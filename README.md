@@ -1,41 +1,38 @@
-# Expression-eval — Test TypeScript + Jest
-# Expression-eval — Svelte + TypeScript (Hello World)
+# sv
 
-This repository was converted from a simple TypeScript test project to a minimal Svelte + Vite app with a Hello World page.
+Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
 
-Files of interest:
-- `package.json` — scripts and dependencies for Vite + Svelte and test scripts
-- `tsconfig.json` — TypeScript config (includes `svelte` types)
-- `vite.config.ts` — Vite configuration with the Svelte plugin
-- `index.html` — Vite HTML entry
-- `src/App.svelte` — Hello World Svelte component
-- `src/main.ts` — Svelte entrypoint
-- `src/shims.d.ts` — TypeScript typings for `.svelte` imports
-- `test/hello.test.ts` — original Jest test (still present)
+## Creating a project
 
-Quick start
+If you're seeing this, you've probably already done this step. Congrats!
 
-Install dependencies:
-```bash
-npm install
+```sh
+# create a new project in the current directory
+npx sv create
+
+# create a new project in my-app
+npx sv create my-app
 ```
 
-Run the Svelte dev server:
-```bash
+## Developing
+
+Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+
+```sh
 npm run dev
+
+# or start the server and open the app in a new browser tab
+npm run dev -- --open
 ```
 
-Build and preview production build:
-```bash
+## Building
+
+To create a production version of your app:
+
+```sh
 npm run build
-npm run preview
 ```
 
-Run the original TypeScript test suite:
-```bash
-npm test
-```
+You can preview the production build with `npm run preview`.
 
-Notes
-- The project uses Vite and the official `@sveltejs/vite-plugin-svelte` plugin.
-- TypeScript support is enabled; `.svelte` types are declared in `src/shims.d.ts`.
+> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
