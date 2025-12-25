@@ -30,10 +30,8 @@ export class GraphEvaluator {
 			// Find start nodes (nodes with no incoming edges)
 			const startNodes = this.findStartNodes();
 
-			// Execute nodes in topological order
-			for (const node of startNodes) {
-				await this.executeNode(node);
-			}
+			// Execute nodes in topological order (in parallel for independent branches)
+			await Promise.all(startNodes.map((node) => this.executeNode(node)));
 
 			// Collect outputs from all nodes
 			const outputs: Record<string, any> = {};

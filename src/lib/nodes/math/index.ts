@@ -56,7 +56,7 @@ export const DivideNode: NodeDefinition = {
 		const input = context.getInputValue('in');
 		const divisor = context.getNodeData().divisor || 1;
 		if (divisor === 0) {
-			throw new Error('Division by zero');
+			throw new Error('Division by zero in Divide node');
 		}
 		const result = (input || 0) / divisor;
 		context.setOutputValue('out', result);
