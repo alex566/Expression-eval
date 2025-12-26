@@ -8,10 +8,11 @@
 	export let data: $$Props['data'];
 
 	// Extract input and output ports from data (now with type info)
-	const inputs: PortSpec[] = (data.inputs as PortSpec[]) || [];
-	const outputs: PortSpec[] = (data.outputs as PortSpec[]) || [];
-	const nodeLabel: string = (data.label as string) || '';
-	const nodeId: string = (data.nodeId as string) || '';
+	// Make these reactive to data changes
+	$: inputs = (data.inputs as PortSpec[]) || [];
+	$: outputs = (data.outputs as PortSpec[]) || [];
+	$: nodeLabel = (data.label as string) || '';
+	$: nodeId = (data.nodeId as string) || '';
 </script>
 
 <div class="custom-node">
