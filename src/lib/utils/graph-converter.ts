@@ -58,6 +58,15 @@ function getNodePorts(
 				}
 			});
 			inputs = Array.from(inputPorts).sort().map(name => ({ name, type: 'any' as const }));
+			
+			// For dynamic input nodes, always add one extra connector for new connections
+			// This applies to math operations that accept variable inputs
+			const dynamicInputNodeTypes = ['Add', 'Subtract', 'Multiply', 'Divide'];
+			if (dynamicInputNodeTypes.includes(nodeType)) {
+				// Find the next available input port number
+				const nextPortNum = inputs.length;
+				inputs.push({ name: `in${nextPortNum}`, type: 'any' as const });
+			}
 		}
 		
 		if (outputs.length === 0 && nodeType !== 'Output') {
