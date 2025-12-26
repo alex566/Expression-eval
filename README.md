@@ -1,6 +1,6 @@
-# sv
+# Expression-eval
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+A Svelte-based dataflow graph visualization and evaluation tool. This application allows you to create, visualize, and evaluate expression graphs with various node types including math operations, control flow, and value nodes.
 
 ## Creating a project
 
@@ -35,4 +35,32 @@ npm run build
 
 You can preview the production build with `npm run preview`.
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+## Deployment
+
+This project is configured to automatically deploy to GitHub Pages when changes are pushed to the `main` branch.
+
+### GitHub Pages Setup
+
+The repository is configured with:
+- **@sveltejs/adapter-static** for static site generation
+- **GitHub Actions workflow** (`.github/workflows/deploy.yml`) that:
+  - Triggers on push to `main` branch
+  - Builds the application with `npm run build`
+  - Deploys the built files to GitHub Pages
+
+### Accessing the Deployed Site
+
+Once deployed, the site will be available at: `https://alex566.github.io/Expression-eval/`
+
+### Manual Deployment
+
+You can also trigger the deployment manually from the GitHub Actions tab in the repository.
+
+### Local Testing
+
+To test the production build locally before deploying:
+
+```sh
+NODE_ENV=production npm run build
+npm run preview
+```
