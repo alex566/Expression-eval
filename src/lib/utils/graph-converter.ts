@@ -1,11 +1,21 @@
 import type { Node, Edge } from '@xyflow/svelte';
 import type { Graph } from '../dataflow/types';
+import { nodeRegistry } from '../dataflow/registry';
 
 /**
  * Determine input and output ports for a node based on its type
  */
 function getNodePorts(nodeType: string): { inputs: string[]; outputs: string[] } {
-	// Define port configurations for each node type
+	// Get ports from the node definition in the registry
+	const definition = nodeRegistry.get(nodeType);
+	if (definition?.inputs && definition?.outputs) {
+		return {
+			inputs: definition.inputs.map(i => i.name),
+			outputs: definition.outputs.map(o => o.name)
+		};
+	}
+
+	// Fallback to hardcoded configs if not found in registry
 	const portConfigs: Record<string, { inputs: string[]; outputs: string[] }> = {
 		Start: { inputs: [], outputs: ['A', 'B'] }, // Start node outputs multiple ports
 		Add: { inputs: ['in'], outputs: ['out'] },
@@ -94,15 +104,17 @@ export function graphToSvelteFlow(graph: Graph): { nodes: Node[]; edges: Edge[] 
 		const verticalSpacing = 100;
 		const yOffset = (counter - (totalNodesInLevel - 1) / 2) * verticalSpacing;
 
+		const definition = nodeRegistry.get(node.type);
 		const ports = getNodePorts(node.type);
 
 		nodes.push({
 			id: node.id,
 			type: 'custom', // Use custom node type
 			data: {
-				label: `${node.type} (${node.id})`,
-				inputs: ports.inputs,
-				outputs: ports.outputs
+				label: node.type,
+				nodeId: node.id,
+				inputs: definition?.inputs || ports.inputs.map(name => ({ name, type: 'any' })),
+				outputs: definition?.outputs || ports.outputs.map(name => ({ name, type: 'any' }))
 			},
 			position: {
 				x: level * 300,

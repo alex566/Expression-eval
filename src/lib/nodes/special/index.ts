@@ -7,6 +7,15 @@ export const StartNode: NodeDefinition = {
 	type: 'Start',
 	category: 'special',
 	description: 'Provides initial input values to the graph',
+	inputs: [],
+	outputs: [
+		{ name: 'A', type: 'any' },
+		{ name: 'B', type: 'any' },
+		{ name: 'x', type: 'any' },
+		{ name: 'y', type: 'any' },
+		{ name: 'z', type: 'any' },
+		{ name: 'out', type: 'any' }
+	],
 	execute(context) {
 		const value = context.getNodeData().value || {};
 
@@ -28,6 +37,15 @@ export const CollectNode: NodeDefinition = {
 	type: 'Collect',
 	category: 'special',
 	description: 'Collects input values into a single output object',
+	inputs: [
+		{ name: 'result', type: 'any' },
+		{ name: 'result1', type: 'any' },
+		{ name: 'result2', type: 'any' },
+		{ name: 'result3', type: 'any' }
+	],
+	outputs: [
+		{ name: 'out', type: 'object' }
+	],
 	execute(context) {
 		const data = context.getNodeData();
 		const result: Record<string, any> = {};
@@ -54,6 +72,12 @@ export const OutputNode: NodeDefinition = {
 	type: 'Output',
 	category: 'special',
 	description: 'Marks a value as a final output of the graph',
+	inputs: [
+		{ name: 'in', type: 'any' }
+	],
+	outputs: [
+		{ name: 'output', type: 'any' }
+	],
 	execute(context) {
 		const value = context.getInputValue('in');
 		const name = context.getNodeData().name || 'output';

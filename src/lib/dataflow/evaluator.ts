@@ -6,6 +6,7 @@ import type {
 	EvaluationResult,
 	NodeRegistry
 } from './types';
+import { isTypeCompatible, getValueType } from './types';
 
 /**
  * Graph evaluator - executes the dataflow graph
@@ -117,10 +118,39 @@ export class GraphEvaluator {
 	 */
 	private async propagateOutputs(node: GraphNode): Promise<void> {
 		const outgoingEdges = this.graph.edges.filter((edge) => edge.from.node === node.id);
+		const definition = this.registry.get(node.type);
 
 		for (const edge of outgoingEdges) {
 			const sourceValues = this.nodeValues.get(edge.from.node);
 			const value = sourceValues?.get(edge.from.port);
+
+			// Type checking: verify output type matches port specification
+			if (definition?.outputs) {
+				const outputPort = definition.outputs.find(p => p.name === edge.from.port);
+				if (outputPort && value !== undefined && !isTypeCompatible(value, outputPort.type)) {
+					const actualType = getValueType(value);
+					throw new Error(
+						`Type mismatch at node '${node.id}' output port '${edge.from.port}': ` +
+						`expected '${outputPort.type}' but got '${actualType}'`
+					);
+				}
+			}
+
+			// Type checking: verify value matches target input type
+			const targetNode = this.graph.nodes.find((n) => n.id === edge.to.node);
+			if (targetNode) {
+				const targetDefinition = this.registry.get(targetNode.type);
+				if (targetDefinition?.inputs) {
+					const inputPort = targetDefinition.inputs.find(p => p.name === edge.to.port);
+					if (inputPort && value !== undefined && !isTypeCompatible(value, inputPort.type)) {
+						const actualType = getValueType(value);
+						throw new Error(
+							`Type mismatch: cannot connect '${node.type}.${edge.from.port}' (${actualType}) ` +
+							`to '${targetNode.type}.${edge.to.port}' (expected ${inputPort.type})`
+						);
+					}
+				}
+			}
 
 			// Set the value as input to the target node
 			if (!this.nodeValues.has(edge.to.node)) {
@@ -130,7 +160,6 @@ export class GraphEvaluator {
 			targetValues?.set(`input.${edge.to.port}`, value);
 
 			// Execute the target node
-			const targetNode = this.graph.nodes.find((n) => n.id === edge.to.node);
 			if (targetNode) {
 				await this.executeNode(targetNode);
 			}
