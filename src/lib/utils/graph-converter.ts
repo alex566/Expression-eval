@@ -48,6 +48,9 @@ function getNodePorts(
 	} else {
 		// Fallback to hardcoded configs if not found in registry (for backward compatibility)
 		const portConfigs: Record<string, { inputs: string[]; outputs: string[] }> = {
+			Start: { inputs: [], outputs: [] }, // Handled specially above
+			Output: { inputs: [], outputs: [] }, // Handled specially above
+			Collect: { inputs: ['result'], outputs: ['out'] }, // Has special handling above
 			Add: { inputs: ['in'], outputs: ['out'] },
 			Subtract: { inputs: ['in'], outputs: ['out'] },
 			Multiply: { inputs: ['in'], outputs: ['out'] },
