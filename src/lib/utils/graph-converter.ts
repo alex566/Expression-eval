@@ -2,6 +2,28 @@ import type { Node, Edge } from '@xyflow/svelte';
 import type { Graph } from '../dataflow/types';
 
 /**
+ * Determine input and output ports for a node based on its type
+ */
+function getNodePorts(nodeType: string): { inputs: string[]; outputs: string[] } {
+	// Define port configurations for each node type
+	const portConfigs: Record<string, { inputs: string[]; outputs: string[] }> = {
+		Start: { inputs: [], outputs: ['A', 'B'] }, // Start node outputs multiple ports
+		Add: { inputs: ['in'], outputs: ['out'] },
+		Subtract: { inputs: ['in'], outputs: ['out'] },
+		Multiply: { inputs: ['in'], outputs: ['out'] },
+		Divide: { inputs: ['in'], outputs: ['out'] },
+		Collect: { inputs: ['result'], outputs: ['out'] },
+		Output: { inputs: ['in'], outputs: [] },
+		If: { inputs: ['condition', 'true', 'false'], outputs: ['out'] },
+		Compare: { inputs: ['a', 'b'], outputs: ['out'] },
+		ForEach: { inputs: ['array'], outputs: ['out', 'count'] },
+		Map: { inputs: ['array'], outputs: ['out'] }
+	};
+
+	return portConfigs[nodeType] || { inputs: ['in'], outputs: ['out'] };
+}
+
+/**
  * Convert dataflow graph to SvelteFlow format with horizontal layout
  */
 export function graphToSvelteFlow(graph: Graph): { nodes: Node[]; edges: Edge[] } {
@@ -62,7 +84,7 @@ export function graphToSvelteFlow(graph: Graph): { nodes: Node[]; edges: Edge[] 
 
 	const levelCounters = new Map<number, number>();
 
-	// Convert nodes with horizontal layout
+	// Convert nodes with horizontal layout and custom node type
 	graph.nodes.forEach((node) => {
 		const level = levels.get(node.id) || 0;
 		const counter = levelCounters.get(level) || 0;
@@ -72,11 +94,15 @@ export function graphToSvelteFlow(graph: Graph): { nodes: Node[]; edges: Edge[] 
 		const verticalSpacing = 100;
 		const yOffset = (counter - (totalNodesInLevel - 1) / 2) * verticalSpacing;
 
+		const ports = getNodePorts(node.type);
+
 		nodes.push({
 			id: node.id,
-			type: 'default',
+			type: 'custom', // Use custom node type
 			data: {
-				label: `${node.type} (${node.id})`
+				label: `${node.type} (${node.id})`,
+				inputs: ports.inputs,
+				outputs: ports.outputs
 			},
 			position: {
 				x: level * 300,
@@ -85,14 +111,16 @@ export function graphToSvelteFlow(graph: Graph): { nodes: Node[]; edges: Edge[] 
 		});
 	});
 
-	// Convert edges without handles (let SvelteFlow connect node centers)
+	// Convert edges with proper source and target handles
 	graph.edges.forEach((edge, index) => {
 		edges.push({
 			id: `e${index}`,
 			source: edge.from.node,
 			target: edge.to.node,
-			label: `${edge.from.port} → ${edge.to.port}`,
-			animated: true
+			sourceHandle: edge.from.port,
+			targetHandle: edge.to.port,
+			animated: true,
+			style: 'stroke: #3b82f6; stroke-width: 2px;'
 		});
 	});
 

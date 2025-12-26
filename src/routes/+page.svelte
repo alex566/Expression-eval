@@ -7,6 +7,7 @@
 	import { nodeRegistry } from '$lib/dataflow/registry';
 	import { registerAllNodes } from '$lib/nodes';
 	import { graphToSvelteFlow } from '$lib/utils/graph-converter';
+	import CustomNode from '$lib/components/CustomNode.svelte';
 
 	let nodes: Node[] = [];
 	let edges: Edge[] = [];
@@ -14,6 +15,11 @@
 	let evaluationResult: EvaluationResult | null = null;
 	let isLoading = true;
 	let error = '';
+
+	// Register custom node types for SvelteFlow
+	const nodeTypes = {
+		custom: CustomNode
+	};
 
 	onMount(async () => {
 		try {
@@ -68,7 +74,7 @@
 			<div class="graph-container">
 				<h2>Graph Visualization</h2>
 				<div class="flow">
-					<SvelteFlow {nodes} {edges} fitView>
+					<SvelteFlow {nodes} {edges} {nodeTypes} fitView>
 						<Background />
 						<Controls />
 					</SvelteFlow>
