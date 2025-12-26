@@ -7,6 +7,12 @@ export const AddNode: NodeDefinition = {
 	type: 'Add',
 	category: 'math',
 	description: 'Adds a specified amount to the input value',
+	inputs: [
+		{ name: 'in', type: 'number' }
+	],
+	outputs: [
+		{ name: 'out', type: 'number' }
+	],
 	execute(context) {
 		const input = context.getInputValue('in');
 		const amount = context.getNodeData().amount || 0;
@@ -22,6 +28,12 @@ export const SubtractNode: NodeDefinition = {
 	type: 'Subtract',
 	category: 'math',
 	description: 'Subtracts a specified amount from the input value',
+	inputs: [
+		{ name: 'in', type: 'number' }
+	],
+	outputs: [
+		{ name: 'out', type: 'number' }
+	],
 	execute(context) {
 		const input = context.getInputValue('in');
 		const amount = context.getNodeData().amount || 0;
@@ -37,6 +49,12 @@ export const MultiplyNode: NodeDefinition = {
 	type: 'Multiply',
 	category: 'math',
 	description: 'Multiplies the input value by a specified factor',
+	inputs: [
+		{ name: 'in', type: 'number' }
+	],
+	outputs: [
+		{ name: 'out', type: 'number' }
+	],
 	execute(context) {
 		const input = context.getInputValue('in');
 		const factor = context.getNodeData().factor || 1;
@@ -52,6 +70,12 @@ export const DivideNode: NodeDefinition = {
 	type: 'Divide',
 	category: 'math',
 	description: 'Divides the input value by a specified divisor',
+	inputs: [
+		{ name: 'in', type: 'number' }
+	],
+	outputs: [
+		{ name: 'out', type: 'number' }
+	],
 	execute(context) {
 		const input = context.getInputValue('in');
 		const divisor = context.getNodeData().divisor || 1;

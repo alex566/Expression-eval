@@ -1,17 +1,26 @@
 <script lang="ts">
 	import { Handle, Position } from '@xyflow/svelte';
 	import type { NodeProps } from '@xyflow/svelte';
+	import type { PortSpec } from '$lib/dataflow/types';
 
 	type $$Props = NodeProps;
 
 	export let data: $$Props['data'];
 
-	// Extract input and output ports from data
-	const inputs: string[] = (data.inputs as string[]) || [];
-	const outputs: string[] = (data.outputs as string[]) || [];
+	// Extract input and output ports from data (now with type info)
+	// Make these reactive to data changes
+	$: inputs = (data.inputs as PortSpec[]) || [];
+	$: outputs = (data.outputs as PortSpec[]) || [];
+	$: nodeLabel = (data.label as string) || '';
+	$: nodeId = (data.nodeId as string) || '';
+	
+	// Calculate dynamic height based on number of ports
+	$: maxPorts = Math.max(inputs.length, outputs.length);
+	$: minHeight = Math.max(80, 40 + maxPorts * 30); // Base height + spacing per port
+
 </script>
 
-<div class="custom-node">
+<div class="custom-node" style="min-height: {minHeight}px;">
 	<!-- Input handles on the left -->
 	{#if inputs.length > 0}
 		<div class="handles-container left">
@@ -20,10 +29,12 @@
 					<Handle
 						type="target"
 						position={Position.Left}
-						id={input}
+						id={input.name}
 						style="top: {(i + 1) * (100 / (inputs.length + 1))}%"
 					/>
-					<span class="handle-label left">{input}</span>
+					<span class="handle-label left">
+						{input.name}: <span class="type-label">{input.type}</span>
+					</span>
 				</div>
 			{/each}
 		</div>
@@ -31,7 +42,10 @@
 
 	<!-- Node content -->
 	<div class="node-content">
-		<div class="node-label">{data.label}</div>
+		<div class="node-label">{nodeLabel}</div>
+		{#if nodeId}
+			<div class="node-id">({nodeId})</div>
+		{/if}
 	</div>
 
 	<!-- Output handles on the right -->
@@ -42,10 +56,12 @@
 					<Handle
 						type="source"
 						position={Position.Right}
-						id={output}
+						id={output.name}
 						style="top: {(i + 1) * (100 / (outputs.length + 1))}%"
 					/>
-					<span class="handle-label right">{output}</span>
+					<span class="handle-label right">
+						{output.name}: <span class="type-label">{output.type}</span>
+					</span>
 				</div>
 			{/each}
 		</div>
@@ -77,6 +93,12 @@
 		font-weight: 600;
 		font-size: 14px;
 		color: #1a192b;
+	}
+
+	.node-id {
+		font-size: 11px;
+		color: #64748b;
+		margin-top: 2px;
 	}
 
 	.handles-container {
@@ -113,6 +135,11 @@
 		padding: 2px 6px;
 		border-radius: 4px;
 		border: 1px solid #e2e8f0;
+	}
+
+	.type-label {
+		color: #3b82f6;
+		font-weight: 600;
 	}
 
 	.handle-label.left {
