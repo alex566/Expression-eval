@@ -8,6 +8,7 @@
 	import { registerAllNodes } from '$lib/nodes';
 	import { graphToSvelteFlow } from '$lib/utils/graph-converter';
 	import CustomNode from '$lib/components/CustomNode.svelte';
+	import EvaluationReport from '$lib/components/EvaluationReport.svelte';
 
 	let nodes: Node[] = [];
 	let edges: Edge[] = [];
@@ -16,6 +17,7 @@
 	let evaluationResult: EvaluationResult | null = null;
 	let isLoading = true;
 	let error = '';
+	let selectedGraph = 'sample-graph.json';
 
 	// Register custom node types for SvelteFlow
 	const nodeTypes = {
@@ -28,19 +30,7 @@
 			registerAllNodes();
 
 			// Load sample graph
-			const response = await fetch('/sample-graph.json');
-			if (!response.ok) {
-				throw new Error('Failed to load sample graph');
-			}
-
-			graph = await response.json();
-
-			// Convert to SvelteFlow format
-			if (graph) {
-				const flow = graphToSvelteFlow(graph);
-				nodes = flow.nodes;
-				edges = flow.edges;
-			}
+			await loadGraph(selectedGraph);
 
 			isLoading = false;
 		} catch (err) {
@@ -48,6 +38,37 @@
 			isLoading = false;
 		}
 	});
+
+	async function loadGraph(filename: string) {
+		try {
+			const response = await fetch(`/${filename}`);
+			if (!response.ok) {
+				throw new Error(`Failed to load ${filename}`);
+			}
+
+			graph = await response.json();
+
+			// Reset results when loading new graph
+			validationResult = null;
+			evaluationResult = null;
+
+			// Convert to SvelteFlow format
+			if (graph) {
+				const flow = graphToSvelteFlow(graph);
+				nodes = flow.nodes;
+				edges = flow.edges;
+			}
+			error = '';
+		} catch (err) {
+			error = err instanceof Error ? err.message : String(err);
+		}
+	}
+
+	async function handleGraphChange(event: Event) {
+		const target = event.target as HTMLSelectElement;
+		selectedGraph = target.value;
+		await loadGraph(selectedGraph);
+	}
 
 	async function validateGraph() {
 		if (!graph) {
@@ -113,6 +134,15 @@
 
 			<div class="sidebar">
 				<h2>Controls</h2>
+				
+				<div class="graph-selector">
+					<label for="graph-select">Load Graph:</label>
+					<select id="graph-select" bind:value={selectedGraph} onchange={handleGraphChange}>
+						<option value="sample-graph.json">Sample Graph</option>
+						<option value="complex-graph.json">Complex Graph</option>
+					</select>
+				</div>
+
 				<button onclick={validateGraph}>Validate Graph</button>
 				<button onclick={evaluateGraph}>Evaluate Graph</button>
 
@@ -148,24 +178,9 @@
 					</div>
 				{/if}
 
-				{#if evaluationResult}
+				{#if evaluationResult && graph}
 					<div class="results">
-						<h3>Evaluation Result</h3>
-						<div class="result-status" class:success={evaluationResult.success}>
-							Status: {evaluationResult.success ? 'Success' : 'Failed'}
-						</div>
-
-						{#if evaluationResult.error}
-							<div class="error-message">{evaluationResult.error}</div>
-						{/if}
-
-						{#if evaluationResult.inferredTypes}
-							<h4>Inferred Types:</h4>
-							<pre>{JSON.stringify(evaluationResult.inferredTypes, null, 2)}</pre>
-						{/if}
-
-						<h4>Outputs:</h4>
-						<pre>{JSON.stringify(evaluationResult.outputs, null, 2)}</pre>
+						<EvaluationReport result={evaluationResult} {graph} />
 					</div>
 				{/if}
 
@@ -256,6 +271,38 @@
 		margin-bottom: 1rem;
 	}
 
+	.graph-selector {
+		margin-bottom: 1rem;
+		padding: 0.75rem;
+		background: white;
+		border-radius: 0.375rem;
+		border: 1px solid #e5e7eb;
+	}
+
+	.graph-selector label {
+		display: block;
+		font-size: 0.875rem;
+		font-weight: 600;
+		margin-bottom: 0.5rem;
+		color: #374151;
+	}
+
+	.graph-selector select {
+		width: 100%;
+		padding: 0.5rem;
+		border: 1px solid #d1d5db;
+		border-radius: 0.25rem;
+		font-size: 0.875rem;
+		background: white;
+		cursor: pointer;
+	}
+
+	.graph-selector select:focus {
+		outline: none;
+		border-color: #3b82f6;
+		box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+	}
+
 	button {
 		width: 100%;
 		padding: 0.75rem 1rem;
@@ -296,14 +343,6 @@
 	.result-status.failure {
 		background: #fee2e2;
 		color: #991b1b;
-	}
-
-	.error-message {
-		padding: 0.5rem;
-		background: #fee2e2;
-		color: #991b1b;
-		border-radius: 0.25rem;
-		margin-bottom: 0.5rem;
 	}
 
 	.error-list,
