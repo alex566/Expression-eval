@@ -294,13 +294,26 @@ export class GraphEvaluator {
 	 * Execute a single node and propagate values to connected nodes
 	 */
 	private async executeNode(node: GraphNode): Promise<void> {
-		if (this.executedNodes.has(node.id)) {
-			return;
-		}
-
+		// Check if this node has already produced all its outputs
 		const definition = this.registry.get(node.type);
 		if (!definition) {
 			throw new Error(`Node type '${node.type}' not found in registry`);
+		}
+
+		// If node has outputs defined and all outputs are already set, skip execution
+		if (definition.outputs && definition.outputs.length > 0) {
+			const nodeValues = this.nodeValues.get(node.id);
+			if (nodeValues) {
+				const allOutputsSet = definition.outputs.every(output => 
+					nodeValues.has(output.name)
+				);
+				if (allOutputsSet) {
+					return;
+				}
+			}
+		} else if (this.executedNodes.has(node.id)) {
+			// For nodes without outputs (like Output node), use executedNodes set
+			return;
 		}
 
 		// Create context for this node
@@ -309,7 +322,10 @@ export class GraphEvaluator {
 		// Execute the node
 		await definition.execute(context);
 
-		this.executedNodes.add(node.id);
+		// Mark as executed (for nodes without outputs)
+		if (!definition.outputs || definition.outputs.length === 0) {
+			this.executedNodes.add(node.id);
+		}
 
 		// Propagate outputs to connected nodes
 		await this.propagateOutputs(node);

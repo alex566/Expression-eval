@@ -224,7 +224,155 @@ export const COMPLEX_GRAPH: Graph = {
 	]
 };
 
+export const DATE_SAMPLE_GRAPH: Graph = {
+	nodes: [
+		{
+			id: "dateString",
+			type: "Value",
+			data: {
+				value: "2025-01-01T00:00:00.000Z"
+			}
+		},
+		{
+			id: "createDate",
+			type: "CreateDate",
+			data: {}
+		},
+		{
+			id: "daysToAdd",
+			type: "Value",
+			data: {
+				value: 7
+			}
+		},
+		{
+			id: "hoursToAdd",
+			type: "Value",
+			data: {
+				value: 12
+			}
+		},
+		{
+			id: "addDate",
+			type: "AddDate",
+			data: {}
+		},
+		{
+			id: "formatType",
+			type: "Value",
+			data: {
+				value: "iso"
+			}
+		},
+		{
+			id: "formatDate",
+			type: "FormatDate",
+			data: {}
+		},
+		{
+			id: "output",
+			type: "Output",
+			data: {
+				outputs: ["originalDate", "modifiedDate", "formattedDate"]
+			}
+		}
+	],
+	edges: [
+		{
+			from: {
+				node: "dateString",
+				port: "out"
+			},
+			to: {
+				node: "createDate",
+				port: "value"
+			}
+		},
+		{
+			from: {
+				node: "createDate",
+				port: "out"
+			},
+			to: {
+				node: "output",
+				port: "originalDate"
+			}
+		},
+		{
+			from: {
+				node: "createDate",
+				port: "out"
+			},
+			to: {
+				node: "addDate",
+				port: "date"
+			}
+		},
+		{
+			from: {
+				node: "daysToAdd",
+				port: "out"
+			},
+			to: {
+				node: "addDate",
+				port: "days"
+			}
+		},
+		{
+			from: {
+				node: "hoursToAdd",
+				port: "out"
+			},
+			to: {
+				node: "addDate",
+				port: "hours"
+			}
+		},
+		{
+			from: {
+				node: "addDate",
+				port: "out"
+			},
+			to: {
+				node: "output",
+				port: "modifiedDate"
+			}
+		},
+		{
+			from: {
+				node: "addDate",
+				port: "out"
+			},
+			to: {
+				node: "formatDate",
+				port: "date"
+			}
+		},
+		{
+			from: {
+				node: "formatType",
+				port: "out"
+			},
+			to: {
+				node: "formatDate",
+				port: "format"
+			}
+		},
+		{
+			from: {
+				node: "formatDate",
+				port: "out"
+			},
+			to: {
+				node: "output",
+				port: "formattedDate"
+			}
+		}
+	]
+};
+
 export const GRAPHS: Record<string, Graph> = {
 	'sample': SAMPLE_GRAPH,
-	'complex': COMPLEX_GRAPH
+	'complex': COMPLEX_GRAPH,
+	'dates': DATE_SAMPLE_GRAPH
 };

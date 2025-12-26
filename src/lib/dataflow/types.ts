@@ -9,6 +9,7 @@ export type DataType =
 	| 'boolean' 
 	| 'array' 
 	| 'object' 
+	| 'Date'
 	| 'any'
 	| 'number | string'
 	| 'string | number'
@@ -129,6 +130,9 @@ export interface EvaluationResult {
 export function getValueType(value: any): DataType {
 	if (value === null || value === undefined) {
 		return 'any';
+	}
+	if (value instanceof Date) {
+		return 'Date';
 	}
 	if (Array.isArray(value)) {
 		return 'array';
