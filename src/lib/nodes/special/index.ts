@@ -1,61 +1,20 @@
 import type { NodeDefinition } from '../../dataflow/types';
 
 /**
- * Start node - provides initial values to the graph
- * Dynamically creates output ports based on the input data
+ * Value node - provides a constant value
+ * This node outputs a hardcoded value specified in its data
  */
-export const StartNode: NodeDefinition = {
-	type: 'Start',
+export const ValueNode: NodeDefinition = {
+	type: 'Value',
 	category: 'special',
-	description: 'Provides initial input values to the graph',
+	description: 'Provides a constant value',
 	inputs: [],
-	outputs: [], // Will be dynamically determined from data
-	execute(context) {
-		const value = context.getNodeData().value || {};
-
-		// Output each property as a separate port
-		if (typeof value === 'object' && value !== null) {
-			for (const [key, val] of Object.entries(value)) {
-				context.setOutputValue(key, val);
-			}
-		} else {
-			context.setOutputValue('out', value);
-		}
-	}
-};
-
-/**
- * Collect node - collects values into a single output
- */
-export const CollectNode: NodeDefinition = {
-	type: 'Collect',
-	category: 'special',
-	description: 'Collects input values into a single output object',
-	inputs: [
-		{ name: 'result', type: 'any' },
-		{ name: 'result1', type: 'any' },
-		{ name: 'result2', type: 'any' },
-		{ name: 'result3', type: 'any' }
-	],
 	outputs: [
-		{ name: 'out', type: 'object' }
+		{ name: 'out', type: 'any' }
 	],
 	execute(context) {
-		const data = context.getNodeData();
-		const result: Record<string, any> = {};
-
-		// Collect all inputs
-		// For the example, we'll collect specific named inputs
-		const inputNames = data.inputs || ['result'];
-
-		for (const name of inputNames) {
-			const value = context.getInputValue(name);
-			if (value !== undefined) {
-				result[name] = value;
-			}
-		}
-
-		context.setOutputValue('out', result);
+		const value = context.getNodeData().value;
+		context.setOutputValue('out', value);
 	}
 };
 
