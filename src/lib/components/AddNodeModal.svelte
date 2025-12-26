@@ -48,13 +48,28 @@
 			resetModal();
 		}
 	}
+
+	function handleKeydown(event: KeyboardEvent) {
+		if (event.key === 'Escape') {
+			resetModal();
+		}
+	}
 </script>
+
+<svelte:window on:keydown={handleKeydown} />
 
 {#if isOpen}
 	<div class="modal-backdrop" on:click={handleBackdropClick} role="presentation">
-		<div class="modal" on:click={(e) => e.stopPropagation()} role="dialog" tabindex="-1">
+		<div 
+			class="modal" 
+			on:click={(e) => e.stopPropagation()} 
+			role="dialog" 
+			aria-modal="true"
+			aria-labelledby="modal-title"
+			tabindex="-1"
+		>
 			<div class="modal-header">
-				<h2>Add New Node</h2>
+				<h2 id="modal-title">Add New Node</h2>
 				<button class="close-btn" on:click={resetModal} aria-label="Close">&times;</button>
 			</div>
 

@@ -21,7 +21,6 @@
 	let error = '';
 	let selectedGraph = 'sample';
 	let showAddNodeModal = false;
-	let newNodePosition = { x: 0, y: 0 };
 
 	// Register custom node types for SvelteFlow
 	const nodeTypes = {
@@ -122,9 +121,9 @@
 	}
 
 	function generateNodeId(): string {
-		// Generate unique node ID
+		// Generate unique node ID with higher entropy
 		const timestamp = Date.now();
-		const random = Math.floor(Math.random() * 1000);
+		const random = Math.floor(Math.random() * 999999);
 		return `node_${timestamp}_${random}`;
 	}
 
