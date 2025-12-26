@@ -1,6 +1,7 @@
 import type { Node, Edge } from '@xyflow/svelte';
 import type { Graph, PortSpec, InferredTypeInfo } from '../dataflow/types';
 import { nodeRegistry } from '../dataflow/registry';
+import dagre from 'dagre';
 
 /**
  * Determine input and output ports for a node based on its type
@@ -91,7 +92,7 @@ function getNodePorts(
 }
 
 /**
- * Convert dataflow graph to SvelteFlow format with horizontal layout
+ * Convert dataflow graph to SvelteFlow format with dagre horizontal layout
  * Optionally accepts inferred types to display runtime type information
  */
 export function graphToSvelteFlow(
@@ -101,74 +102,52 @@ export function graphToSvelteFlow(
 	const nodes: Node[] = [];
 	const edges: Edge[] = [];
 
-	// Build adjacency map to determine node levels (for horizontal layout)
-	const inDegree = new Map<string, number>();
-	const adjacency = new Map<string, string[]>();
+	// Create a new dagre graph with horizontal layout (LR = Left to Right)
+	const dagreGraph = new dagre.graphlib.Graph();
+	dagreGraph.setDefaultEdgeLabel(() => ({}));
 	
-	graph.nodes.forEach(node => {
-		inDegree.set(node.id, 0);
-		adjacency.set(node.id, []);
+	// Configure the graph layout
+	dagreGraph.setGraph({ 
+		rankdir: 'LR', // Left to Right (horizontal layout with output on the right)
+		nodesep: 100,  // Vertical spacing between nodes
+		ranksep: 200,  // Horizontal spacing between ranks/levels
+		edgesep: 50,   // Spacing between edges
+		marginx: 50,
+		marginy: 50
 	});
 
-	graph.edges.forEach(edge => {
-		inDegree.set(edge.to.node, (inDegree.get(edge.to.node) || 0) + 1);
-		const neighbors = adjacency.get(edge.from.node) || [];
-		neighbors.push(edge.to.node);
-		adjacency.set(edge.from.node, neighbors);
-	});
-
-	// Assign levels using topological sort
-	const levels = new Map<string, number>();
-	const queue: string[] = [];
-	
-	graph.nodes.forEach(node => {
-		if (inDegree.get(node.id) === 0) {
-			levels.set(node.id, 0);
-			queue.push(node.id);
-		}
-	});
-
-	while (queue.length > 0) {
-		const current = queue.shift()!;
-		const currentLevel = levels.get(current) || 0;
-		const neighbors = adjacency.get(current) || [];
-		
-		neighbors.forEach(neighbor => {
-			const degree = (inDegree.get(neighbor) || 0) - 1;
-			inDegree.set(neighbor, degree);
-			
-			const nextLevel = currentLevel + 1;
-			levels.set(neighbor, Math.max(levels.get(neighbor) || 0, nextLevel));
-			
-			if (degree === 0) {
-				queue.push(neighbor);
-			}
-		});
-	}
-
-	// Count nodes per level for vertical positioning
-	const nodesPerLevel = new Map<number, number>();
-	graph.nodes.forEach(node => {
-		const level = levels.get(node.id) || 0;
-		nodesPerLevel.set(level, (nodesPerLevel.get(level) || 0) + 1);
-	});
-
-	const levelCounters = new Map<number, number>();
-
-	// Convert nodes with horizontal layout and custom node type
+	// First pass: Create nodes with their data and add to dagre graph
 	graph.nodes.forEach((node) => {
-		const level = levels.get(node.id) || 0;
-		const counter = levelCounters.get(level) || 0;
-		levelCounters.set(level, counter + 1);
-
-		const totalNodesInLevel = nodesPerLevel.get(level) || 1;
-		const verticalSpacing = 100;
-		const yOffset = (counter - (totalNodesInLevel - 1) / 2) * verticalSpacing;
-
-		const definition = nodeRegistry.get(node.type);
 		const ports = getNodePorts(node.type, node.id, node.data, graph.edges, inferredTypes);
+		
+		// Add node to dagre graph with dimensions
+		// Approximate node size based on content
+		const nodeWidth = 200;
+		const nodeHeight = Math.max(100, 40 + Math.max(ports.inputs.length, ports.outputs.length) * 25);
+		
+		dagreGraph.setNode(node.id, { 
+			width: nodeWidth, 
+			height: nodeHeight,
+			// Store additional data we'll need later
+			nodeType: node.type,
+			nodeData: node.data,
+			ports: ports
+		});
+	});
 
-		// Use ports directly since getNodePorts now always returns PortSpec arrays
+	// Add edges to dagre graph
+	graph.edges.forEach((edge) => {
+		dagreGraph.setEdge(edge.from.node, edge.to.node);
+	});
+
+	// Run dagre layout algorithm
+	dagre.layout(dagreGraph);
+
+	// Second pass: Extract positioned nodes from dagre
+	graph.nodes.forEach((node) => {
+		const dagreNode = dagreGraph.node(node.id) as any;
+		const ports = dagreNode.ports as { inputs: PortSpec[]; outputs: PortSpec[] };
+
 		nodes.push({
 			id: node.id,
 			type: 'custom', // Use custom node type
@@ -179,8 +158,9 @@ export function graphToSvelteFlow(
 				outputs: ports.outputs
 			},
 			position: {
-				x: level * 300,
-				y: 200 + yOffset
+				// dagre returns center position, we need top-left for SvelteFlow
+				x: dagreNode.x - dagreNode.width / 2,
+				y: dagreNode.y - dagreNode.height / 2
 			}
 		});
 	});
