@@ -345,14 +345,6 @@
 		color: #991b1b;
 	}
 
-	.error-message {
-		padding: 0.5rem;
-		background: #fee2e2;
-		color: #991b1b;
-		border-radius: 0.25rem;
-		margin-bottom: 0.5rem;
-	}
-
 	.error-list,
 	.warning-list {
 		margin-top: 0.5rem;

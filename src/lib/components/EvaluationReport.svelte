@@ -39,6 +39,8 @@
 			}
 
 			// Collect outputs (excluding input ports)
+			// Output keys follow the pattern: nodeId.portName
+			// Input keys follow the pattern: nodeId.input.portName
 			for (const key in result.outputs) {
 				if (key.startsWith(`${node.id}.`) && !key.includes('.input.')) {
 					const port = key.replace(`${node.id}.`, '');
@@ -76,7 +78,11 @@
 
 		for (const outputNode of outputNodes) {
 			// Get the output port names from the node's data
-			const outputNames = outputNode.data.outputs || ['output'];
+			// If outputs is not defined or empty, skip this node rather than assume a default
+			const outputNames = outputNode.data.outputs;
+			if (!outputNames || !Array.isArray(outputNames) || outputNames.length === 0) {
+				continue;
+			}
 			
 			for (const outputName of outputNames) {
 				const key = `${outputNode.id}.${outputName}`;
