@@ -1,0 +1,105 @@
+{
+	"nodes": [
+		{
+			"id": "start",
+			"type": "Start",
+			"data": {
+				"value": {
+					"x": 5,
+					"y": 10,
+					"z": 3
+				}
+			}
+		},
+		{
+			"id": "add1",
+			"type": "Add",
+			"data": {
+				"amount": 2
+			}
+		},
+		{
+			"id": "multiply",
+			"type": "Multiply",
+			"data": {
+				"factor": 3
+			}
+		},
+		{
+			"id": "subtract",
+			"type": "Subtract",
+			"data": {
+				"amount": 5
+			}
+		},
+		{
+			"id": "collect",
+			"type": "Collect",
+			"data": {
+				"inputs": ["result1", "result2", "result3"]
+			}
+		}
+	],
+	"edges": [
+		{
+			"from": {
+				"node": "start",
+				"port": "x"
+			},
+			"to": {
+				"node": "add1",
+				"port": "in"
+			}
+		},
+		{
+			"from": {
+				"node": "add1",
+				"port": "out"
+			},
+			"to": {
+				"node": "collect",
+				"port": "result1"
+			}
+		},
+		{
+			"from": {
+				"node": "start",
+				"port": "y"
+			},
+			"to": {
+				"node": "multiply",
+				"port": "in"
+			}
+		},
+		{
+			"from": {
+				"node": "multiply",
+				"port": "out"
+			},
+			"to": {
+				"node": "collect",
+				"port": "result2"
+			}
+		},
+		{
+			"from": {
+				"node": "start",
+				"port": "z"
+			},
+			"to": {
+				"node": "subtract",
+				"port": "in"
+			}
+		},
+		{
+			"from": {
+				"node": "subtract",
+				"port": "out"
+			},
+			"to": {
+				"node": "collect",
+				"port": "result3"
+			}
+		}
+	]
+}

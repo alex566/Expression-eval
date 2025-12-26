@@ -1,0 +1,50 @@
+{
+	"nodes": [
+		{
+			"id": "start",
+			"type": "Start",
+			"data": {
+				"value": {
+					"A": 10,
+					"B": 20
+				}
+			}
+		},
+		{
+			"id": "add",
+			"type": "Add",
+			"data": {
+				"amount": 5
+			}
+		},
+		{
+			"id": "collect",
+			"type": "Collect",
+			"data": {
+				"inputs": ["result"]
+			}
+		}
+	],
+	"edges": [
+		{
+			"from": {
+				"node": "start",
+				"port": "A"
+			},
+			"to": {
+				"node": "add",
+				"port": "in"
+			}
+		},
+		{
+			"from": {
+				"node": "add",
+				"port": "out"
+			},
+			"to": {
+				"node": "collect",
+				"port": "result"
+			}
+		}
+	]
+}
