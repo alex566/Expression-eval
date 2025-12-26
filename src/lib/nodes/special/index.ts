@@ -2,20 +2,14 @@ import type { NodeDefinition } from '../../dataflow/types';
 
 /**
  * Start node - provides initial values to the graph
+ * Dynamically creates output ports based on the input data
  */
 export const StartNode: NodeDefinition = {
 	type: 'Start',
 	category: 'special',
 	description: 'Provides initial input values to the graph',
 	inputs: [],
-	outputs: [
-		{ name: 'A', type: 'any' },
-		{ name: 'B', type: 'any' },
-		{ name: 'x', type: 'any' },
-		{ name: 'y', type: 'any' },
-		{ name: 'z', type: 'any' },
-		{ name: 'out', type: 'any' }
-	],
+	outputs: [], // Will be dynamically determined from data
 	execute(context) {
 		const value = context.getNodeData().value || {};
 
@@ -66,21 +60,25 @@ export const CollectNode: NodeDefinition = {
 };
 
 /**
- * Output node - marks a final output value
+ * Output node - marks final output values
+ * Dynamically creates input ports based on the configuration
  */
 export const OutputNode: NodeDefinition = {
 	type: 'Output',
 	category: 'special',
-	description: 'Marks a value as a final output of the graph',
-	inputs: [
-		{ name: 'in', type: 'any' }
-	],
-	outputs: [
-		{ name: 'output', type: 'any' }
-	],
+	description: 'Marks values as final outputs of the graph',
+	inputs: [], // Will be dynamically determined from data
+	outputs: [],
 	execute(context) {
-		const value = context.getInputValue('in');
-		const name = context.getNodeData().name || 'output';
-		context.setOutputValue(name, value);
+		const data = context.getNodeData();
+		const outputNames = data.outputs || ['output'];
+		
+		// Process each configured output
+		for (const name of outputNames) {
+			const value = context.getInputValue(name);
+			if (value !== undefined) {
+				context.setOutputValue(name, value);
+			}
+		}
 	}
 };

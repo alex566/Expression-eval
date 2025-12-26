@@ -13,9 +13,14 @@
 	$: outputs = (data.outputs as PortSpec[]) || [];
 	$: nodeLabel = (data.label as string) || '';
 	$: nodeId = (data.nodeId as string) || '';
+	
+	// Calculate dynamic height based on number of ports
+	$: maxPorts = Math.max(inputs.length, outputs.length);
+	$: minHeight = Math.max(80, 40 + maxPorts * 30); // Base height + spacing per port
+
 </script>
 
-<div class="custom-node">
+<div class="custom-node" style="min-height: {minHeight}px;">
 	<!-- Input handles on the left -->
 	{#if inputs.length > 0}
 		<div class="handles-container left">
