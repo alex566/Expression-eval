@@ -1,14 +1,15 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { SvelteFlow, Controls, Background, type Node, type Edge } from '@xyflow/svelte';
+	import { SvelteFlow, Controls, Background, type Node, type Edge, type Connection } from '@xyflow/svelte';
 	import '@xyflow/svelte/dist/style.css';
-	import type { Graph, EvaluationResult, ValidationResult } from '$lib/dataflow/types';
+	import type { Graph, EvaluationResult, ValidationResult, GraphNode, GraphEdge } from '$lib/dataflow/types';
 	import { GraphEvaluator } from '$lib/dataflow/evaluator';
 	import { nodeRegistry } from '$lib/dataflow/registry';
 	import { registerAllNodes } from '$lib/nodes';
 	import { graphToSvelteFlow } from '$lib/utils/graph-converter';
 	import CustomNode from '$lib/components/CustomNode.svelte';
 	import EvaluationReport from '$lib/components/EvaluationReport.svelte';
+	import AddNodeModal from '$lib/components/AddNodeModal.svelte';
 	import { GRAPHS } from '$lib/data/graphs';
 
 	let nodes: Node[] = [];
@@ -19,6 +20,8 @@
 	let isLoading = true;
 	let error = '';
 	let selectedGraph = 'sample';
+	let showAddNodeModal = false;
+	let newNodePosition = { x: 0, y: 0 };
 
 	// Register custom node types for SvelteFlow
 	const nodeTypes = {
@@ -112,6 +115,101 @@
 			error = err instanceof Error ? err.message : String(err);
 		}
 	}
+
+	function handlePaneClick(event: CustomEvent) {
+		// Open modal to add new node
+		showAddNodeModal = true;
+	}
+
+	function generateNodeId(): string {
+		// Generate unique node ID
+		const timestamp = Date.now();
+		const random = Math.floor(Math.random() * 1000);
+		return `node_${timestamp}_${random}`;
+	}
+
+	function handleAddNode(nodeType: string, nodeData: Record<string, any>) {
+		if (!graph) return;
+
+		// Process special node data
+		let processedData = { ...nodeData };
+		if (nodeType === 'Output' && nodeData.outputNames) {
+			// Convert comma-separated string to array
+			processedData.outputs = nodeData.outputNames
+				.split(',')
+				.map((s: string) => s.trim())
+				.filter((s: string) => s.length > 0);
+			delete processedData.outputNames;
+		}
+
+		// Create new node
+		const newNode: GraphNode = {
+			id: generateNodeId(),
+			type: nodeType,
+			data: processedData
+		};
+
+		// Add node to graph
+		graph = {
+			nodes: [...graph.nodes, newNode],
+			edges: [...graph.edges]
+		};
+
+		// Update visualization
+		updateVisualization();
+		showAddNodeModal = false;
+	}
+
+	function handleConnect(event: CustomEvent<Connection>) {
+		if (!graph) return;
+
+		const connection = event.detail;
+
+		// Create new edge
+		const newEdge: GraphEdge = {
+			from: {
+				node: connection.source,
+				port: connection.sourceHandle || 'out'
+			},
+			to: {
+				node: connection.target,
+				port: connection.targetHandle || 'in'
+			}
+		};
+
+		// Check if edge already exists
+		const edgeExists = graph.edges.some(
+			(edge) =>
+				edge.from.node === newEdge.from.node &&
+				edge.from.port === newEdge.from.port &&
+				edge.to.node === newEdge.to.node &&
+				edge.to.port === newEdge.to.port
+		);
+
+		if (!edgeExists) {
+			// Add edge to graph
+			graph = {
+				nodes: [...graph.nodes],
+				edges: [...graph.edges, newEdge]
+			};
+
+			// Update visualization
+			updateVisualization();
+		}
+	}
+
+	function updateVisualization() {
+		if (!graph) return;
+
+		// Reset validation and evaluation results when graph changes
+		validationResult = null;
+		evaluationResult = null;
+
+		// Convert to SvelteFlow format
+		const flow = graphToSvelteFlow(graph);
+		nodes = flow.nodes;
+		edges = flow.edges;
+	}
 </script>
 
 <div class="container">
@@ -141,7 +239,14 @@
 			<div class="graph-container">
 				<h2>Graph Visualization</h2>
 				<div class="flow">
-					<SvelteFlow {nodes} {edges} {nodeTypes} fitView>
+					<SvelteFlow 
+						{nodes} 
+						{edges} 
+						{nodeTypes} 
+						fitView
+						onpaneclick={handlePaneClick}
+						onconnect={handleConnect}
+					>
 						<Background />
 						<Controls />
 					</SvelteFlow>
@@ -198,6 +303,13 @@
 			</div>
 		</div>
 	{/if}
+
+	<!-- Add Node Modal -->
+	<AddNodeModal 
+		isOpen={showAddNodeModal} 
+		onClose={() => showAddNodeModal = false}
+		onAddNode={handleAddNode}
+	/>
 </div>
 
 <style>
