@@ -12,15 +12,15 @@
 	import AddNodeModal from '$lib/components/AddNodeModal.svelte';
 	import { GRAPHS } from '$lib/data/graphs';
 
-	let nodes: Node[] = [];
-	let edges: Edge[] = [];
-	let graph: Graph | null = null;
-	let validationResult: ValidationResult | null = null;
-	let evaluationResult: EvaluationResult | null = null;
-	let isLoading = true;
-	let error = '';
-	let selectedGraph = 'sample';
-	let showAddNodeModal = false;
+	let nodes = $state.raw<Node[]>([]);
+	let edges = $state.raw<Edge[]>([]);
+	let graph: Graph | null = $state(null);
+	let validationResult: ValidationResult | null = $state(null);
+	let evaluationResult: EvaluationResult | null = $state(null);
+	let isLoading = $state(true);
+	let error = $state('');
+	let selectedGraph = $state('sample');
+	let showAddNodeModal = $state(false);
 
 	// Register custom node types for SvelteFlow
 	const nodeTypes = {
@@ -168,11 +168,11 @@
 		const newEdge: GraphEdge = {
 			from: {
 				node: connection.source,
-				port: connection.sourceHandle || 'out'
+				port: connection.sourceHandle ?? 'out'
 			},
 			to: {
 				node: connection.target,
-				port: connection.targetHandle || 'in'
+				port: connection.targetHandle ?? 'in'
 			}
 		};
 
