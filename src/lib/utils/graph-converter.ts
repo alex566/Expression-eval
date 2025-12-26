@@ -49,7 +49,7 @@ function getNodePorts(
 		outputs = definition.outputs.map(p => ({ ...p }));
 		
 		// If inputs are empty (dynamic nodes), detect from edges and add extra connector
-		if (definition.inputs && definition.inputs.length === 0) {
+		if (inputs.length === 0) {
 			// Find all edges targeting this node and extract unique port names
 			const inputPorts = new Set<string>();
 			edges.forEach(edge => {
@@ -61,9 +61,9 @@ function getNodePorts(
 			
 			// For nodes with dynamic inputs (defined with empty inputs array),
 			// always add one extra connector for new connections
-			// Find the next available input port number
-			const nextPortNum = inputs.length;
-			inputs.push({ name: `in${nextPortNum}`, type: 'any' as const });
+			// Find the next available input connector index
+			const nextInputIndex = inputs.length;
+			inputs.push({ name: `in${nextInputIndex}`, type: 'any' as const });
 		}
 		
 		if (outputs.length === 0 && nodeType !== 'Output') {
