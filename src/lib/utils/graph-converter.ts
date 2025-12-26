@@ -4,6 +4,19 @@ import { nodeRegistry } from '../dataflow/registry';
 import dagre from 'dagre';
 
 /**
+ * Extended dagre node type that includes our custom properties
+ */
+interface DagreNode {
+	x: number;
+	y: number;
+	width: number;
+	height: number;
+	ports: { inputs: PortSpec[]; outputs: PortSpec[] };
+	nodeType: string;
+	nodeData: Record<string, any>;
+}
+
+/**
  * Determine input and output ports for a node based on its type
  * Returns PortSpec arrays from the node definition, or creates fallback PortSpec objects
  * If inferredTypes are provided, updates the port types with inferred runtime types
@@ -145,8 +158,8 @@ export function graphToSvelteFlow(
 
 	// Second pass: Extract positioned nodes from dagre
 	graph.nodes.forEach((node) => {
-		const dagreNode = dagreGraph.node(node.id) as any;
-		const ports = dagreNode.ports as { inputs: PortSpec[]; outputs: PortSpec[] };
+		const dagreNode = dagreGraph.node(node.id) as DagreNode;
+		const ports = dagreNode.ports;
 
 		nodes.push({
 			id: node.id,
