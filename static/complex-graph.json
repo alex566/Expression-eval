@@ -1,54 +1,89 @@
 {
 	"nodes": [
 		{
-			"id": "start",
-			"type": "Start",
+			"id": "value_x",
+			"type": "Value",
 			"data": {
-				"value": {
-					"x": 5,
-					"y": 10,
-					"z": 3
-				}
+				"value": 5
+			}
+		},
+		{
+			"id": "value_2",
+			"type": "Value",
+			"data": {
+				"value": 2
+			}
+		},
+		{
+			"id": "value_y",
+			"type": "Value",
+			"data": {
+				"value": 10
+			}
+		},
+		{
+			"id": "value_3",
+			"type": "Value",
+			"data": {
+				"value": 3
+			}
+		},
+		{
+			"id": "value_z",
+			"type": "Value",
+			"data": {
+				"value": 3
+			}
+		},
+		{
+			"id": "value_5",
+			"type": "Value",
+			"data": {
+				"value": 5
 			}
 		},
 		{
 			"id": "add1",
 			"type": "Add",
-			"data": {
-				"amount": 2
-			}
+			"data": {}
 		},
 		{
 			"id": "multiply",
 			"type": "Multiply",
-			"data": {
-				"factor": 3
-			}
+			"data": {}
 		},
 		{
 			"id": "subtract",
 			"type": "Subtract",
-			"data": {
-				"amount": 5
-			}
+			"data": {}
 		},
 		{
-			"id": "collect",
-			"type": "Collect",
+			"id": "output",
+			"type": "Output",
 			"data": {
-				"inputs": ["result1", "result2", "result3"]
+				"outputs": ["result1", "result2", "result3"]
 			}
 		}
 	],
 	"edges": [
 		{
 			"from": {
-				"node": "start",
-				"port": "x"
+				"node": "value_x",
+				"port": "out"
 			},
 			"to": {
 				"node": "add1",
-				"port": "in"
+				"port": "in0"
+			}
+		},
+		{
+			"from": {
+				"node": "value_2",
+				"port": "out"
+			},
+			"to": {
+				"node": "add1",
+				"port": "in1"
 			}
 		},
 		{
@@ -57,18 +92,28 @@
 				"port": "out"
 			},
 			"to": {
-				"node": "collect",
+				"node": "output",
 				"port": "result1"
 			}
 		},
 		{
 			"from": {
-				"node": "start",
-				"port": "y"
+				"node": "value_y",
+				"port": "out"
 			},
 			"to": {
 				"node": "multiply",
-				"port": "in"
+				"port": "in0"
+			}
+		},
+		{
+			"from": {
+				"node": "value_3",
+				"port": "out"
+			},
+			"to": {
+				"node": "multiply",
+				"port": "in1"
 			}
 		},
 		{
@@ -77,18 +122,28 @@
 				"port": "out"
 			},
 			"to": {
-				"node": "collect",
+				"node": "output",
 				"port": "result2"
 			}
 		},
 		{
 			"from": {
-				"node": "start",
-				"port": "z"
+				"node": "value_z",
+				"port": "out"
 			},
 			"to": {
 				"node": "subtract",
-				"port": "in"
+				"port": "in0"
+			}
+		},
+		{
+			"from": {
+				"node": "value_5",
+				"port": "out"
+			},
+			"to": {
+				"node": "subtract",
+				"port": "in1"
 			}
 		},
 		{
@@ -97,7 +152,7 @@
 				"port": "out"
 			},
 			"to": {
-				"node": "collect",
+				"node": "output",
 				"port": "result3"
 			}
 		}

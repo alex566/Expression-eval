@@ -1,39 +1,51 @@
 {
 	"nodes": [
 		{
-			"id": "start",
-			"type": "Start",
+			"id": "value1",
+			"type": "Value",
 			"data": {
-				"value": {
-					"A": 10,
-					"B": 20
-				}
+				"value": 10
+			}
+		},
+		{
+			"id": "value2",
+			"type": "Value",
+			"data": {
+				"value": 5
 			}
 		},
 		{
 			"id": "add",
 			"type": "Add",
-			"data": {
-				"amount": 5
-			}
+			"data": {}
 		},
 		{
-			"id": "collect",
-			"type": "Collect",
+			"id": "output",
+			"type": "Output",
 			"data": {
-				"inputs": ["result"]
+				"outputs": ["result"]
 			}
 		}
 	],
 	"edges": [
 		{
 			"from": {
-				"node": "start",
-				"port": "A"
+				"node": "value1",
+				"port": "out"
 			},
 			"to": {
 				"node": "add",
-				"port": "in"
+				"port": "in0"
+			}
+		},
+		{
+			"from": {
+				"node": "value2",
+				"port": "out"
+			},
+			"to": {
+				"node": "add",
+				"port": "in1"
 			}
 		},
 		{
@@ -42,7 +54,7 @@
 				"port": "out"
 			},
 			"to": {
-				"node": "collect",
+				"node": "output",
 				"port": "result"
 			}
 		}

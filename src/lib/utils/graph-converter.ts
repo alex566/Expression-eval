@@ -6,12 +6,13 @@ import { nodeRegistry } from '../dataflow/registry';
  * Determine input and output ports for a node based on its type
  * Returns PortSpec arrays from the node definition, or creates fallback PortSpec objects
  * If inferredTypes are provided, updates the port types with inferred runtime types
- * Special handling for Start and Output nodes to create dynamic ports based on data
+ * Special handling for Value, Output nodes and dynamic nodes to create ports based on data/edges
  */
 function getNodePorts(
 	nodeType: string, 
 	nodeId: string,
 	nodeData: Record<string, any>,
+	edges: Array<{ from: { node: string; port: string }; to: { node: string; port: string } }>,
 	inferredTypes?: Record<string, InferredTypeInfo>
 ): { inputs: PortSpec[]; outputs: PortSpec[] } {
 	// Get ports from the node definition in the registry
@@ -19,42 +20,41 @@ function getNodePorts(
 	let inputs: PortSpec[] = [];
 	let outputs: PortSpec[] = [];
 
-	// Special handling for Start node - create outputs based on input data
-	if (nodeType === 'Start') {
-		const value = nodeData.value || {};
-		if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-			// Create output port for each property in the value object
-			outputs = Object.keys(value).map(key => ({ name: key, type: 'any' as const }));
-		} else {
-			// Single output for non-object values
-			outputs = [{ name: 'out', type: 'any' as const }];
-		}
+	// Special handling for Value node - single output
+	if (nodeType === 'Value') {
+		outputs = [{ name: 'out', type: 'any' as const }];
 	}
 	// Special handling for Output node - create inputs based on configuration
 	else if (nodeType === 'Output') {
 		const outputNames = nodeData.outputs || ['output'];
 		inputs = outputNames.map((name: string) => ({ name, type: 'any' as const }));
 	}
-	// For Collect node, create inputs based on configuration
-	else if (nodeType === 'Collect') {
-		const inputNames = nodeData.inputs || ['result'];
-		inputs = inputNames.map((name: string) => ({ name, type: 'any' as const }));
-		outputs = [{ name: 'out', type: 'object' as const }];
-	}
 	// Standard node - use definition
 	else if (definition?.inputs && definition?.outputs) {
 		inputs = definition.inputs.map(p => ({ ...p }));
 		outputs = definition.outputs.map(p => ({ ...p }));
+		
+		// If inputs or outputs are empty (dynamic nodes), detect from edges
+		if (inputs.length === 0) {
+			// Find all edges targeting this node and extract unique port names
+			const inputPorts = new Set<string>();
+			edges.forEach(edge => {
+				if (edge.to.node === nodeId) {
+					inputPorts.add(edge.to.port);
+				}
+			});
+			inputs = Array.from(inputPorts).sort().map(name => ({ name, type: 'any' as const }));
+		}
+		
+		if (outputs.length === 0 && nodeType !== 'Output') {
+			// For nodes with no outputs defined, assume 'out' port
+			outputs = [{ name: 'out', type: 'any' as const }];
+		}
 	} else {
 		// Fallback to hardcoded configs if not found in registry (for backward compatibility)
 		const portConfigs: Record<string, { inputs: string[]; outputs: string[] }> = {
-			Start: { inputs: [], outputs: [] }, // Handled specially above
+			Value: { inputs: [], outputs: ['out'] },
 			Output: { inputs: [], outputs: [] }, // Handled specially above
-			Collect: { inputs: ['result'], outputs: ['out'] }, // Has special handling above
-			Add: { inputs: ['in'], outputs: ['out'] },
-			Subtract: { inputs: ['in'], outputs: ['out'] },
-			Multiply: { inputs: ['in'], outputs: ['out'] },
-			Divide: { inputs: ['in'], outputs: ['out'] },
 			If: { inputs: ['condition', 'true', 'false'], outputs: ['out'] },
 			Compare: { inputs: ['a', 'b'], outputs: ['out'] },
 			ForEach: { inputs: ['array'], outputs: ['out', 'count'] },
@@ -166,7 +166,7 @@ export function graphToSvelteFlow(
 		const yOffset = (counter - (totalNodesInLevel - 1) / 2) * verticalSpacing;
 
 		const definition = nodeRegistry.get(node.type);
-		const ports = getNodePorts(node.type, node.id, node.data, inferredTypes);
+		const ports = getNodePorts(node.type, node.id, node.data, graph.edges, inferredTypes);
 
 		// Use ports directly since getNodePorts now always returns PortSpec arrays
 		nodes.push({
