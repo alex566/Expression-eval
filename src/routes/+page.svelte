@@ -124,15 +124,15 @@
 		<div class="toolbar">
 			<div class="graph-selector">
 				<label for="graph-select">Load Graph:</label>
-				<select id="graph-select" bind:value={selectedGraph} onchange={handleGraphChange}>
+				<select id="graph-select" bind:value={selectedGraph} on:change={handleGraphChange}>
 					<option value="sample">Sample Graph</option>
 					<option value="complex">Complex Graph</option>
 					<option value="dates">Date Operations</option>
 				</select>
 			</div>
 			<div class="toolbar-buttons">
-				<button onclick={validateGraph}>Validate Graph</button>
-				<button onclick={evaluateGraph}>Evaluate Graph</button>
+				<button on:click={validateGraph}>Validate Graph</button>
+				<button on:click={evaluateGraph}>Evaluate Graph</button>
 			</div>
 		</div>
 
