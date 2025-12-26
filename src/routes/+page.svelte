@@ -120,7 +120,24 @@
 	{:else if error}
 		<div class="error">Error: {error}</div>
 	{:else}
+		<!-- Toolbar with graph picker -->
+		<div class="toolbar">
+			<div class="graph-selector">
+				<label for="graph-select">Load Graph:</label>
+				<select id="graph-select" bind:value={selectedGraph} on:change={handleGraphChange}>
+					<option value="sample">Sample Graph</option>
+					<option value="complex">Complex Graph</option>
+					<option value="dates">Date Operations</option>
+				</select>
+			</div>
+			<div class="toolbar-buttons">
+				<button on:click={validateGraph}>Validate Graph</button>
+				<button on:click={evaluateGraph}>Evaluate Graph</button>
+			</div>
+		</div>
+
 		<div class="content">
+			<!-- Graph visualization -->
 			<div class="graph-container">
 				<h2>Graph Visualization</h2>
 				<div class="flow">
@@ -131,20 +148,8 @@
 				</div>
 			</div>
 
+			<!-- Output information -->
 			<div class="sidebar">
-				<h2>Controls</h2>
-				
-				<div class="graph-selector">
-					<label for="graph-select">Load Graph:</label>
-					<select id="graph-select" bind:value={selectedGraph} onchange={handleGraphChange}>
-						<option value="sample">Sample Graph</option>
-						<option value="complex">Complex Graph</option>
-						<option value="dates">Date Operations</option>
-					</select>
-				</div>
-
-				<button onclick={validateGraph}>Validate Graph</button>
-				<button onclick={evaluateGraph}>Evaluate Graph</button>
 
 				{#if validationResult}
 					<div class="results">
@@ -218,6 +223,48 @@
 		flex-direction: column;
 	}
 
+	.toolbar {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		padding: 1rem;
+		background: #f3f4f6;
+		border-bottom: 1px solid #e5e7eb;
+		flex-shrink: 0;
+	}
+
+	.toolbar-buttons {
+		display: flex;
+		gap: 0.5rem;
+	}
+
+	.toolbar-buttons button {
+		flex: 1;
+		margin-bottom: 0;
+	}
+
+	/* Mobile-first: stack toolbar elements */
+	@media (min-width: 640px) {
+		.toolbar {
+			flex-direction: row;
+			align-items: center;
+		}
+
+		.toolbar .graph-selector {
+			flex: 1;
+			margin-bottom: 0;
+		}
+
+		.toolbar-buttons {
+			flex-shrink: 0;
+		}
+
+		.toolbar-buttons button {
+			width: auto;
+			padding: 0.5rem 1rem;
+		}
+	}
+
 	.loading,
 	.error {
 		display: flex;
@@ -233,8 +280,10 @@
 
 	.content {
 		display: flex;
-		height: 100%;
+		flex: 1;
 		overflow: hidden;
+		flex-direction: column;
+		min-height: 0;
 	}
 
 	.graph-container {
@@ -242,6 +291,7 @@
 		display: flex;
 		flex-direction: column;
 		min-width: 0;
+		min-height: 300px;
 	}
 
 	.graph-container h2 {
@@ -249,22 +299,48 @@
 		padding: 1rem;
 		background: #f3f4f6;
 		border-bottom: 1px solid #e5e7eb;
+		display: none;
 	}
 
 	.flow {
 		flex: 1;
-		min-height: 0;
+		min-height: 300px;
 	}
 
 	.sidebar {
-		width: 400px;
+		width: 100%;
 		background: #f9fafb;
-		border-left: 1px solid #e5e7eb;
+		border-top: 1px solid #e5e7eb;
 		overflow-y: auto;
 		padding: 1rem;
+		flex-shrink: 0;
 	}
 
-	.sidebar h2,
+	/* Desktop layout */
+	@media (min-width: 768px) {
+		.content {
+			flex-direction: row;
+		}
+
+		.graph-container {
+			min-height: 0;
+		}
+
+		.graph-container h2 {
+			display: block;
+		}
+
+		.flow {
+			min-height: 0;
+		}
+
+		.sidebar {
+			width: 400px;
+			border-top: none;
+			border-left: 1px solid #e5e7eb;
+		}
+	}
+
 	.sidebar h3,
 	.sidebar h4 {
 		margin-top: 0;
@@ -272,11 +348,15 @@
 	}
 
 	.graph-selector {
-		margin-bottom: 1rem;
+		margin-bottom: 0.5rem;
 		padding: 0.75rem;
 		background: white;
 		border-radius: 0.375rem;
 		border: 1px solid #e5e7eb;
+	}
+
+	.toolbar .graph-selector {
+		margin-bottom: 0;
 	}
 
 	.graph-selector label {
