@@ -9,6 +9,7 @@
 	import { graphToSvelteFlow } from '$lib/utils/graph-converter';
 	import CustomNode from '$lib/components/CustomNode.svelte';
 	import EvaluationReport from '$lib/components/EvaluationReport.svelte';
+	import { GRAPHS } from '$lib/data/graphs';
 
 	let nodes: Node[] = [];
 	let edges: Edge[] = [];
@@ -17,7 +18,7 @@
 	let evaluationResult: EvaluationResult | null = null;
 	let isLoading = true;
 	let error = '';
-	let selectedGraph = 'sample-graph.json';
+	let selectedGraph = 'sample';
 
 	// Register custom node types for SvelteFlow
 	const nodeTypes = {
@@ -30,7 +31,7 @@
 			registerAllNodes();
 
 			// Load sample graph
-			await loadGraph(selectedGraph);
+			loadGraph(selectedGraph);
 
 			isLoading = false;
 		} catch (err) {
@@ -39,35 +40,33 @@
 		}
 	});
 
-	async function loadGraph(filename: string) {
+	function loadGraph(graphKey: string) {
 		try {
-			const response = await fetch(`/${filename}`);
-			if (!response.ok) {
-				throw new Error(`Failed to load ${filename}`);
+			// Load graph from embedded data
+			graph = GRAPHS[graphKey];
+			if (!graph) {
+				throw new Error(`Graph '${graphKey}' not found`);
 			}
-
-			graph = await response.json();
 
 			// Reset results when loading new graph
 			validationResult = null;
 			evaluationResult = null;
 
 			// Convert to SvelteFlow format
-			if (graph) {
-				const flow = graphToSvelteFlow(graph);
-				nodes = flow.nodes;
-				edges = flow.edges;
-			}
+			const flow = graphToSvelteFlow(graph);
+			nodes = flow.nodes;
+			edges = flow.edges;
+
 			error = '';
 		} catch (err) {
 			error = err instanceof Error ? err.message : String(err);
 		}
 	}
 
-	async function handleGraphChange(event: Event) {
+	function handleGraphChange(event: Event) {
 		const target = event.target as HTMLSelectElement;
 		selectedGraph = target.value;
-		await loadGraph(selectedGraph);
+		loadGraph(selectedGraph);
 	}
 
 	async function validateGraph() {
@@ -138,8 +137,8 @@
 				<div class="graph-selector">
 					<label for="graph-select">Load Graph:</label>
 					<select id="graph-select" bind:value={selectedGraph} onchange={handleGraphChange}>
-						<option value="sample-graph.json">Sample Graph</option>
-						<option value="complex-graph.json">Complex Graph</option>
+						<option value="sample">Sample Graph</option>
+						<option value="complex">Complex Graph</option>
 					</select>
 				</div>
 
