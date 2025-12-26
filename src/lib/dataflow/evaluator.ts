@@ -4,15 +4,18 @@ import type {
 	GraphEdge,
 	NodeContext,
 	EvaluationResult,
-	NodeRegistry
+	NodeRegistry,
+	DataType,
+	InferredTypeInfo
 } from './types';
 import { isTypeCompatible, getValueType } from './types';
 
 /**
- * Graph evaluator - executes the dataflow graph
+ * Graph evaluator - executes the dataflow graph with type inference
  */
 export class GraphEvaluator {
 	private nodeValues: Map<string, Map<string, any>> = new Map();
+	private inferredTypes: Map<string, InferredTypeInfo> = new Map();
 	private executedNodes: Set<string> = new Set();
 
 	constructor(
@@ -26,6 +29,7 @@ export class GraphEvaluator {
 	async evaluate(): Promise<EvaluationResult> {
 		try {
 			this.nodeValues.clear();
+			this.inferredTypes.clear();
 			this.executedNodes.clear();
 
 			// Find start nodes (nodes with no incoming edges)
@@ -42,9 +46,16 @@ export class GraphEvaluator {
 				}
 			}
 
+			// Convert inferred types map to record for result
+			const inferredTypesRecord: Record<string, InferredTypeInfo> = {};
+			for (const [key, typeInfo] of this.inferredTypes.entries()) {
+				inferredTypesRecord[key] = typeInfo;
+			}
+
 			return {
 				success: true,
-				outputs
+				outputs,
+				inferredTypes: inferredTypesRecord
 			};
 		} catch (error) {
 			return {
@@ -100,6 +111,8 @@ export class GraphEvaluator {
 			this.nodeValues.set(node.id, new Map());
 		}
 
+		const definition = this.registry.get(node.type);
+
 		return {
 			getInputValue: (port: string) => {
 				const values = this.nodeValues.get(node.id);
@@ -108,9 +121,26 @@ export class GraphEvaluator {
 			setOutputValue: (port: string, value: any) => {
 				const values = this.nodeValues.get(node.id);
 				values?.set(port, value);
+				
+				// Infer and store type information
+				this.inferTypeForPort(node.id, port, value, definition?.outputs?.find(p => p.name === port)?.type);
 			},
 			getNodeData: () => node.data
 		};
+	}
+
+	/**
+	 * Infer type for a port based on its value and store type information
+	 */
+	private inferTypeForPort(nodeId: string, port: string, value: any, declaredType?: DataType): void {
+		const inferredType = getValueType(value);
+		const key = `${nodeId}.${port}`;
+		
+		this.inferredTypes.set(key, {
+			inferredType,
+			declaredType,
+			isCompatible: declaredType ? isTypeCompatible(value, declaredType) : true
+		});
 	}
 
 	/**
@@ -157,6 +187,11 @@ export class GraphEvaluator {
 				}
 				const targetValues = this.nodeValues.get(edge.to.node);
 				targetValues?.set(`input.${edge.to.port}`, value);
+
+				// Infer type for input port
+				const targetDefinition2 = this.registry.get(targetNode.type);
+				const inputPortSpec = targetDefinition2?.inputs?.find(p => p.name === edge.to.port);
+				this.inferTypeForPort(edge.to.node, `input.${edge.to.port}`, value, inputPortSpec?.type);
 
 				// Execute the target node (reusing targetNode from above)
 				await this.executeNode(targetNode);

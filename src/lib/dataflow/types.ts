@@ -88,11 +88,25 @@ export interface NodeRegistry {
 }
 
 /**
+ * Inferred type information for a port
+ */
+export interface InferredTypeInfo {
+	/** The actual inferred type based on runtime value */
+	inferredType: DataType;
+	/** The declared type constraint (if any) */
+	declaredType?: DataType;
+	/** Whether the inferred type is compatible with declared type */
+	isCompatible: boolean;
+}
+
+/**
  * Evaluation result
  */
 export interface EvaluationResult {
 	success: boolean;
 	outputs: Record<string, any>;
+	/** Inferred types for each port (node.port -> type info) */
+	inferredTypes?: Record<string, InferredTypeInfo>;
 	error?: string;
 }
 

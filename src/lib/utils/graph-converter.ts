@@ -1,49 +1,78 @@
 import type { Node, Edge } from '@xyflow/svelte';
-import type { Graph, PortSpec } from '../dataflow/types';
+import type { Graph, PortSpec, InferredTypeInfo } from '../dataflow/types';
 import { nodeRegistry } from '../dataflow/registry';
 
 /**
  * Determine input and output ports for a node based on its type
  * Returns PortSpec arrays from the node definition, or creates fallback PortSpec objects
+ * If inferredTypes are provided, updates the port types with inferred runtime types
  */
-function getNodePorts(nodeType: string): { inputs: PortSpec[]; outputs: PortSpec[] } {
+function getNodePorts(
+	nodeType: string, 
+	nodeId: string, 
+	inferredTypes?: Record<string, InferredTypeInfo>
+): { inputs: PortSpec[]; outputs: PortSpec[] } {
 	// Get ports from the node definition in the registry
 	const definition = nodeRegistry.get(nodeType);
+	let inputs: PortSpec[] = [];
+	let outputs: PortSpec[] = [];
+
 	if (definition?.inputs && definition?.outputs) {
-		return {
-			inputs: definition.inputs,
-			outputs: definition.outputs
+		inputs = definition.inputs.map(p => ({ ...p }));
+		outputs = definition.outputs.map(p => ({ ...p }));
+	} else {
+		// Fallback to hardcoded configs if not found in registry (for backward compatibility)
+		const portConfigs: Record<string, { inputs: string[]; outputs: string[] }> = {
+			Start: { inputs: [], outputs: ['A', 'B'] },
+			Add: { inputs: ['in'], outputs: ['out'] },
+			Subtract: { inputs: ['in'], outputs: ['out'] },
+			Multiply: { inputs: ['in'], outputs: ['out'] },
+			Divide: { inputs: ['in'], outputs: ['out'] },
+			Collect: { inputs: ['result'], outputs: ['out'] },
+			Output: { inputs: ['in'], outputs: [] },
+			If: { inputs: ['condition', 'true', 'false'], outputs: ['out'] },
+			Compare: { inputs: ['a', 'b'], outputs: ['out'] },
+			ForEach: { inputs: ['array'], outputs: ['out', 'count'] },
+			Map: { inputs: ['array'], outputs: ['out'] }
 		};
+
+		const config = portConfigs[nodeType] || { inputs: ['in'], outputs: ['out'] };
+		inputs = config.inputs.map(name => ({ name, type: 'any' as const }));
+		outputs = config.outputs.map(name => ({ name, type: 'any' as const }));
 	}
 
-	// Fallback to hardcoded configs if not found in registry (for backward compatibility)
-	// These will be converted to PortSpec objects with 'any' type
-	const portConfigs: Record<string, { inputs: string[]; outputs: string[] }> = {
-		Start: { inputs: [], outputs: ['A', 'B'] }, // Start node outputs multiple ports
-		Add: { inputs: ['in'], outputs: ['out'] },
-		Subtract: { inputs: ['in'], outputs: ['out'] },
-		Multiply: { inputs: ['in'], outputs: ['out'] },
-		Divide: { inputs: ['in'], outputs: ['out'] },
-		Collect: { inputs: ['result'], outputs: ['out'] },
-		Output: { inputs: ['in'], outputs: [] },
-		If: { inputs: ['condition', 'true', 'false'], outputs: ['out'] },
-		Compare: { inputs: ['a', 'b'], outputs: ['out'] },
-		ForEach: { inputs: ['array'], outputs: ['out', 'count'] },
-		Map: { inputs: ['array'], outputs: ['out'] }
-	};
+	// Override with inferred types if available
+	if (inferredTypes) {
+		inputs = inputs.map(port => {
+			const key = `${nodeId}.input.${port.name}`;
+			const inferred = inferredTypes[key];
+			return {
+				name: port.name,
+				type: inferred?.inferredType || port.type
+			};
+		});
 
-	const config = portConfigs[nodeType] || { inputs: ['in'], outputs: ['out'] };
-	// Convert string arrays to PortSpec arrays
-	return {
-		inputs: config.inputs.map(name => ({ name, type: 'any' as const })),
-		outputs: config.outputs.map(name => ({ name, type: 'any' as const }))
-	};
+		outputs = outputs.map(port => {
+			const key = `${nodeId}.${port.name}`;
+			const inferred = inferredTypes[key];
+			return {
+				name: port.name,
+				type: inferred?.inferredType || port.type
+			};
+		});
+	}
+
+	return { inputs, outputs };
 }
 
 /**
  * Convert dataflow graph to SvelteFlow format with horizontal layout
+ * Optionally accepts inferred types to display runtime type information
  */
-export function graphToSvelteFlow(graph: Graph): { nodes: Node[]; edges: Edge[] } {
+export function graphToSvelteFlow(
+	graph: Graph, 
+	inferredTypes?: Record<string, InferredTypeInfo>
+): { nodes: Node[]; edges: Edge[] } {
 	const nodes: Node[] = [];
 	const edges: Edge[] = [];
 
@@ -112,7 +141,7 @@ export function graphToSvelteFlow(graph: Graph): { nodes: Node[]; edges: Edge[] 
 		const yOffset = (counter - (totalNodesInLevel - 1) / 2) * verticalSpacing;
 
 		const definition = nodeRegistry.get(node.type);
-		const ports = getNodePorts(node.type);
+		const ports = getNodePorts(node.type, node.id, inferredTypes);
 
 		// Use ports directly since getNodePorts now always returns PortSpec arrays
 		nodes.push({

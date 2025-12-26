@@ -58,6 +58,13 @@
 			const evaluator = new GraphEvaluator(graph, nodeRegistry);
 			evaluationResult = await evaluator.evaluate();
 			error = '';
+
+			// Update nodes with inferred types for visualization
+			if (evaluationResult.success && evaluationResult.inferredTypes && graph) {
+				const flow = graphToSvelteFlow(graph, evaluationResult.inferredTypes);
+				nodes = flow.nodes;
+				edges = flow.edges;
+			}
 		} catch (err) {
 			error = err instanceof Error ? err.message : String(err);
 		}
@@ -94,6 +101,11 @@
 
 						{#if evaluationResult.error}
 							<div class="error-message">{evaluationResult.error}</div>
+						{/if}
+
+						{#if evaluationResult.inferredTypes}
+							<h4>Inferred Types:</h4>
+							<pre>{JSON.stringify(evaluationResult.inferredTypes, null, 2)}</pre>
 						{/if}
 
 						<h4>Outputs:</h4>
