@@ -4,11 +4,12 @@ import type {
 	GraphEdge,
 	NodeContext,
 	EvaluationResult,
+	ValidationResult,
 	NodeRegistry,
 	DataType,
 	InferredTypeInfo
 } from './types';
-import { isTypeCompatible, getValueType } from './types';
+import { isTypeCompatible, getValueType, areTypesCompatible } from './types';
 
 /**
  * Graph evaluator - executes the dataflow graph with type inference
@@ -64,6 +65,217 @@ export class GraphEvaluator {
 				error: error instanceof Error ? error.message : String(error)
 			};
 		}
+	}
+
+	/**
+	 * Validate the graph structure and perform type checking with type inference
+	 * This does NOT execute the graph, only validates it
+	 */
+	async validate(): Promise<ValidationResult> {
+		const errors: string[] = [];
+		const warnings: string[] = [];
+		const inferredTypes: Record<string, InferredTypeInfo> = {};
+
+		try {
+			// 1. Check for basic graph structure issues
+			if (this.graph.nodes.length === 0) {
+				errors.push('Graph has no nodes');
+				return { success: false, errors, warnings, inferredTypes };
+			}
+
+			// 2. Check all nodes have valid types in registry
+			const nodeMap = new Map<string, GraphNode>();
+			for (const node of this.graph.nodes) {
+				nodeMap.set(node.id, node);
+				const definition = this.registry.get(node.type);
+				if (!definition) {
+					errors.push(`Node '${node.id}' has unknown type '${node.type}'`);
+				}
+			}
+
+			// 3. Check all edges reference valid nodes
+			for (const edge of this.graph.edges) {
+				if (!nodeMap.has(edge.from.node)) {
+					errors.push(`Edge references non-existent source node '${edge.from.node}'`);
+				}
+				if (!nodeMap.has(edge.to.node)) {
+					errors.push(`Edge references non-existent target node '${edge.to.node}'`);
+				}
+			}
+
+			// If we have basic errors, return early
+			if (errors.length > 0) {
+				return { success: false, errors, warnings, inferredTypes };
+			}
+
+			// 4. Check for cycles (basic cycle detection)
+			const cycleCheck = this.detectCycles();
+			if (cycleCheck.hasCycle) {
+				errors.push(`Graph contains cycles: ${cycleCheck.cycleDescription}`);
+			}
+
+			// 5. Infer types for Value nodes and constant data
+			for (const node of this.graph.nodes) {
+				const definition = this.registry.get(node.type);
+				if (!definition) continue;
+
+				// For Value nodes, infer type from the value
+				if (node.type === 'Value' && node.data.value !== undefined) {
+					const valueType = getValueType(node.data.value);
+					const outputPort = definition.outputs?.[0];
+					inferredTypes[`${node.id}.out`] = {
+						inferredType: valueType,
+						declaredType: outputPort?.type,
+						isCompatible: outputPort ? isTypeCompatible(node.data.value, outputPort.type) : true
+					};
+				}
+			}
+
+			// 6. Type check edges based on node definitions
+			for (const edge of this.graph.edges) {
+				const sourceNode = nodeMap.get(edge.from.node);
+				const targetNode = nodeMap.get(edge.to.node);
+				
+				if (!sourceNode || !targetNode) continue;
+
+				const sourceDefinition = this.registry.get(sourceNode.type);
+				const targetDefinition = this.registry.get(targetNode.type);
+
+				if (!sourceDefinition || !targetDefinition) continue;
+
+				// Get port specifications
+				const sourcePort = sourceDefinition.outputs?.find(p => p.name === edge.from.port);
+				const targetPort = targetDefinition.inputs?.find(p => p.name === edge.to.port);
+
+				// If we have inferred type for source, use it; otherwise use declared type
+				const sourceKey = `${edge.from.node}.${edge.from.port}`;
+				const sourceType = inferredTypes[sourceKey]?.inferredType || sourcePort?.type || 'any';
+				const targetType = targetPort?.type || 'any';
+
+				// Check type compatibility
+				if (!areTypesCompatible(sourceType, targetType)) {
+					errors.push(
+						`Type mismatch: cannot connect '${sourceNode.type}.${edge.from.port}' (${sourceType}) ` +
+						`to '${targetNode.type}.${edge.to.port}' (expected ${targetType})`
+					);
+				}
+
+				// Store inferred type information for the target input
+				inferredTypes[`${edge.to.node}.input.${edge.to.port}`] = {
+					inferredType: sourceType,
+					declaredType: targetType,
+					isCompatible: areTypesCompatible(sourceType, targetType)
+				};
+			}
+
+			// 7. Check for unreachable nodes (optional warning)
+			const reachableNodes = this.findReachableNodes();
+			for (const node of this.graph.nodes) {
+				if (!reachableNodes.has(node.id)) {
+					warnings.push(`Node '${node.id}' (${node.type}) is not reachable from any input`);
+				}
+			}
+
+			return {
+				success: errors.length === 0,
+				errors,
+				warnings,
+				inferredTypes
+			};
+		} catch (error) {
+			errors.push(error instanceof Error ? error.message : String(error));
+			return {
+				success: false,
+				errors,
+				warnings,
+				inferredTypes
+			};
+		}
+	}
+
+	/**
+	 * Detect cycles in the graph using DFS
+	 */
+	private detectCycles(): { hasCycle: boolean; cycleDescription: string } {
+		const visited = new Set<string>();
+		const recursionStack = new Set<string>();
+		const adjacency = new Map<string, string[]>();
+
+		// Build adjacency list
+		for (const node of this.graph.nodes) {
+			adjacency.set(node.id, []);
+		}
+		for (const edge of this.graph.edges) {
+			const neighbors = adjacency.get(edge.from.node) || [];
+			neighbors.push(edge.to.node);
+			adjacency.set(edge.from.node, neighbors);
+		}
+
+		// DFS helper
+		const dfs = (nodeId: string, path: string[]): string | null => {
+			visited.add(nodeId);
+			recursionStack.add(nodeId);
+			path.push(nodeId);
+
+			const neighbors = adjacency.get(nodeId) || [];
+			for (const neighbor of neighbors) {
+				if (!visited.has(neighbor)) {
+					const cycle = dfs(neighbor, [...path]);
+					if (cycle) return cycle;
+				} else if (recursionStack.has(neighbor)) {
+					// Found a cycle
+					const cycleStart = path.indexOf(neighbor);
+					return path.slice(cycleStart).concat(neighbor).join(' -> ');
+				}
+			}
+
+			recursionStack.delete(nodeId);
+			return null;
+		};
+
+		// Check each node
+		for (const node of this.graph.nodes) {
+			if (!visited.has(node.id)) {
+				const cycle = dfs(node.id, []);
+				if (cycle) {
+					return { hasCycle: true, cycleDescription: cycle };
+				}
+			}
+		}
+
+		return { hasCycle: false, cycleDescription: '' };
+	}
+
+	/**
+	 * Find all reachable nodes from start nodes
+	 */
+	private findReachableNodes(): Set<string> {
+		const reachable = new Set<string>();
+		const startNodes = this.findStartNodes();
+		const adjacency = new Map<string, string[]>();
+
+		// Build adjacency list
+		for (const node of this.graph.nodes) {
+			adjacency.set(node.id, []);
+		}
+		for (const edge of this.graph.edges) {
+			const neighbors = adjacency.get(edge.from.node) || [];
+			neighbors.push(edge.to.node);
+			adjacency.set(edge.from.node, neighbors);
+		}
+
+		// BFS from start nodes
+		const queue = [...startNodes.map(n => n.id)];
+		while (queue.length > 0) {
+			const current = queue.shift()!;
+			if (reachable.has(current)) continue;
+			
+			reachable.add(current);
+			const neighbors = adjacency.get(current) || [];
+			queue.push(...neighbors);
+		}
+
+		return reachable;
 	}
 
 	/**
