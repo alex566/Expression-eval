@@ -43,7 +43,7 @@ function getNodePorts(
 					inputPorts.add(edge.to.port);
 				}
 			});
-			inputs = Array.from(inputPorts).sort().map(name => ({ name, type: 'number' as const }));
+			inputs = Array.from(inputPorts).sort().map(name => ({ name, type: 'any' as const }));
 		}
 		
 		if (outputs.length === 0 && nodeType !== 'Output') {
