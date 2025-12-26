@@ -300,19 +300,25 @@ export class GraphEvaluator {
 			throw new Error(`Node type '${node.type}' not found in registry`);
 		}
 
-		// If node has outputs defined and all outputs are already set, skip execution
-		if (definition.outputs && definition.outputs.length > 0) {
-			const nodeValues = this.nodeValues.get(node.id);
-			if (nodeValues) {
-				const allOutputsSet = definition.outputs.every(output => 
-					nodeValues.has(output.name)
-				);
-				if (allOutputsSet) {
-					return;
-				}
+		// Check if all connected inputs are ready before executing
+		const incomingEdges = this.graph.edges.filter((edge) => edge.to.node === node.id);
+		const nodeValues = this.nodeValues.get(node.id);
+		
+		// If there are incoming edges, check that all connected inputs have values
+		if (incomingEdges.length > 0) {
+			const allInputsReady = incomingEdges.every(edge => {
+				const inputKey = `input.${edge.to.port}`;
+				return nodeValues?.has(inputKey);
+			});
+			
+			if (!allInputsReady) {
+				// Not all inputs are ready yet, skip execution
+				return;
 			}
-		} else if (this.executedNodes.has(node.id)) {
-			// For nodes without outputs (like Output node), use executedNodes set
+		}
+
+		// Check if already executed (for nodes without outputs)
+		if ((!definition.outputs || definition.outputs.length === 0) && this.executedNodes.has(node.id)) {
 			return;
 		}
 
