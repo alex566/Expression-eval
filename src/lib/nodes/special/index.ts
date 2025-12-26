@@ -104,50 +104,58 @@ export const AddDateNode: NodeDefinition = {
 	execute(context) {
 		const inputDate = context.getInputValue('date');
 		
-		// Only execute if date input is available
-		if (inputDate !== undefined && inputDate instanceof Date) {
-			// Clone the date to avoid mutation
-			const result = new Date(inputDate.getTime());
-			
-			// Add each time component if provided
-			const seconds = context.getInputValue('seconds');
-			if (seconds !== undefined) {
-				result.setSeconds(result.getSeconds() + Number(seconds));
-			}
-			
-			const minutes = context.getInputValue('minutes');
-			if (minutes !== undefined) {
-				result.setMinutes(result.getMinutes() + Number(minutes));
-			}
-			
-			const hours = context.getInputValue('hours');
-			if (hours !== undefined) {
-				result.setHours(result.getHours() + Number(hours));
-			}
-			
-			const days = context.getInputValue('days');
-			if (days !== undefined) {
-				result.setDate(result.getDate() + Number(days));
-			}
-			
-			const months = context.getInputValue('months');
-			if (months !== undefined) {
-				result.setMonth(result.getMonth() + Number(months));
-			}
-			
-			const years = context.getInputValue('years');
-			if (years !== undefined) {
-				result.setFullYear(result.getFullYear() + Number(years));
-			}
-			
-			context.setOutputValue('out', result);
+		// Skip execution if date input is not available yet
+		// The evaluator may call this node multiple times as inputs arrive
+		// We only execute when the required date input is present
+		if (inputDate === undefined) {
+			return;
 		}
+		
+		if (!(inputDate instanceof Date)) {
+			throw new Error('AddDate: date input must be a Date object');
+		}
+		
+		// Clone the date to avoid mutation
+		const result = new Date(inputDate.getTime());
+		
+		// Add each time component if provided
+		const seconds = context.getInputValue('seconds');
+		if (seconds !== undefined) {
+			result.setSeconds(result.getSeconds() + Number(seconds));
+		}
+		
+		const minutes = context.getInputValue('minutes');
+		if (minutes !== undefined) {
+			result.setMinutes(result.getMinutes() + Number(minutes));
+		}
+		
+		const hours = context.getInputValue('hours');
+		if (hours !== undefined) {
+			result.setHours(result.getHours() + Number(hours));
+		}
+		
+		const days = context.getInputValue('days');
+		if (days !== undefined) {
+			result.setDate(result.getDate() + Number(days));
+		}
+		
+		const months = context.getInputValue('months');
+		if (months !== undefined) {
+			result.setMonth(result.getMonth() + Number(months));
+		}
+		
+		const years = context.getInputValue('years');
+		if (years !== undefined) {
+			result.setFullYear(result.getFullYear() + Number(years));
+		}
+		
+		context.setOutputValue('out', result);
 	}
 };
 
 /**
  * FormatDate node - converts a Date to a string
- * Supports different format types: 'iso', 'locale', 'timestamp'
+ * Supports different format types: 'iso', 'locale', 'date', 'time', 'timestamp'
  */
 export const FormatDateNode: NodeDefinition = {
 	type: 'FormatDate',
@@ -164,31 +172,39 @@ export const FormatDateNode: NodeDefinition = {
 		const date = context.getInputValue('date');
 		const format = context.getInputValue('format') || 'iso';
 		
-		// Only execute if date input is available
-		if (date !== undefined && date instanceof Date) {
-			let result: string;
-			
-			switch (format) {
-				case 'iso':
-					result = date.toISOString();
-					break;
-				case 'locale':
-					result = date.toLocaleString();
-					break;
-				case 'date':
-					result = date.toDateString();
-					break;
-				case 'time':
-					result = date.toTimeString();
-					break;
-				case 'timestamp':
-					result = date.getTime().toString();
-					break;
-				default:
-					result = date.toISOString();
-			}
-			
-			context.setOutputValue('out', result);
+		// Skip execution if date input is not available yet
+		// The evaluator may call this node multiple times as inputs arrive
+		// We only execute when the required date input is present
+		if (date === undefined) {
+			return;
 		}
+		
+		if (!(date instanceof Date)) {
+			throw new Error('FormatDate: date input must be a Date object');
+		}
+		
+		let result: string;
+		
+		switch (format) {
+			case 'iso':
+				result = date.toISOString();
+				break;
+			case 'locale':
+				result = date.toLocaleString();
+				break;
+			case 'date':
+				result = date.toDateString();
+				break;
+			case 'time':
+				result = date.toTimeString();
+				break;
+			case 'timestamp':
+				result = date.getTime().toString();
+				break;
+			default:
+				result = date.toISOString();
+		}
+		
+		context.setOutputValue('out', result);
 	}
 };

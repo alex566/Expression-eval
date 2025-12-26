@@ -139,6 +139,7 @@
 					<select id="graph-select" bind:value={selectedGraph} onchange={handleGraphChange}>
 						<option value="sample">Sample Graph</option>
 						<option value="complex">Complex Graph</option>
+						<option value="dates">Date Operations</option>
 					</select>
 				</div>
 
