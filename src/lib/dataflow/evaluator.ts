@@ -150,17 +150,15 @@ export class GraphEvaluator {
 						);
 					}
 				}
-			}
 
-			// Set the value as input to the target node
-			if (!this.nodeValues.has(edge.to.node)) {
-				this.nodeValues.set(edge.to.node, new Map());
-			}
-			const targetValues = this.nodeValues.get(edge.to.node);
-			targetValues?.set(`input.${edge.to.port}`, value);
+				// Set the value as input to the target node
+				if (!this.nodeValues.has(edge.to.node)) {
+					this.nodeValues.set(edge.to.node, new Map());
+				}
+				const targetValues = this.nodeValues.get(edge.to.node);
+				targetValues?.set(`input.${edge.to.port}`, value);
 
-			// Execute the target node
-			if (targetNode) {
+				// Execute the target node (reusing targetNode from above)
 				await this.executeNode(targetNode);
 			}
 		}

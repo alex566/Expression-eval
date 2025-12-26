@@ -131,7 +131,8 @@ export function isTypeCompatible(value: any, expectedType: DataType): boolean {
 
 	const actualType = getValueType(value);
 
-	// Handle union types
+	// Handle union types (assumes ' | ' separator format as defined in DataType)
+	// Union types must be defined with exact spacing: "type1 | type2"
 	if (expectedType.includes(' | ')) {
 		const types = expectedType.split(' | ').map(t => t.trim() as DataType);
 		return types.some(type => actualType === type || type === 'any');
@@ -142,6 +143,8 @@ export function isTypeCompatible(value: any, expectedType: DataType): boolean {
 
 /**
  * Format type for display (e.g., "number | string" -> "number | string")
+ * Currently returns the type as-is. This function exists for future extensibility
+ * to support custom type formatting or pretty-printing if needed.
  */
 export function formatType(type: DataType): string {
 	return type;
