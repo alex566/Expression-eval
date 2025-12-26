@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { SvelteFlow, Controls, Background, type Node, type Edge } from '@xyflow/svelte';
 	import '@xyflow/svelte/dist/style.css';
-	import type { Graph, EvaluationResult } from '$lib/dataflow/types';
+	import type { Graph, EvaluationResult, ValidationResult } from '$lib/dataflow/types';
 	import { GraphEvaluator } from '$lib/dataflow/evaluator';
 	import { nodeRegistry } from '$lib/dataflow/registry';
 	import { registerAllNodes } from '$lib/nodes';
@@ -12,6 +12,7 @@
 	let nodes: Node[] = [];
 	let edges: Edge[] = [];
 	let graph: Graph | null = null;
+	let validationResult: ValidationResult | null = null;
 	let evaluationResult: EvaluationResult | null = null;
 	let isLoading = true;
 	let error = '';
@@ -47,6 +48,28 @@
 			isLoading = false;
 		}
 	});
+
+	async function validateGraph() {
+		if (!graph) {
+			error = 'No graph loaded';
+			return;
+		}
+
+		try {
+			const evaluator = new GraphEvaluator(graph, nodeRegistry);
+			validationResult = await evaluator.validate();
+			error = '';
+
+			// Update nodes with inferred types for visualization
+			if (validationResult.success && validationResult.inferredTypes && graph) {
+				const flow = graphToSvelteFlow(graph, validationResult.inferredTypes);
+				nodes = flow.nodes;
+				edges = flow.edges;
+			}
+		} catch (err) {
+			error = err instanceof Error ? err.message : String(err);
+		}
+	}
 
 	async function evaluateGraph() {
 		if (!graph) {
@@ -90,7 +113,40 @@
 
 			<div class="sidebar">
 				<h2>Controls</h2>
+				<button onclick={validateGraph}>Validate Graph</button>
 				<button onclick={evaluateGraph}>Evaluate Graph</button>
+
+				{#if validationResult}
+					<div class="results">
+						<h3>Validation Result</h3>
+						<div class="result-status" class:success={validationResult.success} class:failure={!validationResult.success}>
+							Status: {validationResult.success ? 'Valid' : 'Invalid'}
+						</div>
+
+						{#if validationResult.errors.length > 0}
+							<div class="error-list">
+								<h4>Errors:</h4>
+								{#each validationResult.errors as err}
+									<div class="error-item">{err}</div>
+								{/each}
+							</div>
+						{/if}
+
+						{#if validationResult.warnings.length > 0}
+							<div class="warning-list">
+								<h4>Warnings:</h4>
+								{#each validationResult.warnings as warn}
+									<div class="warning-item">{warn}</div>
+								{/each}
+							</div>
+						{/if}
+
+						{#if validationResult.success && validationResult.inferredTypes && Object.keys(validationResult.inferredTypes).length > 0}
+							<h4>Inferred Types:</h4>
+							<pre>{JSON.stringify(validationResult.inferredTypes, null, 2)}</pre>
+						{/if}
+					</div>
+				{/if}
 
 				{#if evaluationResult}
 					<div class="results">
@@ -210,6 +266,7 @@
 		font-size: 1rem;
 		cursor: pointer;
 		transition: background 0.2s;
+		margin-bottom: 0.5rem;
 	}
 
 	button:hover {
@@ -236,12 +293,46 @@
 		color: #166534;
 	}
 
+	.result-status.failure {
+		background: #fee2e2;
+		color: #991b1b;
+	}
+
 	.error-message {
 		padding: 0.5rem;
 		background: #fee2e2;
 		color: #991b1b;
 		border-radius: 0.25rem;
 		margin-bottom: 0.5rem;
+	}
+
+	.error-list,
+	.warning-list {
+		margin-top: 0.5rem;
+	}
+
+	.error-list h4,
+	.warning-list h4 {
+		margin-bottom: 0.5rem;
+		font-size: 0.9rem;
+	}
+
+	.error-item {
+		padding: 0.5rem;
+		background: #fee2e2;
+		color: #991b1b;
+		border-radius: 0.25rem;
+		margin-bottom: 0.25rem;
+		font-size: 0.875rem;
+	}
+
+	.warning-item {
+		padding: 0.5rem;
+		background: #fef3c7;
+		color: #92400e;
+		border-radius: 0.25rem;
+		margin-bottom: 0.25rem;
+		font-size: 0.875rem;
 	}
 
 	pre {

@@ -100,6 +100,19 @@ export interface InferredTypeInfo {
 }
 
 /**
+ * Validation result
+ */
+export interface ValidationResult {
+	success: boolean;
+	/** Inferred types for each port (node.port -> type info) */
+	inferredTypes: Record<string, InferredTypeInfo>;
+	/** List of validation errors */
+	errors: string[];
+	/** List of validation warnings */
+	warnings: string[];
+}
+
+/**
  * Evaluation result
  */
 export interface EvaluationResult {
@@ -162,4 +175,31 @@ export function isTypeCompatible(value: any, expectedType: DataType): boolean {
  */
 export function formatType(type: DataType): string {
 	return type;
+}
+
+/**
+ * Check if two types are compatible (for connection validation)
+ * Returns true if sourceType can be connected to targetType
+ */
+export function areTypesCompatible(sourceType: DataType, targetType: DataType): boolean {
+	// 'any' accepts anything
+	if (targetType === 'any' || sourceType === 'any') {
+		return true;
+	}
+
+	// Handle union types in target
+	if (targetType.includes(' | ')) {
+		const targetTypes = targetType.split(' | ').map(t => t.trim());
+		return targetTypes.some(type => type === sourceType || type === 'any');
+	}
+
+	// Handle union types in source
+	if (sourceType.includes(' | ')) {
+		const sourceTypes = sourceType.split(' | ').map(t => t.trim());
+		// All source types must be compatible with target
+		return sourceTypes.every(type => type === targetType);
+	}
+
+	// Direct match
+	return sourceType === targetType;
 }
