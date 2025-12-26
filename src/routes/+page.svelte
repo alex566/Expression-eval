@@ -68,7 +68,7 @@
 			<div class="graph-container">
 				<h2>Graph Visualization</h2>
 				<div class="flow">
-					<SvelteFlow {nodes} {edges}>
+					<SvelteFlow {nodes} {edges} fitView>
 						<Background />
 						<Controls />
 					</SvelteFlow>
