@@ -158,6 +158,7 @@ export function graphToSvelteFlow(
 
 	// Second pass: Extract positioned nodes from dagre
 	graph.nodes.forEach((node) => {
+		// Safe to cast because we control the node data structure set in the first pass
 		const dagreNode = dagreGraph.node(node.id) as DagreNode;
 		const ports = dagreNode.ports;
 
@@ -192,17 +193,4 @@ export function graphToSvelteFlow(
 	});
 
 	return { nodes, edges };
-}
-
-/**
- * Layout nodes in a better way (simple horizontal layout)
- */
-export function layoutNodes(nodes: Node[]): Node[] {
-	return nodes.map((node, index) => ({
-		...node,
-		position: {
-			x: index * 250,
-			y: Math.floor(index / 4) * 150
-		}
-	}));
 }
