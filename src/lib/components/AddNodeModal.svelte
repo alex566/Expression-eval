@@ -64,7 +64,11 @@
 					break;
 				case 'date':
 					// Convert date string to Date object
-					finalValue = dateValue ? new Date(dateValue) : new Date();
+					if (!dateValue) {
+						alert('Please select a date value.');
+						return;
+					}
+					finalValue = new Date(dateValue);
 					break;
 				case 'array':
 					// Parse JSON for array
@@ -75,6 +79,7 @@
 							return;
 						}
 					} catch (e) {
+						console.error('JSON parse error:', e);
 						alert('Invalid JSON format for array. Please enter a valid JSON array like [1, 2, 3]');
 						return;
 					}
@@ -83,11 +88,12 @@
 					// Parse JSON for object
 					try {
 						finalValue = JSON.parse(jsonValue);
-						if (Array.isArray(finalValue) || typeof finalValue !== 'object') {
+						if (finalValue === null || Array.isArray(finalValue) || typeof finalValue !== 'object') {
 							alert('Invalid object format. Please enter a valid JSON object.');
 							return;
 						}
 					} catch (e) {
+						console.error('JSON parse error:', e);
 						alert('Invalid JSON format for object. Please enter a valid JSON object like {"key": "value"}');
 						return;
 					}
