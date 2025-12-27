@@ -371,8 +371,251 @@ export const DATE_SAMPLE_GRAPH: Graph = {
 	]
 };
 
+export const ARRAY_OPERATIONS_GRAPH: Graph = {
+	nodes: [
+		{
+			id: "array1",
+			type: "Value",
+			data: {
+				value: [1, 2, 3, 4, 5]
+			}
+		},
+		{
+			id: "array2",
+			type: "Value",
+			data: {
+				value: [10, 20, 30, 40, 50]
+			}
+		},
+		{
+			id: "scalar",
+			type: "Value",
+			data: {
+				value: 5
+			}
+		},
+		{
+			id: "add_arrays",
+			type: "Add",
+			data: {}
+		},
+		{
+			id: "multiply_scalar",
+			type: "Multiply",
+			data: {}
+		},
+		{
+			id: "threshold",
+			type: "Value",
+			data: {
+				value: 150
+			}
+		},
+		{
+			id: "compare_threshold",
+			type: "Compare",
+			data: {
+				operator: ">"
+			}
+		},
+		{
+			id: "filter_if",
+			type: "If",
+			data: {}
+		},
+		{
+			id: "switch_test_value",
+			type: "Value",
+			data: {
+				value: "option2"
+			}
+		},
+		{
+			id: "switch_node",
+			type: "Switch",
+			data: {
+				cases: {
+					"option1": "case1",
+					"option2": "case2",
+					"option3": "case3"
+				}
+			}
+		},
+		{
+			id: "output",
+			type: "Output",
+			data: {
+				outputs: ["added", "multiplied", "comparison", "filtered_true", "filtered_false", "switch_out"]
+			}
+		}
+	],
+	edges: [
+		{
+			from: {
+				node: "array1",
+				port: "out"
+			},
+			to: {
+				node: "add_arrays",
+				port: "in0"
+			}
+		},
+		{
+			from: {
+				node: "array2",
+				port: "out"
+			},
+			to: {
+				node: "add_arrays",
+				port: "in1"
+			}
+		},
+		{
+			from: {
+				node: "add_arrays",
+				port: "out"
+			},
+			to: {
+				node: "output",
+				port: "added"
+			}
+		},
+		{
+			from: {
+				node: "add_arrays",
+				port: "out"
+			},
+			to: {
+				node: "multiply_scalar",
+				port: "in0"
+			}
+		},
+		{
+			from: {
+				node: "scalar",
+				port: "out"
+			},
+			to: {
+				node: "multiply_scalar",
+				port: "in1"
+			}
+		},
+		{
+			from: {
+				node: "multiply_scalar",
+				port: "out"
+			},
+			to: {
+				node: "output",
+				port: "multiplied"
+			}
+		},
+		{
+			from: {
+				node: "multiply_scalar",
+				port: "out"
+			},
+			to: {
+				node: "compare_threshold",
+				port: "a"
+			}
+		},
+		{
+			from: {
+				node: "threshold",
+				port: "out"
+			},
+			to: {
+				node: "compare_threshold",
+				port: "b"
+			}
+		},
+		{
+			from: {
+				node: "compare_threshold",
+				port: "out"
+			},
+			to: {
+				node: "output",
+				port: "comparison"
+			}
+		},
+		{
+			from: {
+				node: "compare_threshold",
+				port: "out"
+			},
+			to: {
+				node: "filter_if",
+				port: "condition"
+			}
+		},
+		{
+			from: {
+				node: "multiply_scalar",
+				port: "out"
+			},
+			to: {
+				node: "filter_if",
+				port: "true"
+			}
+		},
+		{
+			from: {
+				node: "multiply_scalar",
+				port: "out"
+			},
+			to: {
+				node: "filter_if",
+				port: "false"
+			}
+		},
+		{
+			from: {
+				node: "filter_if",
+				port: "trueOut"
+			},
+			to: {
+				node: "output",
+				port: "filtered_true"
+			}
+		},
+		{
+			from: {
+				node: "filter_if",
+				port: "falseOut"
+			},
+			to: {
+				node: "output",
+				port: "filtered_false"
+			}
+		},
+		{
+			from: {
+				node: "switch_test_value",
+				port: "out"
+			},
+			to: {
+				node: "switch_node",
+				port: "value"
+			}
+		},
+		{
+			from: {
+				node: "switch_node",
+				port: "case2"
+			},
+			to: {
+				node: "output",
+				port: "switch_out"
+			}
+		}
+	]
+};
+
 export const GRAPHS: Record<string, Graph> = {
 	'sample': SAMPLE_GRAPH,
 	'complex': COMPLEX_GRAPH,
-	'dates': DATE_SAMPLE_GRAPH
+	'dates': DATE_SAMPLE_GRAPH,
+	'arrays': ARRAY_OPERATIONS_GRAPH
 };

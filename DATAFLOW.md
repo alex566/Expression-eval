@@ -29,19 +29,28 @@ This implementation provides a modular and clean dataflow graph system for Expre
 Nodes are organized in separate folders by category:
 
 #### Math Operations (`src/lib/nodes/math/`)
+All math nodes now support **array-aware operations**. When any input is an array, the operation is performed element-wise:
 - **Add**: Adds all connected input values together (dynamic inputs: in0, in1, in2, ...)
+  - Arrays: `[1,2,3] + [10,20,30] = [11,22,33]`
+  - Mixed: `[1,2,3] + 5 = [6,7,8]`
 - **Subtract**: Subtracts all subsequent inputs from the first input (in0 - in1 - in2 - ...)
+  - Arrays: `[10,20,30] - [1,2,3] = [9,18,27]`
 - **Multiply**: Multiplies all connected input values together (dynamic inputs: in0, in1, in2, ...)
+  - Arrays: `[1,2,3] * [10,20,30] = [10,40,90]`
 - **Divide**: Divides the first input by all subsequent inputs (in0 / in1 / in2 / ...)
+  - Arrays: `[10,20,30] / [2,4,5] = [5,5,6]`
 
 #### Control Flow (`src/lib/nodes/control/`)
-- **If**: Conditional branching
-- **Compare**: Compares two values
-- **ForEach**: Iterates over an array
-- **Map**: Transforms an array
+- **If**: Conditional branching (supports both single values and array filtering)
+  - Single: outputs either `true` or `false` value based on condition
+  - Array: when condition is an array of booleans, filters input arrays into `trueOut` and `falseOut`
+- **Compare**: Compares two values (supports element-wise array comparison)
+  - Single: `5 > 3 = true`
+  - Arrays: `[1,5,10] > 3 = [false, true, true]`
+- **Switch**: Multi-case branching based on a value matching a case
 
 #### Special Nodes (`src/lib/nodes/special/`)
-- **Value**: Provides a constant/hardcoded value to the graph
+- **Value**: Provides a constant/hardcoded value to the graph (supports arrays)
 - **Output**: Marks final output values
 
 ## Graph JSON Format
@@ -132,9 +141,53 @@ This example:
 
 See `static/complex-graph.json` for a more complex example with multiple operations running in parallel.
 
+### Array Operations Example
+
+See `static/array-operations.json` for a comprehensive example demonstrating:
+- **Element-wise array addition**: `[1,2,3,4,5] + [10,20,30,40,50] = [11,22,33,44,55]`
+- **Array-scalar multiplication**: `[11,22,33,44,55] * 5 = [55,110,165,220,275]`
+- **Element-wise comparison**: `[55,110,165,220,275] > 150 = [false,false,true,true,true]`
+- **Array filtering with If node**: Separate values into two arrays based on boolean array
+- **Switch node**: Route values to different outputs based on case matching
+
 ## Visualization
 
 The implementation uses SvelteFlow for graph visualization. The graph is automatically converted from the JSON format to SvelteFlow's format.
+
+## Array-Aware Operations
+
+All math and comparison operations now support **array-aware execution**:
+
+### How It Works
+- When any input to a node is an array, the operation becomes element-wise
+- Scalar values are broadcast to match array length
+- All inputs are aligned to the longest array
+
+### Examples
+```javascript
+// Math operations
+[1, 2, 3] + [10, 20, 30] = [11, 22, 33]  // element-wise addition
+[1, 2, 3] * 5 = [5, 10, 15]              // scalar broadcast
+[10, 20, 30] - [1, 2, 3] = [9, 18, 27]   // element-wise subtraction
+
+// Comparison operations
+[1, 5, 10, 15, 20] > 10 = [false, false, false, true, true]
+[1, 2, 3] == [1, 5, 3] = [true, false, true]
+
+// Array filtering with If node
+condition: [true, false, true, false, true]
+true input: [10, 20, 30, 40, 50]
+false input: [10, 20, 30, 40, 50]
+→ trueOut: [10, 30, 50]
+→ falseOut: [20, 40]
+```
+
+### Control Flow with Arrays
+- **Compare**: Produces boolean arrays when comparing arrays
+- **If**: Filters arrays based on boolean array conditions
+  - `trueOut`: Elements where condition is true
+  - `falseOut`: Elements where condition is false
+- **Switch**: Routes values to different outputs based on case values
 
 ## Dynamic Inputs for Math Operations
 
@@ -191,4 +244,8 @@ npm run build
 - ✅ Real-time evaluation
 - ✅ Extensible node system
 - ✅ Dynamic inputs for math operations
-- ✅ Value nodes for constant values
+- ✅ Value nodes for constant values (supports arrays)
+- ✅ **Array-aware operations** - element-wise math and comparisons
+- ✅ **Array filtering** - conditional node filters arrays with boolean arrays
+- ✅ **Switch node** - multi-case branching
+- ✅ Removed Map/ForEach in favor of native array support
