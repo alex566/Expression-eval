@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { SvelteFlow, Controls, Background, type Node, type Edge, type Connection, type EdgeChange } from '@xyflow/svelte';
+	import { SvelteFlow, Controls, Background, type Node, type Edge, type Connection } from '@xyflow/svelte';
 	import '@xyflow/svelte/dist/style.css';
 	import type { Graph, EvaluationResult, ValidationResult, GraphNode, GraphEdge } from '$lib/dataflow/types';
 	import { GraphEvaluator } from '$lib/dataflow/evaluator';
@@ -117,7 +117,7 @@
 		}
 	}
 
-	function handlePaneClick(event: CustomEvent) {
+	function handlePaneClick() {
 		// Open modal to add new node
 		showAddNodeModal = true;
 	}
@@ -167,10 +167,8 @@
 		showAddNodeModal = false;
 	}
 
-	function handleConnect(event: CustomEvent<Connection>) {
+	function handleConnect(connection: Connection) {
 		if (!graph) return;
-
-		const connection = event.detail;
 
 		// Create new edge
 		const newEdge: GraphEdge = {
@@ -209,10 +207,10 @@
 	 * Handle deletions of nodes and edges
 	 * Called when user presses delete/backspace on selected elements
 	 */
-	function handleDelete(event: CustomEvent<{ nodes: Node[]; edges: Edge[] }>) {
+	function handleDelete(params: { nodes: Node[]; edges: Edge[] }) {
 		if (!graph) return;
 
-		const { nodes: deletedNodes, edges: deletedEdges } = event.detail;
+		const { nodes: deletedNodes, edges: deletedEdges } = params;
 		let graphModified = false;
 
 		// Remove deleted edges from graph
