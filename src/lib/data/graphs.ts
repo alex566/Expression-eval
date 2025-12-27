@@ -613,9 +613,207 @@ export const ARRAY_OPERATIONS_GRAPH: Graph = {
 	]
 };
 
+export const MAP_FILTER_REDUCE_GRAPH: Graph = {
+	nodes: [
+		{
+			id: "numbers",
+			type: "Value",
+			data: {
+				value: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+			}
+		},
+		{
+			id: "map_double",
+			type: "Map",
+			data: {},
+			subgraph: {
+				nodes: [
+					{
+						id: "element",
+						type: "Input",
+						data: {}
+					},
+					{
+						id: "two",
+						type: "Value",
+						data: {
+							value: 2
+						}
+					},
+					{
+						id: "multiply",
+						type: "Multiply",
+						data: {}
+					},
+					{
+						id: "output",
+						type: "Output",
+						data: {
+							outputs: ["result"]
+						}
+					}
+				],
+				edges: [
+					{
+						from: { node: "element", port: "out" },
+						to: { node: "multiply", port: "in0" }
+					},
+					{
+						from: { node: "two", port: "out" },
+						to: { node: "multiply", port: "in1" }
+					},
+					{
+						from: { node: "multiply", port: "out" },
+						to: { node: "output", port: "result" }
+					}
+				]
+			}
+		},
+		{
+			id: "filter_gt5",
+			type: "Filter",
+			data: {},
+			subgraph: {
+				nodes: [
+					{
+						id: "element",
+						type: "Input",
+						data: {}
+					},
+					{
+						id: "threshold",
+						type: "Value",
+						data: {
+							value: 10
+						}
+					},
+					{
+						id: "compare",
+						type: "Compare",
+						data: {
+							operator: ">"
+						}
+					},
+					{
+						id: "output",
+						type: "Output",
+						data: {
+							outputs: ["result"]
+						}
+					}
+				],
+				edges: [
+					{
+						from: { node: "element", port: "out" },
+						to: { node: "compare", port: "a" }
+					},
+					{
+						from: { node: "threshold", port: "out" },
+						to: { node: "compare", port: "b" }
+					},
+					{
+						from: { node: "compare", port: "out" },
+						to: { node: "output", port: "result" }
+					}
+				]
+			}
+		},
+		{
+			id: "reduce_sum",
+			type: "Reduce",
+			data: {},
+			subgraph: {
+				nodes: [
+					{
+						id: "accumulator",
+						type: "Input",
+						data: {}
+					},
+					{
+						id: "element",
+						type: "Input",
+						data: {}
+					},
+					{
+						id: "add",
+						type: "Add",
+						data: {}
+					},
+					{
+						id: "output",
+						type: "Output",
+						data: {
+							outputs: ["result"]
+						}
+					}
+				],
+				edges: [
+					{
+						from: { node: "accumulator", port: "out" },
+						to: { node: "add", port: "in0" }
+					},
+					{
+						from: { node: "element", port: "out" },
+						to: { node: "add", port: "in1" }
+					},
+					{
+						from: { node: "add", port: "out" },
+						to: { node: "output", port: "result" }
+					}
+				]
+			}
+		},
+		{
+			id: "initial_value",
+			type: "Value",
+			data: {
+				value: 0
+			}
+		},
+		{
+			id: "output",
+			type: "Output",
+			data: {
+				outputs: ["mapped", "filtered", "sum"]
+			}
+		}
+	],
+	edges: [
+		{
+			from: { node: "numbers", port: "out" },
+			to: { node: "map_double", port: "array" }
+		},
+		{
+			from: { node: "map_double", port: "out" },
+			to: { node: "output", port: "mapped" }
+		},
+		{
+			from: { node: "map_double", port: "out" },
+			to: { node: "filter_gt5", port: "array" }
+		},
+		{
+			from: { node: "filter_gt5", port: "out" },
+			to: { node: "output", port: "filtered" }
+		},
+		{
+			from: { node: "filter_gt5", port: "out" },
+			to: { node: "reduce_sum", port: "array" }
+		},
+		{
+			from: { node: "initial_value", port: "out" },
+			to: { node: "reduce_sum", port: "initial" }
+		},
+		{
+			from: { node: "reduce_sum", port: "out" },
+			to: { node: "output", port: "sum" }
+		}
+	]
+};
+
 export const GRAPHS: Record<string, Graph> = {
 	'sample': SAMPLE_GRAPH,
 	'complex': COMPLEX_GRAPH,
 	'dates': DATE_SAMPLE_GRAPH,
-	'arrays': ARRAY_OPERATIONS_GRAPH
+	'arrays': ARRAY_OPERATIONS_GRAPH,
+	'mapfilterreduce': MAP_FILTER_REDUCE_GRAPH
 };

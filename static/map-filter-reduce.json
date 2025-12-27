@@ -1,0 +1,343 @@
+{
+	"nodes": [
+		{
+			"id": "numbers",
+			"type": "Value",
+			"data": {
+				"value": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+			},
+			"comment": "Input array of numbers 1-10"
+		},
+		{
+			"id": "map_double",
+			"type": "Map",
+			"data": {},
+			"comment": "Maps each element by doubling it",
+			"subgraph": {
+				"nodes": [
+					{
+						"id": "element",
+						"type": "Input",
+						"data": {},
+						"comment": "Current element from the array"
+					},
+					{
+						"id": "two",
+						"type": "Value",
+						"data": {
+							"value": 2
+						}
+					},
+					{
+						"id": "multiply",
+						"type": "Multiply",
+						"data": {}
+					},
+					{
+						"id": "output",
+						"type": "Output",
+						"data": {
+							"outputs": ["result"]
+						}
+					}
+				],
+				"edges": [
+					{
+						"from": {
+							"node": "element",
+							"port": "out"
+						},
+						"to": {
+							"node": "multiply",
+							"port": "in0"
+						}
+					},
+					{
+						"from": {
+							"node": "two",
+							"port": "out"
+						},
+						"to": {
+							"node": "multiply",
+							"port": "in1"
+						}
+					},
+					{
+						"from": {
+							"node": "multiply",
+							"port": "out"
+						},
+						"to": {
+							"node": "output",
+							"port": "result"
+						}
+					}
+				]
+			}
+		},
+		{
+			"id": "filter_even",
+			"type": "Filter",
+			"data": {},
+			"comment": "Filters to keep only even numbers",
+			"subgraph": {
+				"nodes": [
+					{
+						"id": "element",
+						"type": "Input",
+						"data": {},
+						"comment": "Current element from the array"
+					},
+					{
+						"id": "two",
+						"type": "Value",
+						"data": {
+							"value": 2
+						}
+					},
+					{
+						"id": "modulo_check",
+						"type": "Value",
+						"data": {
+							"value": 0
+						},
+						"comment": "Check if remainder is 0"
+					},
+					{
+						"id": "divide",
+						"type": "Divide",
+						"data": {},
+						"comment": "This is a simplified check - in real scenario we'd use modulo"
+					},
+					{
+						"id": "compare",
+						"type": "Compare",
+						"data": {
+							"operator": "=="
+						},
+						"comment": "Check if divisible by 2 (simplified)"
+					},
+					{
+						"id": "output",
+						"type": "Output",
+						"data": {
+							"outputs": ["result"]
+						}
+					}
+				],
+				"edges": [
+					{
+						"from": {
+							"node": "element",
+							"port": "out"
+						},
+						"to": {
+							"node": "divide",
+							"port": "in0"
+						}
+					},
+					{
+						"from": {
+							"node": "two",
+							"port": "out"
+						},
+						"to": {
+							"node": "divide",
+							"port": "in1"
+						}
+					},
+					{
+						"from": {
+							"node": "divide",
+							"port": "out"
+						},
+						"to": {
+							"node": "compare",
+							"port": "a"
+						}
+					},
+					{
+						"from": {
+							"node": "modulo_check",
+							"port": "out"
+						},
+						"to": {
+							"node": "compare",
+							"port": "b"
+						}
+					},
+					{
+						"from": {
+							"node": "compare",
+							"port": "out"
+						},
+						"to": {
+							"node": "output",
+							"port": "result"
+						}
+					}
+				]
+			}
+		},
+		{
+			"id": "reduce_sum",
+			"type": "Reduce",
+			"data": {},
+			"comment": "Reduces to sum of all elements",
+			"subgraph": {
+				"nodes": [
+					{
+						"id": "accumulator",
+						"type": "Input",
+						"data": {},
+						"comment": "Running sum"
+					},
+					{
+						"id": "element",
+						"type": "Input",
+						"data": {},
+						"comment": "Current element"
+					},
+					{
+						"id": "add",
+						"type": "Add",
+						"data": {}
+					},
+					{
+						"id": "output",
+						"type": "Output",
+						"data": {
+							"outputs": ["result"]
+						}
+					}
+				],
+				"edges": [
+					{
+						"from": {
+							"node": "accumulator",
+							"port": "out"
+						},
+						"to": {
+							"node": "add",
+							"port": "in0"
+						}
+					},
+					{
+						"from": {
+							"node": "element",
+							"port": "out"
+						},
+						"to": {
+							"node": "add",
+							"port": "in1"
+						}
+					},
+					{
+						"from": {
+							"node": "add",
+							"port": "out"
+						},
+						"to": {
+							"node": "output",
+							"port": "result"
+						}
+					}
+				]
+			}
+		},
+		{
+			"id": "initial_value",
+			"type": "Value",
+			"data": {
+				"value": 0
+			},
+			"comment": "Initial value for reduce (0)"
+		},
+		{
+			"id": "output",
+			"type": "Output",
+			"data": {
+				"outputs": ["mapped", "filtered", "sum"]
+			}
+		}
+	],
+	"edges": [
+		{
+			"from": {
+				"node": "numbers",
+				"port": "out"
+			},
+			"to": {
+				"node": "map_double",
+				"port": "array"
+			},
+			"comment": "Feed numbers to map"
+		},
+		{
+			"from": {
+				"node": "map_double",
+				"port": "out"
+			},
+			"to": {
+				"node": "output",
+				"port": "mapped"
+			},
+			"comment": "Output mapped result"
+		},
+		{
+			"from": {
+				"node": "map_double",
+				"port": "out"
+			},
+			"to": {
+				"node": "filter_even",
+				"port": "array"
+			},
+			"comment": "Feed mapped result to filter"
+		},
+		{
+			"from": {
+				"node": "filter_even",
+				"port": "out"
+			},
+			"to": {
+				"node": "output",
+				"port": "filtered"
+			},
+			"comment": "Output filtered result"
+		},
+		{
+			"from": {
+				"node": "filter_even",
+				"port": "out"
+			},
+			"to": {
+				"node": "reduce_sum",
+				"port": "array"
+			},
+			"comment": "Feed filtered result to reduce"
+		},
+		{
+			"from": {
+				"node": "initial_value",
+				"port": "out"
+			},
+			"to": {
+				"node": "reduce_sum",
+				"port": "initial"
+			},
+			"comment": "Provide initial value for reduce"
+		},
+		{
+			"from": {
+				"node": "reduce_sum",
+				"port": "out"
+			},
+			"to": {
+				"node": "output",
+				"port": "sum"
+			},
+			"comment": "Output sum result"
+		}
+	]
+}

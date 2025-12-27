@@ -47,6 +47,8 @@ export interface GraphNode {
 	id: string;
 	type: string;
 	data: Record<string, any>;
+	/** Optional subgraph for nodes like Map, Filter, Reduce */
+	subgraph?: Graph;
 }
 
 /**
@@ -75,6 +77,8 @@ export interface NodeDefinition {
 	description?: string;
 	inputs?: PortSpec[];
 	outputs?: PortSpec[];
+	/** Indicates if this node type supports subgraphs */
+	hasSubgraph?: boolean;
 	execute(context: NodeContext): void | Promise<void>;
 }
 
