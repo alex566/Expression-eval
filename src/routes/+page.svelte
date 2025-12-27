@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { SvelteFlow, Controls, Background, type Node, type Edge, type Connection } from '@xyflow/svelte';
+	import { SvelteFlow, Controls, Background, type Node, type Edge, type Connection, type EdgeChange } from '@xyflow/svelte';
 	import '@xyflow/svelte/dist/style.css';
 	import type { Graph, EvaluationResult, ValidationResult, GraphNode, GraphEdge } from '$lib/dataflow/types';
 	import { GraphEvaluator } from '$lib/dataflow/evaluator';
 	import { nodeRegistry } from '$lib/dataflow/registry';
 	import { registerAllNodes } from '$lib/nodes';
-	import { graphToSvelteFlow } from '$lib/utils/graph-converter';
+	import { graphToSvelteFlow, updateFlowWithPreservedPositions } from '$lib/utils/graph-converter';
 	import CustomNode from '$lib/components/CustomNode.svelte';
 	import EvaluationReport from '$lib/components/EvaluationReport.svelte';
 	import AddNodeModal from '$lib/components/AddNodeModal.svelte';
@@ -83,8 +83,9 @@
 			error = '';
 
 			// Update nodes with inferred types for visualization
+			// Preserve existing positions - only update node data, not layout
 			if (validationResult.success && validationResult.inferredTypes && graph) {
-				const flow = graphToSvelteFlow(graph, validationResult.inferredTypes);
+				const flow = updateFlowWithPreservedPositions(graph, nodes, validationResult.inferredTypes);
 				nodes = flow.nodes;
 				edges = flow.edges;
 			}
@@ -105,8 +106,9 @@
 			error = '';
 
 			// Update nodes with inferred types for visualization
+			// Preserve existing positions - only update node data, not layout
 			if (evaluationResult.success && evaluationResult.inferredTypes && graph) {
-				const flow = graphToSvelteFlow(graph, evaluationResult.inferredTypes);
+				const flow = updateFlowWithPreservedPositions(graph, nodes, evaluationResult.inferredTypes);
 				nodes = flow.nodes;
 				edges = flow.edges;
 			}
@@ -154,8 +156,14 @@
 			edges: [...graph.edges]
 		};
 
-		// Update visualization
-		updateVisualization();
+		// Update visualization - use full layout since we're adding a new node
+		// New nodes need to be positioned, so we recalculate layout
+		const flow = graphToSvelteFlow(graph);
+		nodes = flow.nodes;
+		edges = flow.edges;
+		
+		validationResult = null;
+		evaluationResult = null;
 		showAddNodeModal = false;
 	}
 
@@ -192,23 +200,69 @@
 				edges: [...graph.edges, newEdge]
 			};
 
-			// Update visualization
-			updateVisualization();
+			// Update visualization while preserving positions
+			updateVisualizationPreservingPositions();
 		}
 	}
 
-	function updateVisualization() {
+	/**
+	 * Handle edge changes (deletions, additions, reconnections)
+	 */
+	function handleEdgesChange(event: CustomEvent<EdgeChange[]>) {
+		if (!graph) return;
+
+		const changes = event.detail;
+		let graphModified = false;
+
+		changes.forEach(change => {
+			if (change.type === 'remove') {
+				// Find and remove the edge from the graph
+				const edgeToRemove = edges.find(e => e.id === change.id);
+				if (edgeToRemove) {
+					// Remove from graph state
+					graph = {
+						nodes: [...graph.nodes],
+						edges: graph.edges.filter(
+							edge => !(
+								edge.from.node === edgeToRemove.source &&
+								edge.from.port === edgeToRemove.sourceHandle &&
+								edge.to.node === edgeToRemove.target &&
+								edge.to.port === edgeToRemove.targetHandle
+							)
+						)
+					};
+					
+					// Also remove from edges state
+					edges = edges.filter(e => e.id !== change.id);
+					graphModified = true;
+				}
+			}
+		});
+
+		if (graphModified) {
+			// Reset validation and evaluation results when graph changes
+			validationResult = null;
+			evaluationResult = null;
+		}
+	}
+
+	/**
+	 * Update visualization while preserving node positions
+	 * Used when graph structure changes but layout should remain the same
+	 */
+	function updateVisualizationPreservingPositions() {
 		if (!graph) return;
 
 		// Reset validation and evaluation results when graph changes
 		validationResult = null;
 		evaluationResult = null;
 
-		// Convert to SvelteFlow format
-		const flow = graphToSvelteFlow(graph);
+		// Update flow while preserving existing node positions
+		const flow = updateFlowWithPreservedPositions(graph, nodes);
 		nodes = flow.nodes;
 		edges = flow.edges;
 	}
+
 </script>
 
 <div class="container">
@@ -221,7 +275,7 @@
 		<div class="toolbar">
 			<div class="graph-selector">
 				<label for="graph-select">Load Graph:</label>
-				<select id="graph-select" bind:value={selectedGraph} on:change={handleGraphChange}>
+				<select id="graph-select" bind:value={selectedGraph} onchange={handleGraphChange}>
 					<option value="sample">Sample Graph</option>
 					<option value="complex">Complex Graph</option>
 					<option value="dates">Date Operations</option>
@@ -229,8 +283,8 @@
 				</select>
 			</div>
 			<div class="toolbar-buttons">
-				<button on:click={validateGraph}>Validate Graph</button>
-				<button on:click={evaluateGraph}>Evaluate Graph</button>
+				<button onclick={validateGraph}>Validate Graph</button>
+				<button onclick={evaluateGraph}>Evaluate Graph</button>
 			</div>
 		</div>
 
@@ -244,8 +298,10 @@
 						{edges} 
 						{nodeTypes} 
 						fitView
+						edgesDeletable={true}
 						onpaneclick={handlePaneClick}
 						onconnect={handleConnect}
+						onedgeschange={handleEdgesChange}
 					>
 						<Background />
 						<Controls />

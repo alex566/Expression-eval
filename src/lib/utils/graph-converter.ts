@@ -200,3 +200,55 @@ export function graphToSvelteFlow(
 
 	return { nodes, edges };
 }
+
+/**
+ * Update nodes and edges while preserving existing node positions
+ * This is used when only the node data (like inferred types) changes, not the structure
+ */
+export function updateFlowWithPreservedPositions(
+	graph: Graph,
+	existingNodes: Node[],
+	inferredTypes?: Record<string, InferredTypeInfo>
+): { nodes: Node[]; edges: Edge[] } {
+	const nodes: Node[] = [];
+	const edges: Edge[] = [];
+
+	// Create a map of existing positions
+	const positionMap = new Map<string, { x: number; y: number }>();
+	existingNodes.forEach(node => {
+		positionMap.set(node.id, node.position);
+	});
+
+	// Create nodes with preserved positions
+	graph.nodes.forEach((node) => {
+		const ports = getNodePorts(node.type, node.id, node.data, graph.edges, inferredTypes);
+		const existingPosition = positionMap.get(node.id);
+
+		nodes.push({
+			id: node.id,
+			type: 'custom',
+			data: {
+				label: node.type,
+				nodeId: node.id,
+				inputs: ports.inputs,
+				outputs: ports.outputs
+			},
+			position: existingPosition || { x: 0, y: 0 } // Use existing position or default
+		});
+	});
+
+	// Convert edges with proper source and target handles
+	graph.edges.forEach((edge, index) => {
+		edges.push({
+			id: `e${index}`,
+			source: edge.from.node,
+			target: edge.to.node,
+			sourceHandle: edge.from.port,
+			targetHandle: edge.to.port,
+			animated: true,
+			style: 'stroke: #3b82f6; stroke-width: 2px;'
+		});
+	});
+
+	return { nodes, edges };
+}
