@@ -113,10 +113,12 @@ function getNodePorts(
 /**
  * Convert dataflow graph to SvelteFlow format with dagre horizontal layout
  * Optionally accepts inferred types to display runtime type information
+ * Optionally accepts a callback for handling node double-clicks
  */
 export function graphToSvelteFlow(
 	graph: Graph, 
-	inferredTypes?: Record<string, InferredTypeInfo>
+	inferredTypes?: Record<string, InferredTypeInfo>,
+	onNodeDoubleClick?: (nodeId: string) => void
 ): { nodes: Node[]; edges: Edge[] } {
 	const nodes: Node[] = [];
 	const edges: Edge[] = [];
@@ -180,7 +182,8 @@ export function graphToSvelteFlow(
 				nodeId: node.id,
 				inputs: ports.inputs,
 				outputs: ports.outputs,
-				hasSubgraph
+				hasSubgraph,
+				onNodeDoubleClick
 			},
 			position: {
 				// dagre returns center position, we need top-left for SvelteFlow
@@ -211,20 +214,30 @@ export function graphToSvelteFlow(
 /**
  * Update nodes and edges while preserving existing node positions
  * This is used when only the node data (like inferred types) changes, not the structure
+ * Optionally accepts a callback for handling node double-clicks
  */
 export function updateFlowWithPreservedPositions(
 	graph: Graph,
 	existingNodes: Node[],
-	inferredTypes?: Record<string, InferredTypeInfo>
+	inferredTypes?: Record<string, InferredTypeInfo>,
+	onNodeDoubleClick?: (nodeId: string) => void
 ): { nodes: Node[]; edges: Edge[] } {
 	const nodes: Node[] = [];
 	const edges: Edge[] = [];
 
-	// Create a map of existing positions
+	// Create a map of existing positions and extract onNodeDoubleClick from existing nodes
 	const positionMap = new Map<string, { x: number; y: number }>();
+	let callbackFromExisting: ((nodeId: string) => void) | undefined;
 	existingNodes.forEach(node => {
 		positionMap.set(node.id, node.position);
+		// Extract callback from first node that has it
+		if (!callbackFromExisting && node.data?.onNodeDoubleClick) {
+			callbackFromExisting = node.data.onNodeDoubleClick as (nodeId: string) => void;
+		}
 	});
+
+	// Use provided callback or fallback to existing callback
+	const nodeCallback = onNodeDoubleClick || callbackFromExisting;
 
 	// Create nodes with preserved positions
 	graph.nodes.forEach((node) => {
@@ -243,7 +256,8 @@ export function updateFlowWithPreservedPositions(
 				nodeId: node.id,
 				inputs: ports.inputs,
 				outputs: ports.outputs,
-				hasSubgraph
+				hasSubgraph,
+				onNodeDoubleClick: nodeCallback
 			},
 			position: existingPosition || { x: 0, y: 0 } // Use existing position or default
 		});
