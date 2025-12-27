@@ -488,8 +488,10 @@
 		background: #f9fafb;
 		border-top: 1px solid #e5e7eb;
 		overflow-y: auto;
+		-webkit-overflow-scrolling: touch;
 		padding: 1rem;
-		flex-shrink: 0;
+		flex: 1 1 auto;
+		min-height: 0;
 	}
 
 	/* Desktop layout */
