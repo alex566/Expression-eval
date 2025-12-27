@@ -225,6 +225,7 @@
 					<option value="sample">Sample Graph</option>
 					<option value="complex">Complex Graph</option>
 					<option value="dates">Date Operations</option>
+					<option value="arrays">Array Operations</option>
 				</select>
 			</div>
 			<div class="toolbar-buttons">
