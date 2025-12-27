@@ -359,7 +359,11 @@ export class GraphEvaluator {
 				// Infer and store type information
 				this.inferTypeForPort(node.id, port, value, definition?.outputs?.find(p => p.name === port)?.type);
 			},
-			getNodeData: () => node.data
+			getNodeData: () => ({
+				...node.data,
+				// Include subgraph if it exists (needed for Map/Filter/Reduce nodes)
+				...(node.subgraph ? { subgraph: node.subgraph } : {})
+			})
 		};
 	}
 

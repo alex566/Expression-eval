@@ -68,8 +68,8 @@
 			validationResult = null;
 			evaluationResult = null;
 
-			// Convert to SvelteFlow format
-			const flow = graphToSvelteFlow(graph);
+			// Convert to SvelteFlow format with double-click handler
+			const flow = graphToSvelteFlow(graph, undefined, handleNodeDoubleClick);
 			nodes = flow.nodes;
 			edges = flow.edges;
 
@@ -77,6 +77,10 @@
 		} catch (err) {
 			error = err instanceof Error ? err.message : String(err);
 		}
+	}
+
+	function handleNodeDoubleClick(nodeId: string) {
+		handleNodeClick({ detail: { nodeId } } as CustomEvent);
 	}
 
 	function handleNodeClick(event: CustomEvent) {
@@ -100,7 +104,7 @@
 		currentGraph = clickedNode.subgraph;
 
 		// Update visualization
-		const flow = graphToSvelteFlow(clickedNode.subgraph);
+		const flow = graphToSvelteFlow(clickedNode.subgraph, undefined, handleNodeDoubleClick);
 		nodes = flow.nodes;
 		edges = flow.edges;
 
@@ -117,7 +121,7 @@
 		currentGraph = breadcrumbs[index].graph;
 
 		// Update visualization
-		const flow = graphToSvelteFlow(currentGraph);
+		const flow = graphToSvelteFlow(currentGraph, undefined, handleNodeDoubleClick);
 		nodes = flow.nodes;
 		edges = flow.edges;
 
@@ -224,7 +228,7 @@
 
 		// Update visualization - use full layout since we're adding a new node
 		// New nodes need to be positioned, so we recalculate layout
-		const flow = graphToSvelteFlow(graph);
+		const flow = graphToSvelteFlow(graph, undefined, handleNodeDoubleClick);
 		nodes = flow.nodes;
 		edges = flow.edges;
 		
@@ -382,12 +386,6 @@
 						onpaneclick={handlePaneClick}
 						onconnect={handleConnect}
 						ondelete={handleDelete}
-						onnodedoubleclick={(event) => {
-							const node = event.detail.node;
-							if (node?.data?.hasSubgraph) {
-								handleNodeClick({ detail: { nodeId: node.id } } as CustomEvent);
-							}
-						}}
 					>
 						<Background />
 						<Controls />

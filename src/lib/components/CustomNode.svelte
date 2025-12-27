@@ -15,10 +15,18 @@
 	$: nodeLabel = (data.label as string) || '';
 	$: nodeId = (data.nodeId as string) || '';
 	$: hasSubgraph = (data.hasSubgraph as boolean) || false;
+	$: onNodeDoubleClick = (data.onNodeDoubleClick as ((nodeId: string) => void) | undefined);
 	
 	// Calculate dynamic height based on number of ports
 	$: maxPorts = Math.max(inputs.length, outputs.length);
 	$: minHeight = Math.max(80, 40 + maxPorts * 30); // Base height + spacing per port
+
+	function handleDoubleClick(event: MouseEvent) {
+		if (hasSubgraph && onNodeDoubleClick) {
+			event.stopPropagation();
+			onNodeDoubleClick(id);
+		}
+	}
 
 </script>
 
@@ -28,6 +36,7 @@
 	style="min-height: {minHeight}px;"
 	role="button"
 	tabindex={hasSubgraph ? "0" : undefined}
+	ondblclick={handleDoubleClick}
 >
 	<!-- Input handles on the left -->
 	{#if inputs.length > 0}
