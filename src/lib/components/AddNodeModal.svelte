@@ -11,6 +11,12 @@
 	let selectedCategory = 'all';
 	let allNodes: NodeDefinition[] = [];
 	let categories: string[] = [];
+	let selectedValueType: string = 'string';
+	let stringValue = '';
+	let numberValue = 0;
+	let booleanValue = false;
+	let dateValue = '';
+	let jsonValue = '';
 
 	// Update nodes when modal opens
 	$: if (isOpen) {
@@ -28,10 +34,76 @@
 	function selectNode(node: NodeDefinition) {
 		selectedNode = node;
 		nodeData = {};
+		// Reset value input fields when selecting Value node
+		if (node.type === 'Value') {
+			selectedValueType = 'string';
+			stringValue = '';
+			numberValue = 0;
+			booleanValue = false;
+			dateValue = '';
+			jsonValue = '';
+		}
 	}
 
 	function handleAddNode() {
 		if (!selectedNode) return;
+
+		// Special handling for Value node - convert typed input to appropriate value
+		if (selectedNode.type === 'Value') {
+			let finalValue: any;
+			
+			switch (selectedValueType) {
+				case 'number':
+					finalValue = numberValue;
+					break;
+				case 'string':
+					finalValue = stringValue;
+					break;
+				case 'boolean':
+					finalValue = booleanValue;
+					break;
+				case 'date':
+					// Convert date string to Date object
+					if (!dateValue) {
+						alert('Please select a date value.');
+						return;
+					}
+					finalValue = new Date(dateValue);
+					break;
+				case 'array':
+					// Parse JSON for array
+					try {
+						finalValue = JSON.parse(jsonValue);
+						if (!Array.isArray(finalValue)) {
+							alert('Invalid array format. Please enter a valid JSON array.');
+							return;
+						}
+					} catch (e) {
+						console.error('JSON parse error:', e);
+						alert('Invalid JSON format for array. Please enter a valid JSON array like [1, 2, 3]');
+						return;
+					}
+					break;
+				case 'object':
+					// Parse JSON for object
+					try {
+						finalValue = JSON.parse(jsonValue);
+						if (finalValue === null || Array.isArray(finalValue) || typeof finalValue !== 'object') {
+							alert('Invalid object format. Please enter a valid JSON object.');
+							return;
+						}
+					} catch (e) {
+						console.error('JSON parse error:', e);
+						alert('Invalid JSON format for object. Please enter a valid JSON object like {"key": "value"}');
+						return;
+					}
+					break;
+				default:
+					finalValue = stringValue;
+			}
+			
+			nodeData.value = finalValue;
+		}
 
 		onAddNode(selectedNode.type, nodeData);
 		resetModal();
@@ -40,6 +112,12 @@
 	function resetModal() {
 		selectedNode = null;
 		nodeData = {};
+		selectedValueType = 'string';
+		stringValue = '';
+		numberValue = 0;
+		booleanValue = false;
+		dateValue = '';
+		jsonValue = '';
 		onClose();
 	}
 
@@ -130,13 +208,73 @@
 						<div class="config-fields">
 							{#if selectedNode.type === 'Value'}
 								<label>
-									<span>Value:</span>
-									<input
-										type="text"
-										bind:value={nodeData.value}
-										placeholder="Enter value (number, string, etc.)"
-									/>
+									<span>Type:</span>
+									<select bind:value={selectedValueType}>
+										<option value="string">String</option>
+										<option value="number">Number</option>
+										<option value="boolean">Boolean</option>
+										<option value="date">Date</option>
+										<option value="array">Array</option>
+										<option value="object">Object</option>
+									</select>
 								</label>
+
+								{#if selectedValueType === 'string'}
+									<label>
+										<span>String Value:</span>
+										<input
+											type="text"
+											bind:value={stringValue}
+											placeholder="Enter a string value"
+										/>
+									</label>
+								{:else if selectedValueType === 'number'}
+									<label>
+										<span>Number Value:</span>
+										<input
+											type="number"
+											bind:value={numberValue}
+											placeholder="Enter a number"
+											step="any"
+										/>
+									</label>
+								{:else if selectedValueType === 'boolean'}
+									<label class="checkbox-label">
+										<input
+											type="checkbox"
+											bind:checked={booleanValue}
+										/>
+										<span>Boolean Value (checked = true)</span>
+									</label>
+								{:else if selectedValueType === 'date'}
+									<label>
+										<span>Date Value:</span>
+										<input
+											type="datetime-local"
+											bind:value={dateValue}
+										/>
+									</label>
+								{:else if selectedValueType === 'array'}
+									<label>
+										<span>Array Value (JSON):</span>
+										<textarea
+											bind:value={jsonValue}
+											placeholder='Enter JSON array, e.g., [1, 2, 3] or ["a", "b", "c"]'
+											rows="3"
+										></textarea>
+										<small class="hint">Enter a valid JSON array</small>
+									</label>
+								{:else if selectedValueType === 'object'}
+									<label>
+										<span>Object Value (JSON):</span>
+										<textarea
+											bind:value={jsonValue}
+											placeholder="Enter JSON object, e.g., &#123;&quot;key&quot;: &quot;value&quot;&#125;"
+											rows="3"
+										></textarea>
+										<small class="hint">Enter a valid JSON object</small>
+									</label>
+								{/if}
 							{:else if selectedNode.type === 'Output'}
 								<label>
 									<span>Output Names (comma-separated):</span>
@@ -349,18 +487,51 @@
 	}
 
 	.config-fields input,
-	.config-fields select {
+	.config-fields select,
+	.config-fields textarea {
 		padding: 0.5rem;
 		border: 1px solid #d1d5db;
 		border-radius: 4px;
 		font-size: 0.875rem;
+		font-family: inherit;
+	}
+
+	.config-fields textarea {
+		resize: vertical;
+		min-height: 60px;
 	}
 
 	.config-fields input:focus,
-	.config-fields select:focus {
+	.config-fields select:focus,
+	.config-fields textarea:focus {
 		outline: none;
 		border-color: #3b82f6;
 		box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+	}
+
+	.checkbox-label {
+		flex-direction: row !important;
+		align-items: center;
+		gap: 0.5rem !important;
+	}
+
+	.checkbox-label input[type="checkbox"] {
+		width: auto;
+		margin: 0;
+		cursor: pointer;
+	}
+
+	.checkbox-label span {
+		font-weight: 600;
+		color: #374151;
+		font-size: 0.875rem;
+	}
+
+	.hint {
+		font-size: 0.75rem;
+		color: #6b7280;
+		font-style: italic;
+		margin-top: -0.25rem;
 	}
 
 	.config-actions {
