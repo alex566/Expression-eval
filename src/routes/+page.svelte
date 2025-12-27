@@ -6,7 +6,7 @@
 	import { GraphEvaluator } from '$lib/dataflow/evaluator';
 	import { nodeRegistry } from '$lib/dataflow/registry';
 	import { registerAllNodes } from '$lib/nodes';
-	import { graphToSvelteFlow } from '$lib/utils/graph-converter';
+	import { graphToSvelteFlow, updateFlowWithPreservedPositions } from '$lib/utils/graph-converter';
 	import CustomNode from '$lib/components/CustomNode.svelte';
 	import EvaluationReport from '$lib/components/EvaluationReport.svelte';
 	import AddNodeModal from '$lib/components/AddNodeModal.svelte';
@@ -83,8 +83,9 @@
 			error = '';
 
 			// Update nodes with inferred types for visualization
+			// Preserve existing positions - only update node data, not layout
 			if (validationResult.success && validationResult.inferredTypes && graph) {
-				const flow = graphToSvelteFlow(graph, validationResult.inferredTypes);
+				const flow = updateFlowWithPreservedPositions(graph, nodes, validationResult.inferredTypes);
 				nodes = flow.nodes;
 				edges = flow.edges;
 			}
@@ -105,8 +106,9 @@
 			error = '';
 
 			// Update nodes with inferred types for visualization
+			// Preserve existing positions - only update node data, not layout
 			if (evaluationResult.success && evaluationResult.inferredTypes && graph) {
-				const flow = graphToSvelteFlow(graph, evaluationResult.inferredTypes);
+				const flow = updateFlowWithPreservedPositions(graph, nodes, evaluationResult.inferredTypes);
 				nodes = flow.nodes;
 				edges = flow.edges;
 			}
@@ -115,7 +117,7 @@
 		}
 	}
 
-	function handlePaneClick(event: CustomEvent) {
+	function handlePaneClick() {
 		// Open modal to add new node
 		showAddNodeModal = true;
 	}
@@ -154,15 +156,19 @@
 			edges: [...graph.edges]
 		};
 
-		// Update visualization
-		updateVisualization();
+		// Update visualization - use full layout since we're adding a new node
+		// New nodes need to be positioned, so we recalculate layout
+		const flow = graphToSvelteFlow(graph);
+		nodes = flow.nodes;
+		edges = flow.edges;
+		
+		validationResult = null;
+		evaluationResult = null;
 		showAddNodeModal = false;
 	}
 
-	function handleConnect(event: CustomEvent<Connection>) {
+	function handleConnect(connection: Connection) {
 		if (!graph) return;
-
-		const connection = event.detail;
 
 		// Create new edge
 		const newEdge: GraphEdge = {
@@ -192,23 +198,78 @@
 				edges: [...graph.edges, newEdge]
 			};
 
-			// Update visualization
-			updateVisualization();
+			// Update visualization while preserving positions
+			updateVisualizationPreservingPositions();
 		}
 	}
 
-	function updateVisualization() {
+	/**
+	 * Handle deletions of nodes and edges
+	 * Called when user presses delete/backspace on selected elements
+	 */
+	function handleDelete(params: { nodes: Node[]; edges: Edge[] }) {
+		if (!graph) return;
+
+		const { nodes: deletedNodes, edges: deletedEdges } = params;
+		let graphModified = false;
+
+		// Remove deleted edges from graph
+		if (deletedEdges.length > 0) {
+			graph = {
+				nodes: [...graph.nodes],
+				edges: graph.edges.filter(edge => {
+					return !deletedEdges.some(deletedEdge =>
+						edge.from.node === deletedEdge.source &&
+						edge.from.port === deletedEdge.sourceHandle &&
+						edge.to.node === deletedEdge.target &&
+						edge.to.port === deletedEdge.targetHandle
+					);
+				})
+			};
+			
+			// Update edges state
+			edges = edges.filter(e => !deletedEdges.some(de => de.id === e.id));
+			graphModified = true;
+		}
+
+		// Remove deleted nodes from graph
+		if (deletedNodes.length > 0) {
+			const deletedNodeIds = new Set(deletedNodes.map(n => n.id));
+			graph = {
+				nodes: graph.nodes.filter(n => !deletedNodeIds.has(n.id)),
+				edges: graph.edges.filter(e => !deletedNodeIds.has(e.from.node) && !deletedNodeIds.has(e.to.node))
+			};
+			
+			// Update visualization states
+			nodes = nodes.filter(n => !deletedNodeIds.has(n.id));
+			edges = edges.filter(e => !deletedNodeIds.has(e.source) && !deletedNodeIds.has(e.target));
+			graphModified = true;
+		}
+
+		if (graphModified) {
+			// Reset validation and evaluation results when graph changes
+			validationResult = null;
+			evaluationResult = null;
+		}
+	}
+
+	/**
+	 * Update visualization while preserving node positions
+	 * Used when graph structure changes but layout should remain the same
+	 */
+	function updateVisualizationPreservingPositions() {
 		if (!graph) return;
 
 		// Reset validation and evaluation results when graph changes
 		validationResult = null;
 		evaluationResult = null;
 
-		// Convert to SvelteFlow format
-		const flow = graphToSvelteFlow(graph);
+		// Update flow while preserving existing node positions
+		const flow = updateFlowWithPreservedPositions(graph, nodes);
 		nodes = flow.nodes;
 		edges = flow.edges;
 	}
+
 </script>
 
 <div class="container">
@@ -221,7 +282,7 @@
 		<div class="toolbar">
 			<div class="graph-selector">
 				<label for="graph-select">Load Graph:</label>
-				<select id="graph-select" bind:value={selectedGraph} on:change={handleGraphChange}>
+				<select id="graph-select" bind:value={selectedGraph} onchange={handleGraphChange}>
 					<option value="sample">Sample Graph</option>
 					<option value="complex">Complex Graph</option>
 					<option value="dates">Date Operations</option>
@@ -229,8 +290,8 @@
 				</select>
 			</div>
 			<div class="toolbar-buttons">
-				<button on:click={validateGraph}>Validate Graph</button>
-				<button on:click={evaluateGraph}>Evaluate Graph</button>
+				<button onclick={validateGraph}>Validate Graph</button>
+				<button onclick={evaluateGraph}>Evaluate Graph</button>
 			</div>
 		</div>
 
@@ -244,8 +305,11 @@
 						{edges} 
 						{nodeTypes} 
 						fitView
+						elementsSelectable={true}
+						deleteKey="Backspace"
 						onpaneclick={handlePaneClick}
 						onconnect={handleConnect}
+						ondelete={handleDelete}
 					>
 						<Background />
 						<Controls />
