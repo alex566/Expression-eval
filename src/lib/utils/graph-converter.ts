@@ -168,6 +168,10 @@ export function graphToSvelteFlow(
 		const dagreNode = dagreGraph.node(node.id) as DagreNode;
 		const ports = dagreNode.ports;
 
+		// Check if this node has a subgraph
+		const definition = nodeRegistry.get(node.type);
+		const hasSubgraph = definition?.hasSubgraph && !!node.subgraph;
+
 		nodes.push({
 			id: node.id,
 			type: 'custom', // Use custom node type
@@ -175,7 +179,8 @@ export function graphToSvelteFlow(
 				label: node.type,
 				nodeId: node.id,
 				inputs: ports.inputs,
-				outputs: ports.outputs
+				outputs: ports.outputs,
+				hasSubgraph
 			},
 			position: {
 				// dagre returns center position, we need top-left for SvelteFlow
@@ -226,6 +231,10 @@ export function updateFlowWithPreservedPositions(
 		const ports = getNodePorts(node.type, node.id, node.data, graph.edges, inferredTypes);
 		const existingPosition = positionMap.get(node.id);
 
+		// Check if this node has a subgraph
+		const definition = nodeRegistry.get(node.type);
+		const hasSubgraph = definition?.hasSubgraph && !!node.subgraph;
+
 		nodes.push({
 			id: node.id,
 			type: 'custom',
@@ -233,7 +242,8 @@ export function updateFlowWithPreservedPositions(
 				label: node.type,
 				nodeId: node.id,
 				inputs: ports.inputs,
-				outputs: ports.outputs
+				outputs: ports.outputs,
+				hasSubgraph
 			},
 			position: existingPosition || { x: 0, y: 0 } // Use existing position or default
 		});

@@ -10,6 +10,7 @@
 	import CustomNode from '$lib/components/CustomNode.svelte';
 	import EvaluationReport from '$lib/components/EvaluationReport.svelte';
 	import AddNodeModal from '$lib/components/AddNodeModal.svelte';
+	import Breadcrumbs from '$lib/components/Breadcrumbs.svelte';
 	import { GRAPHS } from '$lib/data/graphs';
 
 	let nodes = $state.raw<Node[]>([]);
@@ -21,6 +22,15 @@
 	let error = $state('');
 	let selectedGraph = $state('sample');
 	let showAddNodeModal = $state(false);
+
+	// Breadcrumb navigation state
+	interface BreadcrumbItem {
+		label: string;
+		nodeId?: string;
+		graph: Graph;
+	}
+	let breadcrumbs = $state<BreadcrumbItem[]>([]);
+	let currentGraph = $state<Graph | null>(null);
 
 	// Register custom node types for SvelteFlow
 	const nodeTypes = {
@@ -50,6 +60,10 @@
 				throw new Error(`Graph '${graphKey}' not found`);
 			}
 
+			// Reset breadcrumbs and navigation
+			breadcrumbs = [{ label: 'Main Graph', graph }];
+			currentGraph = graph;
+
 			// Reset results when loading new graph
 			validationResult = null;
 			evaluationResult = null;
@@ -65,6 +79,58 @@
 		}
 	}
 
+	function handleNodeClick(event: CustomEvent) {
+		const nodeId = event.detail.nodeId;
+		if (!currentGraph) return;
+
+		// Find the clicked node in the current graph
+		const clickedNode = currentGraph.nodes.find(n => n.id === nodeId);
+		if (!clickedNode || !clickedNode.subgraph) return;
+
+		// Check if this node has a subgraph
+		const definition = nodeRegistry.get(clickedNode.type);
+		if (!definition?.hasSubgraph) return;
+
+		// Navigate into the subgraph
+		breadcrumbs = [...breadcrumbs, {
+			label: `${clickedNode.type} (${nodeId})`,
+			nodeId,
+			graph: clickedNode.subgraph
+		}];
+		currentGraph = clickedNode.subgraph;
+
+		// Update visualization
+		const flow = graphToSvelteFlow(clickedNode.subgraph);
+		nodes = flow.nodes;
+		edges = flow.edges;
+
+		// Reset validation/evaluation when navigating
+		validationResult = null;
+		evaluationResult = null;
+	}
+
+	function handleBreadcrumbNavigate(index: number) {
+		if (index < 0 || index >= breadcrumbs.length) return;
+
+		// Navigate to the selected breadcrumb level
+		breadcrumbs = breadcrumbs.slice(0, index + 1);
+		currentGraph = breadcrumbs[index].graph;
+
+		// Update visualization
+		const flow = graphToSvelteFlow(currentGraph);
+		nodes = flow.nodes;
+		edges = flow.edges;
+
+		// Update the main graph reference if at root
+		if (index === 0) {
+			graph = currentGraph;
+		}
+
+		// Reset validation/evaluation when navigating
+		validationResult = null;
+		evaluationResult = null;
+	}
+
 	function handleGraphChange(event: Event) {
 		const target = event.target as HTMLSelectElement;
 		selectedGraph = target.value;
@@ -72,20 +138,20 @@
 	}
 
 	async function validateGraph() {
-		if (!graph) {
+		if (!currentGraph) {
 			error = 'No graph loaded';
 			return;
 		}
 
 		try {
-			const evaluator = new GraphEvaluator(graph, nodeRegistry);
+			const evaluator = new GraphEvaluator(currentGraph, nodeRegistry);
 			validationResult = await evaluator.validate();
 			error = '';
 
 			// Update nodes with inferred types for visualization
 			// Preserve existing positions - only update node data, not layout
-			if (validationResult.success && validationResult.inferredTypes && graph) {
-				const flow = updateFlowWithPreservedPositions(graph, nodes, validationResult.inferredTypes);
+			if (validationResult.success && validationResult.inferredTypes && currentGraph) {
+				const flow = updateFlowWithPreservedPositions(currentGraph, nodes, validationResult.inferredTypes);
 				nodes = flow.nodes;
 				edges = flow.edges;
 			}
@@ -95,20 +161,20 @@
 	}
 
 	async function evaluateGraph() {
-		if (!graph) {
+		if (!currentGraph) {
 			error = 'No graph loaded';
 			return;
 		}
 
 		try {
-			const evaluator = new GraphEvaluator(graph, nodeRegistry);
+			const evaluator = new GraphEvaluator(currentGraph, nodeRegistry);
 			evaluationResult = await evaluator.evaluate();
 			error = '';
 
 			// Update nodes with inferred types for visualization
 			// Preserve existing positions - only update node data, not layout
-			if (evaluationResult.success && evaluationResult.inferredTypes && graph) {
-				const flow = updateFlowWithPreservedPositions(graph, nodes, evaluationResult.inferredTypes);
+			if (evaluationResult.success && evaluationResult.inferredTypes && currentGraph) {
+				const flow = updateFlowWithPreservedPositions(currentGraph, nodes, evaluationResult.inferredTypes);
 				nodes = flow.nodes;
 				edges = flow.edges;
 			}
@@ -287,6 +353,7 @@
 					<option value="complex">Complex Graph</option>
 					<option value="dates">Date Operations</option>
 					<option value="arrays">Array Operations</option>
+					<option value="mapfilterreduce">Map/Filter/Reduce</option>
 				</select>
 			</div>
 			<div class="toolbar-buttons">
@@ -294,6 +361,11 @@
 				<button onclick={evaluateGraph}>Evaluate Graph</button>
 			</div>
 		</div>
+
+		<!-- Breadcrumb navigation -->
+		{#if breadcrumbs.length > 1}
+			<Breadcrumbs breadcrumbs={breadcrumbs} onNavigate={handleBreadcrumbNavigate} />
+		{/if}
 
 		<div class="content">
 			<!-- Graph visualization -->
@@ -310,6 +382,12 @@
 						onpaneclick={handlePaneClick}
 						onconnect={handleConnect}
 						ondelete={handleDelete}
+						onnodedoubleclick={(event) => {
+							const node = event.detail.node;
+							if (node?.data?.hasSubgraph) {
+								handleNodeClick({ detail: { nodeId: node.id } } as CustomEvent);
+							}
+						}}
 					>
 						<Background />
 						<Controls />

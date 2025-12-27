@@ -6,6 +6,7 @@
 	type $$Props = NodeProps;
 
 	export let data: $$Props['data'];
+	export let id: $$Props['id'];
 
 	// Extract input and output ports from data (now with type info)
 	// Make these reactive to data changes
@@ -13,6 +14,7 @@
 	$: outputs = (data.outputs as PortSpec[]) || [];
 	$: nodeLabel = (data.label as string) || '';
 	$: nodeId = (data.nodeId as string) || '';
+	$: hasSubgraph = (data.hasSubgraph as boolean) || false;
 	
 	// Calculate dynamic height based on number of ports
 	$: maxPorts = Math.max(inputs.length, outputs.length);
@@ -20,7 +22,13 @@
 
 </script>
 
-<div class="custom-node" style="min-height: {minHeight}px;">
+<div 
+	class="custom-node" 
+	class:has-subgraph={hasSubgraph} 
+	style="min-height: {minHeight}px;"
+	role="button"
+	tabindex={hasSubgraph ? "0" : undefined}
+>
 	<!-- Input handles on the left -->
 	{#if inputs.length > 0}
 		<div class="handles-container left">
@@ -42,7 +50,12 @@
 
 	<!-- Node content -->
 	<div class="node-content">
-		<div class="node-label">{nodeLabel}</div>
+		<div class="node-label">
+			{nodeLabel}
+			{#if hasSubgraph}
+				<span class="subgraph-indicator" title="Double-click to view subgraph">⚙️</span>
+			{/if}
+		</div>
 		{#if nodeId}
 			<div class="node-id">({nodeId})</div>
 		{/if}
@@ -82,6 +95,22 @@
 	.custom-node:hover {
 		border-color: #3b82f6;
 		box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+	}
+
+	.custom-node.has-subgraph {
+		border-color: #8b5cf6;
+		cursor: pointer;
+	}
+
+	.custom-node.has-subgraph:hover {
+		border-color: #7c3aed;
+		box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+	}
+
+	.subgraph-indicator {
+		margin-left: 0.5rem;
+		font-size: 0.875rem;
+		opacity: 0.7;
 	}
 
 	.node-content {

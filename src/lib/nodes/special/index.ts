@@ -19,6 +19,26 @@ export const ValueNode: NodeDefinition = {
 };
 
 /**
+ * Input node - represents an input to a subgraph
+ * Used in Map/Filter/Reduce subgraphs to represent the current element
+ */
+export const InputNode: NodeDefinition = {
+	type: 'Input',
+	category: 'special',
+	description: 'Represents an input to a subgraph (used in Map/Filter/Reduce)',
+	inputs: [],
+	outputs: [
+		{ name: 'out', type: 'any' }
+	],
+	execute(context) {
+		// In subgraph context, this will be replaced with a Value node
+		// For standalone usage, output undefined
+		const value = context.getNodeData().value;
+		context.setOutputValue('out', value);
+	}
+};
+
+/**
  * Output node - marks final output values
  * Dynamically creates input ports based on the configuration
  */
