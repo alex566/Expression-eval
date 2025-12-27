@@ -2,14 +2,11 @@
 	import { Handle, Position } from '@xyflow/svelte';
 	import type { NodeProps } from '@xyflow/svelte';
 	import type { PortSpec } from '$lib/dataflow/types';
-	import { createEventDispatcher } from 'svelte';
 
 	type $$Props = NodeProps;
 
 	export let data: $$Props['data'];
 	export let id: $$Props['id'];
-
-	const dispatch = createEventDispatcher();
 
 	// Extract input and output ports from data (now with type info)
 	// Make these reactive to data changes
@@ -23,27 +20,14 @@
 	$: maxPorts = Math.max(inputs.length, outputs.length);
 	$: minHeight = Math.max(80, 40 + maxPorts * 30); // Base height + spacing per port
 
-	function handleNodeClick() {
-		if (hasSubgraph) {
-			dispatch('nodeclick', { nodeId: id });
-		}
-	}
-
 </script>
 
 <div 
 	class="custom-node" 
 	class:has-subgraph={hasSubgraph} 
-	style="min-height: {minHeight}px;" 
-	on:dblclick={handleNodeClick}
+	style="min-height: {minHeight}px;"
 	role="button"
-	tabindex="0"
-	on:keydown={(e) => {
-		if (hasSubgraph && (e.key === 'Enter' || e.key === ' ')) {
-			e.preventDefault();
-			handleNodeClick();
-		}
-	}}
+	tabindex={hasSubgraph ? "0" : undefined}
 >
 	<!-- Input handles on the left -->
 	{#if inputs.length > 0}

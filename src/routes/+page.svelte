@@ -382,7 +382,7 @@
 						onpaneclick={handlePaneClick}
 						onconnect={handleConnect}
 						ondelete={handleDelete}
-						onnodeclick={(event) => {
+						onnodedoubleclick={(event) => {
 							const node = event.detail.node;
 							if (node?.data?.hasSubgraph) {
 								handleNodeClick({ detail: { nodeId: node.id } } as CustomEvent);
