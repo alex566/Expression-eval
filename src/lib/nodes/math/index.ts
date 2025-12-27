@@ -31,14 +31,17 @@ export const AddNode: NodeDefinition = {
 		if (hasArray) {
 			// Array-aware addition: element-wise operation
 			const arrays = inputs.map(input => Array.isArray(input) ? input : [input]);
-			const maxLength = Math.max(...arrays.map(arr => arr.length));
+			const lengths = arrays.map(arr => arr.length).filter(len => len > 0);
+			const maxLength = lengths.length > 0 ? Math.max(...lengths) : 0;
 			const result: number[] = [];
 
 			for (let i = 0; i < maxLength; i++) {
 				let sum = 0;
 				for (const arr of arrays) {
-					const val = i < arr.length ? arr[i] : arr[arr.length - 1];
-					sum += Number(val) || 0;
+					if (arr.length > 0) {
+						const val = i < arr.length ? arr[i] : arr[arr.length - 1];
+						sum += Number(val) || 0;
+					}
 				}
 				result.push(sum);
 			}
@@ -91,16 +94,21 @@ export const SubtractNode: NodeDefinition = {
 		if (hasArray) {
 			// Array-aware subtraction: element-wise operation
 			const arrays = inputs.map(input => Array.isArray(input) ? input : [input]);
-			const maxLength = Math.max(...arrays.map(arr => arr.length));
+			const lengths = arrays.map(arr => arr.length).filter(len => len > 0);
+			const maxLength = lengths.length > 0 ? Math.max(...lengths) : 0;
 			const result: number[] = [];
 
 			for (let i = 0; i < maxLength; i++) {
-				const firstVal = i < arrays[0].length ? arrays[0][i] : arrays[0][arrays[0].length - 1];
+				const firstVal = arrays[0].length > 0 
+					? (i < arrays[0].length ? arrays[0][i] : arrays[0][arrays[0].length - 1])
+					: 0;
 				let diff = Number(firstVal) || 0;
 
 				for (let j = 1; j < arrays.length; j++) {
-					const val = i < arrays[j].length ? arrays[j][i] : arrays[j][arrays[j].length - 1];
-					diff -= Number(val) || 0;
+					if (arrays[j].length > 0) {
+						const val = i < arrays[j].length ? arrays[j][i] : arrays[j][arrays[j].length - 1];
+						diff -= Number(val) || 0;
+					}
 				}
 				result.push(diff);
 			}
@@ -153,14 +161,17 @@ export const MultiplyNode: NodeDefinition = {
 		if (hasArray) {
 			// Array-aware multiplication: element-wise operation
 			const arrays = inputs.map(input => Array.isArray(input) ? input : [input]);
-			const maxLength = Math.max(...arrays.map(arr => arr.length));
+			const lengths = arrays.map(arr => arr.length).filter(len => len > 0);
+			const maxLength = lengths.length > 0 ? Math.max(...lengths) : 0;
 			const result: number[] = [];
 
 			for (let i = 0; i < maxLength; i++) {
 				let product = 1;
 				for (const arr of arrays) {
-					const val = i < arr.length ? arr[i] : arr[arr.length - 1];
-					product *= Number(val) || 0;
+					if (arr.length > 0) {
+						const val = i < arr.length ? arr[i] : arr[arr.length - 1];
+						product *= Number(val) || 0;
+					}
 				}
 				result.push(product);
 			}
@@ -213,20 +224,25 @@ export const DivideNode: NodeDefinition = {
 		if (hasArray) {
 			// Array-aware division: element-wise operation
 			const arrays = inputs.map(input => Array.isArray(input) ? input : [input]);
-			const maxLength = Math.max(...arrays.map(arr => arr.length));
+			const lengths = arrays.map(arr => arr.length).filter(len => len > 0);
+			const maxLength = lengths.length > 0 ? Math.max(...lengths) : 0;
 			const result: number[] = [];
 
 			for (let i = 0; i < maxLength; i++) {
-				const firstVal = i < arrays[0].length ? arrays[0][i] : arrays[0][arrays[0].length - 1];
+				const firstVal = arrays[0].length > 0
+					? (i < arrays[0].length ? arrays[0][i] : arrays[0][arrays[0].length - 1])
+					: 0;
 				let quotient = Number(firstVal) || 0;
 
 				for (let j = 1; j < arrays.length; j++) {
-					const val = i < arrays[j].length ? arrays[j][i] : arrays[j][arrays[j].length - 1];
-					const divisor = Number(val) || 0;
-					if (divisor === 0) {
-						throw new Error('Division by zero in Divide node');
+					if (arrays[j].length > 0) {
+						const val = i < arrays[j].length ? arrays[j][i] : arrays[j][arrays[j].length - 1];
+						const divisor = Number(val) || 0;
+						if (divisor === 0) {
+							throw new Error('Division by zero in Divide node');
+						}
+						quotient /= divisor;
 					}
-					quotient /= divisor;
 				}
 				result.push(quotient);
 			}

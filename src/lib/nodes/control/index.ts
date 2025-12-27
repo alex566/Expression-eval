@@ -112,12 +112,23 @@ export const CompareNode: NodeDefinition = {
 		if (Array.isArray(a) || Array.isArray(b)) {
 			const aArray = Array.isArray(a) ? a : [a];
 			const bArray = Array.isArray(b) ? b : [b];
+			
+			// Handle empty arrays
+			if (aArray.length === 0 && bArray.length === 0) {
+				context.setOutputValue('out', []);
+				return;
+			}
+			
 			const maxLength = Math.max(aArray.length, bArray.length);
 			const results: boolean[] = [];
 
 			for (let i = 0; i < maxLength; i++) {
-				const aVal = i < aArray.length ? aArray[i] : aArray[aArray.length - 1];
-				const bVal = i < bArray.length ? bArray[i] : bArray[bArray.length - 1];
+				const aVal = aArray.length > 0 
+					? (i < aArray.length ? aArray[i] : aArray[aArray.length - 1])
+					: undefined;
+				const bVal = bArray.length > 0
+					? (i < bArray.length ? bArray[i] : bArray[bArray.length - 1])
+					: undefined;
 				results.push(compare(aVal, bVal));
 			}
 
