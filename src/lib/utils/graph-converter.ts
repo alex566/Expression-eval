@@ -194,6 +194,8 @@ export function graphToSvelteFlow(
 			sourceHandle: edge.from.port,
 			targetHandle: edge.to.port,
 			animated: true,
+			selectable: true,
+			deletable: true,
 			style: 'stroke: #3b82f6; stroke-width: 2px;'
 		});
 	});
@@ -246,6 +248,8 @@ export function updateFlowWithPreservedPositions(
 			sourceHandle: edge.from.port,
 			targetHandle: edge.to.port,
 			animated: true,
+			selectable: true,
+			deletable: true,
 			style: 'stroke: #3b82f6; stroke-width: 2px;'
 		});
 	});

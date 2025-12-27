@@ -206,38 +206,47 @@
 	}
 
 	/**
-	 * Handle edge changes (deletions, additions, reconnections)
+	 * Handle deletions of nodes and edges
+	 * Called when user presses delete/backspace on selected elements
 	 */
-	function handleEdgesChange(event: CustomEvent<EdgeChange[]>) {
+	function handleDelete(event: CustomEvent<{ nodes: Node[]; edges: Edge[] }>) {
 		if (!graph) return;
 
-		const changes = event.detail;
+		const { nodes: deletedNodes, edges: deletedEdges } = event.detail;
 		let graphModified = false;
 
-		changes.forEach(change => {
-			if (change.type === 'remove') {
-				// Find and remove the edge from the graph
-				const edgeToRemove = edges.find(e => e.id === change.id);
-				if (edgeToRemove) {
-					// Remove from graph state
-					graph = {
-						nodes: [...graph.nodes],
-						edges: graph.edges.filter(
-							edge => !(
-								edge.from.node === edgeToRemove.source &&
-								edge.from.port === edgeToRemove.sourceHandle &&
-								edge.to.node === edgeToRemove.target &&
-								edge.to.port === edgeToRemove.targetHandle
-							)
-						)
-					};
-					
-					// Also remove from edges state
-					edges = edges.filter(e => e.id !== change.id);
-					graphModified = true;
-				}
-			}
-		});
+		// Remove deleted edges from graph
+		if (deletedEdges.length > 0) {
+			graph = {
+				nodes: [...graph.nodes],
+				edges: graph.edges.filter(edge => {
+					return !deletedEdges.some(deletedEdge =>
+						edge.from.node === deletedEdge.source &&
+						edge.from.port === deletedEdge.sourceHandle &&
+						edge.to.node === deletedEdge.target &&
+						edge.to.port === deletedEdge.targetHandle
+					);
+				})
+			};
+			
+			// Update edges state
+			edges = edges.filter(e => !deletedEdges.some(de => de.id === e.id));
+			graphModified = true;
+		}
+
+		// Remove deleted nodes from graph
+		if (deletedNodes.length > 0) {
+			const deletedNodeIds = new Set(deletedNodes.map(n => n.id));
+			graph = {
+				nodes: graph.nodes.filter(n => !deletedNodeIds.has(n.id)),
+				edges: graph.edges.filter(e => !deletedNodeIds.has(e.from.node) && !deletedNodeIds.has(e.to.node))
+			};
+			
+			// Update visualization states
+			nodes = nodes.filter(n => !deletedNodeIds.has(n.id));
+			edges = edges.filter(e => !deletedNodeIds.has(e.source) && !deletedNodeIds.has(e.target));
+			graphModified = true;
+		}
 
 		if (graphModified) {
 			// Reset validation and evaluation results when graph changes
@@ -298,10 +307,11 @@
 						{edges} 
 						{nodeTypes} 
 						fitView
-						edgesDeletable={true}
+						elementsSelectable={true}
+						deleteKey="Backspace"
 						onpaneclick={handlePaneClick}
 						onconnect={handleConnect}
-						onedgeschange={handleEdgesChange}
+						ondelete={handleDelete}
 					>
 						<Background />
 						<Controls />
