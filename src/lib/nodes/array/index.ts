@@ -14,7 +14,7 @@ export const MapNode: NodeDefinition = {
 	description: 'Maps each element of an array through a transformation function',
 	inputs: [
 		{ name: 'array', type: 'array' },
-		{ name: 'function', type: 'string' } // Function name reference
+		{ name: 'function', type: 'string' } // Function name (from FunctionValue node connection)
 	],
 	outputs: [
 		{ name: 'out', type: 'array' }
@@ -77,7 +77,7 @@ export const FilterNode: NodeDefinition = {
 	description: 'Filters array elements using a predicate function',
 	inputs: [
 		{ name: 'array', type: 'array' },
-		{ name: 'function', type: 'string' } // Function name reference
+		{ name: 'function', type: 'string' } // Function name (from FunctionValue node connection)
 	],
 	outputs: [
 		{ name: 'out', type: 'array' }
@@ -143,7 +143,7 @@ export const ReduceNode: NodeDefinition = {
 	inputs: [
 		{ name: 'array', type: 'array' },
 		{ name: 'initial', type: 'any' },
-		{ name: 'function', type: 'string' } // Function name reference
+		{ name: 'function', type: 'string' } // Function name (from FunctionValue node connection)
 	],
 	outputs: [
 		{ name: 'out', type: 'any' }
