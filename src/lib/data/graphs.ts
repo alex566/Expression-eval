@@ -810,10 +810,196 @@ export const MAP_FILTER_REDUCE_GRAPH: Graph = {
 	]
 };
 
+export const FUNCTION_BASED_GRAPH: Graph = {
+	nodes: [
+		{
+			id: "numbers",
+			type: "Value",
+			data: {
+				value: [1, 2, 3, 4, 5]
+			}
+		},
+		{
+			id: "map_double",
+			type: "Map",
+			data: {
+				functionName: "double"
+			}
+		},
+		{
+			id: "filter_even",
+			type: "Filter",
+			data: {
+				functionName: "isEven"
+			}
+		},
+		{
+			id: "output",
+			type: "Output",
+			data: {
+				outputs: ["result"]
+			}
+		}
+	],
+	edges: [
+		{
+			from: { node: "numbers", port: "out" },
+			to: { node: "map_double", port: "array" }
+		},
+		{
+			from: { node: "map_double", port: "out" },
+			to: { node: "filter_even", port: "array" }
+		},
+		{
+			from: { node: "filter_even", port: "out" },
+			to: { node: "output", port: "result" }
+		}
+	],
+	functions: [
+		{
+			name: "double",
+			description: "Doubles the element value",
+			graph: {
+				nodes: [
+					{
+						id: "input",
+						type: "FunctionInput",
+						data: {}
+					},
+					{
+						id: "getElement",
+						type: "GetProperty",
+						data: {
+							property: "element"
+						}
+					},
+					{
+						id: "two",
+						type: "Value",
+						data: {
+							value: 2
+						}
+					},
+					{
+						id: "multiply",
+						type: "Multiply",
+						data: {}
+					},
+					{
+						id: "output",
+						type: "Output",
+						data: {
+							outputs: ["result"]
+						}
+					}
+				],
+				edges: [
+					{
+						from: { node: "input", port: "out" },
+						to: { node: "getElement", port: "object" }
+					},
+					{
+						from: { node: "getElement", port: "out" },
+						to: { node: "multiply", port: "in0" }
+					},
+					{
+						from: { node: "two", port: "out" },
+						to: { node: "multiply", port: "in1" }
+					},
+					{
+						from: { node: "multiply", port: "out" },
+						to: { node: "output", port: "result" }
+					}
+				]
+			}
+		},
+		{
+			name: "isEven",
+			description: "Checks if element is even",
+			graph: {
+				nodes: [
+					{
+						id: "input",
+						type: "FunctionInput",
+						data: {}
+					},
+					{
+						id: "getElement",
+						type: "GetProperty",
+						data: {
+							property: "element"
+						}
+					},
+					{
+						id: "two",
+						type: "Value",
+						data: {
+							value: 2
+						}
+					},
+					{
+						id: "divide",
+						type: "Divide",
+						data: {}
+					},
+					{
+						id: "floor",
+						type: "Value",
+						data: {
+							value: 0
+						}
+					},
+					{
+						id: "compare",
+						type: "Compare",
+						data: {
+							operator: "=="
+						}
+					},
+					{
+						id: "output",
+						type: "Output",
+						data: {
+							outputs: ["result"]
+						}
+					}
+				],
+				edges: [
+					{
+						from: { node: "input", port: "out" },
+						to: { node: "getElement", port: "object" }
+					},
+					{
+						from: { node: "getElement", port: "out" },
+						to: { node: "divide", port: "in0" }
+					},
+					{
+						from: { node: "two", port: "out" },
+						to: { node: "divide", port: "in1" }
+					},
+					{
+						from: { node: "divide", port: "out" },
+						to: { node: "compare", port: "a" }
+					},
+					{
+						from: { node: "floor", port: "out" },
+						to: { node: "compare", port: "b" }
+					},
+					{
+						from: { node: "compare", port: "out" },
+						to: { node: "output", port: "result" }
+					}
+				]
+			}
+		}
+	]
+};
+
 export const GRAPHS: Record<string, Graph> = {
 	'sample': SAMPLE_GRAPH,
 	'complex': COMPLEX_GRAPH,
 	'dates': DATE_SAMPLE_GRAPH,
 	'arrays': ARRAY_OPERATIONS_GRAPH,
-	'mapfilterreduce': MAP_FILTER_REDUCE_GRAPH
+	'mapfilterreduce': MAP_FILTER_REDUCE_GRAPH,
+	'functions': FUNCTION_BASED_GRAPH
 };
