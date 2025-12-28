@@ -106,15 +106,30 @@ Every function-based graph has a "main" function that serves as the entry point.
 
 ### Using Functions with Array Operations
 
-The Map, Filter, and Reduce nodes now support function references:
+The Map, Filter, and Reduce nodes are now **fully function-based** and require FunctionValue nodes connected to their function input pins:
 
 ```json
 {
-  "id": "map_double",
-  "type": "Map",
-  "data": {
-    "functionName": "double"
-  }
+  "nodes": [
+    {
+      "id": "double_func",
+      "type": "FunctionValue",
+      "data": {
+        "functionName": "double"
+      }
+    },
+    {
+      "id": "map_double",
+      "type": "Map",
+      "data": {}
+    }
+  ],
+  "edges": [
+    {
+      "from": { "node": "double_func", "port": "out" },
+      "to": { "node": "map_double", "port": "function" }
+    }
+  ]
 }
 ```
 
@@ -129,6 +144,7 @@ This approach provides:
 - **Composition**: Functions can call other functions
 - **Clarity**: Function names describe what they do
 - **Modularity**: Functions are self-contained units
+- **Navigation**: Double-click FunctionValue nodes to view/edit function definitions
 
 ## Node Categories
 
@@ -138,6 +154,9 @@ Nodes are organized in separate folders by category:
 - **FunctionInput**: Represents the input JSON object to a function (entry point)
 - **GetProperty**: Extracts a property from a JSON object
   - Example: Extract "element" from `{ element: 5, index: 0 }` → returns `5`
+- **FunctionValue**: Provides a function name as a value that can be connected to function pins
+  - Used to reference functions in Map/Filter/Reduce operations
+  - Double-click to view/edit the function definition
 - **FunctionRef**: Calls a function by name with a JSON object input (internal use)
 
 #### Math Operations (`src/lib/nodes/math/`)
@@ -162,6 +181,21 @@ All math nodes now support **array-aware operations**. When any input is an arra
   - Single: `5 > 3 = true`
   - Arrays: `[1,5,10] > 3 = [false, true, true]`
 - **Switch**: Multi-case branching based on a value matching a case
+
+#### Array Operations (`src/lib/nodes/array/`)
+All array operation nodes are **function-based** and require a FunctionValue node connected to their function input:
+- **Map**: Transforms each element of an array through a function
+  - Inputs: `array` (array to transform), `function` (function name from FunctionValue node)
+  - The function receives `{ element: value }` for each array element
+  - Returns: transformed array
+- **Filter**: Filters array elements using a predicate function
+  - Inputs: `array` (array to filter), `function` (predicate function name)
+  - The function receives `{ element: value }` and should return boolean
+  - Returns: filtered array containing only elements where predicate returned true
+- **Reduce**: Reduces an array to a single value using an accumulator function
+  - Inputs: `array` (array to reduce), `initial` (initial accumulator value), `function` (reducer function name)
+  - The function receives `{ accumulator: current, element: value }` for each element
+  - Returns: final accumulated value
 
 #### Special Nodes (`src/lib/nodes/special/`)
 - **Value**: Provides a constant/hardcoded value to the graph (supports arrays)
@@ -366,13 +400,15 @@ npm run build
 - ✅ **Function-based architecture** - reusable functions with JSON object inputs
 - ✅ **GetProperty node** - extract properties from JSON objects
 - ✅ **FunctionInput node** - define function entry points
-- ✅ **Backward compatibility** - supports both function-based and legacy subgraph approaches
+- ✅ **FunctionValue node** - reference functions as values that can be connected to pins
+- ✅ **Interactive function navigation** - double-click FunctionValue nodes to view/edit functions
+- ✅ **Clean architecture** - Map/Filter/Reduce fully function-based, no more subgraphs
 
 ## Migration from Subgraphs to Functions
 
-The system maintains backward compatibility with the old subgraph approach while supporting the new function-based architecture.
+**Note:** As of the latest version, Map/Filter/Reduce nodes are **fully function-based** and no longer support the subgraph approach. All operations must use FunctionValue nodes connected to function pins.
 
-### Old Approach (Subgraphs)
+### Old Approach (Subgraphs - Deprecated)
 ```json
 {
   "id": "map_double",
@@ -392,16 +428,27 @@ The system maintains backward compatibility with the old subgraph approach while
 }
 ```
 
-### New Approach (Functions)
+### New Approach (Functions - Required)
 ```json
 {
   "nodes": [
     {
-      "id": "map_double",
-      "type": "Map",
+      "id": "double_func",
+      "type": "FunctionValue",
       "data": {
         "functionName": "double"
       }
+    },
+    {
+      "id": "map_double",
+      "type": "Map",
+      "data": {}
+    }
+  ],
+  "edges": [
+    {
+      "from": { "node": "double_func", "port": "out" },
+      "to": { "node": "map_double", "port": "function" }
     }
   ],
   "functions": [
@@ -430,10 +477,11 @@ The system maintains backward compatibility with the old subgraph approach while
 
 ### Benefits of Function-Based Architecture
 
-1. **Reusability**: Define once, use multiple times
+1. **Reusability**: Define once, use multiple times across different operations
 2. **Naming**: Clear function names describe purpose
 3. **Organization**: Functions are listed separately from main graph
-4. **Composition**: Functions can call other functions (future enhancement)
-5. **Testing**: Functions can be tested independently (future enhancement)
+4. **Composition**: Functions are the main composition element, everything is based on functions
+5. **Navigation**: Double-click FunctionValue nodes to view/edit function definitions
+6. **Clean Architecture**: Consistent pattern throughout - no mixed approaches
 
-See `static/function-based.json` for a complete example.
+See `static/function-based.json` and `static/map-filter-reduce.json` for complete examples.
