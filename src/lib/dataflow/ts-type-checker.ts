@@ -33,6 +33,7 @@ export interface TSTypeCheckResult {
 export class TSTypeChecker {
 	private compilerHost: ts.CompilerHost;
 	private compilerOptions: ts.CompilerOptions;
+	private sanitizedToOriginal: Map<string, string> = new Map();
 
 	constructor(private registry: NodeRegistry) {
 		// Configure TypeScript compiler options for type inference
@@ -72,6 +73,9 @@ export class TSTypeChecker {
 		const inferredTypes: Record<string, TSTypeInfo> = {};
 
 		try {
+			// Clear the mapping for this graph
+			this.sanitizedToOriginal.clear();
+
 			// 1. Build TypeScript code from graph
 			const tsCode = this.graphToTypeScript(graph);
 
@@ -313,15 +317,18 @@ export class TSTypeChecker {
 	 */
 	private sanitizeIdentifier(id: string): string {
 		// Replace invalid characters with underscores
-		return id.replace(/[^a-zA-Z0-9_]/g, '_');
+		const sanitized = id.replace(/[^a-zA-Z0-9_]/g, '_');
+		// Store mapping for reverse lookup
+		this.sanitizedToOriginal.set(sanitized, id);
+		return sanitized;
 	}
 
 	/**
 	 * Reverse sanitization to get original node ID
 	 */
 	private unsanitizeIdentifier(sanitized: string): string {
-		// This is a simple implementation - in production, you'd need a proper mapping
-		return sanitized;
+		// Use stored mapping to get original ID
+		return this.sanitizedToOriginal.get(sanitized) || sanitized;
 	}
 
 	/**
