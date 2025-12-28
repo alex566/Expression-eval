@@ -22,6 +22,10 @@ export const IfNode: NodeDefinition = {
 		const trueValue = context.getInputValue('true');
 		const falseValue = context.getInputValue('false');
 
+		if (Array.isArray(condition)) {
+			throw new Error('If node does not support array conditions. Use Filter node for array filtering operations.');
+		}
+
 		// Single condition - standard behavior
 		if (condition) {
 			context.setOutputValue('out', trueValue);
@@ -51,6 +55,10 @@ export const CompareNode: NodeDefinition = {
 		const a = context.getInputValue('a');
 		const b = context.getInputValue('b');
 		const operator = context.getNodeData().operator || '==';
+
+		if (Array.isArray(a) || Array.isArray(b)) {
+			throw new Error('Compare node does not support array inputs. Use Map node with a comparison function for array comparisons.');
+		}
 
 		const compare = (val1: any, val2: any): boolean => {
 			switch (operator) {

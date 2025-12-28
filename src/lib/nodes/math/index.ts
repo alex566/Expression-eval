@@ -21,6 +21,9 @@ export const AddNode: NodeDefinition = {
 		while (true) {
 			const value = context.getInputValue(`in${index}`);
 			if (value === undefined) break;
+			if (Array.isArray(value)) {
+				throw new Error('Add node does not support array inputs. Use Map/Filter/Reduce nodes for array operations.');
+			}
 			inputs.push(value);
 			index++;
 		}
@@ -55,6 +58,9 @@ export const SubtractNode: NodeDefinition = {
 		while (true) {
 			const value = context.getInputValue(`in${index}`);
 			if (value === undefined) break;
+			if (Array.isArray(value)) {
+				throw new Error('Subtract node does not support array inputs. Use Map/Filter/Reduce nodes for array operations.');
+			}
 			inputs.push(value);
 			index++;
 		}
@@ -94,6 +100,9 @@ export const MultiplyNode: NodeDefinition = {
 		while (true) {
 			const value = context.getInputValue(`in${index}`);
 			if (value === undefined) break;
+			if (Array.isArray(value)) {
+				throw new Error('Multiply node does not support array inputs. Use Map/Filter/Reduce nodes for array operations.');
+			}
 			inputs.push(value);
 			index++;
 		}
@@ -133,6 +142,9 @@ export const DivideNode: NodeDefinition = {
 		while (true) {
 			const value = context.getInputValue(`in${index}`);
 			if (value === undefined) break;
+			if (Array.isArray(value)) {
+				throw new Error('Divide node does not support array inputs. Use Map/Filter/Reduce nodes for array operations.');
+			}
 			inputs.push(value);
 			index++;
 		}
@@ -175,6 +187,10 @@ export const ModuloNode: NodeDefinition = {
 		if (dividend === undefined || divisor === undefined) {
 			context.setOutputValue('out', 0);
 			return;
+		}
+
+		if (Array.isArray(dividend) || Array.isArray(divisor)) {
+			throw new Error('Modulo node does not support array inputs. Use Map/Filter/Reduce nodes for array operations.');
 		}
 
 		// Standard single value modulo
