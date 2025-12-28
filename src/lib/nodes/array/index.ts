@@ -1,6 +1,7 @@
 import type { NodeDefinition, Graph, FunctionDefinition } from '../../dataflow/types';
 import { GraphEvaluator } from '../../dataflow/evaluator';
 import { nodeRegistry } from '../../dataflow/registry';
+import { createFunctionGraphWithInput, extractFunctionOutput } from '../../utils/function-helpers';
 
 /**
  * Map node - applies a transformation to each element of an array
@@ -273,48 +274,6 @@ export const ReduceNode: NodeDefinition = {
 		context.setOutputValue('out', accumulator);
 	}
 };
-
-
-/**
- * Helper function to create a function graph with an input object
- * Finds the "FunctionInput" node and replaces it with a Value node containing the input
- */
-function createFunctionGraphWithInput(graph: Graph, inputObject: any): Graph {
-	const nodes = graph.nodes.map(node => {
-		if (node.type === 'FunctionInput' || node.id === 'input' || node.id === 'functionInput') {
-			// Replace FunctionInput node with a Value node containing the input object
-			return {
-				...node,
-				type: 'Value',
-				data: { value: inputObject }
-			};
-		}
-		return node;
-	});
-
-	return {
-		...graph,
-		nodes,
-		edges: graph.edges
-	};
-}
-
-/**
- * Helper function to extract the output value from function evaluation results
- * Looks for an Output node's value or the last computed value
- */
-function extractFunctionOutput(outputs: Record<string, any>): any {
-	// Look for an output node's output
-	for (const [key, value] of Object.entries(outputs)) {
-		if (key.includes('output.') || key.includes('result.') || key.includes('return.')) {
-			return value;
-		}
-	}
-
-	// If no explicit output node, return the last computed value
-	const values = Object.values(outputs);
-	return values.length > 0 ? values[values.length - 1] : undefined;
-}
 
 /**
  * Helper function to create a subgraph with a single input value

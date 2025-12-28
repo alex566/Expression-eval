@@ -269,54 +269,54 @@ export const DivideNode: NodeDefinition = {
  * Array-aware: if any input is an array, performs element-wise modulo
  */
 export const ModuloNode: NodeDefinition = {
-type: 'Modulo',
-category: 'math',
-description: 'Computes the remainder of division (modulo). Array-aware for element-wise operations.',
-inputs: [],
-outputs: [
-{ name: 'out', type: 'number' }
-],
-execute(context) {
-const dividend = context.getInputValue('in0');
-const divisor = context.getInputValue('in1');
+	type: 'Modulo',
+	category: 'math',
+	description: 'Computes the remainder of division (modulo). Array-aware for element-wise operations.',
+	inputs: [],
+	outputs: [
+		{ name: 'out', type: 'number' }
+	],
+	execute(context) {
+		const dividend = context.getInputValue('in0');
+		const divisor = context.getInputValue('in1');
 
-if (dividend === undefined || divisor === undefined) {
-context.setOutputValue('out', 0);
-return;
-}
+		if (dividend === undefined || divisor === undefined) {
+			context.setOutputValue('out', 0);
+			return;
+		}
 
-// Check if any input is an array
-const isDividendArray = Array.isArray(dividend);
-const isDivisorArray = Array.isArray(divisor);
+		// Check if any input is an array
+		const isDividendArray = Array.isArray(dividend);
+		const isDivisorArray = Array.isArray(divisor);
 
-if (isDividendArray || isDivisorArray) {
-// Array-aware modulo: element-wise operation
-const dividendArr = isDividendArray ? dividend : [dividend];
-const divisorArr = isDivisorArray ? divisor : [divisor];
-const maxLength = Math.max(dividendArr.length, divisorArr.length);
-const result: number[] = [];
+		if (isDividendArray || isDivisorArray) {
+			// Array-aware modulo: element-wise operation
+			const dividendArr = isDividendArray ? dividend : [dividend];
+			const divisorArr = isDivisorArray ? divisor : [divisor];
+			const maxLength = Math.max(dividendArr.length, divisorArr.length);
+			const result: number[] = [];
 
-for (let i = 0; i < maxLength; i++) {
-const a = i < dividendArr.length ? dividendArr[i] : dividendArr[dividendArr.length - 1];
-const b = i < divisorArr.length ? divisorArr[i] : divisorArr[divisorArr.length - 1];
-const divVal = Number(b) || 0;
+			for (let i = 0; i < maxLength; i++) {
+				const a = i < dividendArr.length ? dividendArr[i] : dividendArr[dividendArr.length - 1];
+				const b = i < divisorArr.length ? divisorArr[i] : divisorArr[divisorArr.length - 1];
+				const divVal = Number(b) || 0;
+				
+				if (divVal === 0) {
+					throw new Error('Division by zero in Modulo node');
+				}
+				
+				result.push((Number(a) || 0) % divVal);
+			}
 
-if (divVal === 0) {
-throw new Error('Division by zero in Modulo node');
-}
-
-result.push((Number(a) || 0) % divVal);
-}
-
-context.setOutputValue('out', result);
-} else {
-// Standard single value modulo
-const divVal = Number(divisor) || 0;
-if (divVal === 0) {
-throw new Error('Division by zero in Modulo node');
-}
-const result = (Number(dividend) || 0) % divVal;
-context.setOutputValue('out', result);
-}
-}
+			context.setOutputValue('out', result);
+		} else {
+			// Standard single value modulo
+			const divVal = Number(divisor) || 0;
+			if (divVal === 0) {
+				throw new Error('Division by zero in Modulo node');
+			}
+			const result = (Number(dividend) || 0) % divVal;
+			context.setOutputValue('out', result);
+		}
+	}
 };
