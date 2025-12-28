@@ -62,7 +62,7 @@
 		<div class="node-label">
 			{nodeLabel}
 			{#if hasSubgraph}
-				<span class="subgraph-indicator" title="Double-click to view subgraph">⚙️</span>
+				<span class="subgraph-indicator" title="Double-click to view function">⚙️</span>
 			{/if}
 		</div>
 		{#if nodeId}

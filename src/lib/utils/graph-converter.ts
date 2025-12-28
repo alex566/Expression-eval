@@ -170,11 +170,8 @@ export function graphToSvelteFlow(
 		const dagreNode = dagreGraph.node(node.id) as DagreNode;
 		const ports = dagreNode.ports;
 
-		// Check if this node has a subgraph or is a FunctionValue node
-		const definition = nodeRegistry.get(node.type);
-		const hasSubgraph = definition?.hasSubgraph && !!node.subgraph;
+		// Check if this node is a FunctionValue node
 		const isFunctionValue = node.type === 'FunctionValue';
-		const hasFunction = hasSubgraph || isFunctionValue;
 
 		nodes.push({
 			id: node.id,
@@ -184,7 +181,7 @@ export function graphToSvelteFlow(
 				nodeId: node.id,
 				inputs: ports.inputs,
 				outputs: ports.outputs,
-				hasSubgraph: hasFunction,
+				hasSubgraph: isFunctionValue,
 				onNodeDoubleClick
 			},
 			position: {
@@ -246,11 +243,8 @@ export function updateFlowWithPreservedPositions(
 		const ports = getNodePorts(node.type, node.id, node.data, graph.edges, inferredTypes);
 		const existingPosition = positionMap.get(node.id);
 
-		// Check if this node has a subgraph or is a FunctionValue node
-		const definition = nodeRegistry.get(node.type);
-		const hasSubgraph = definition?.hasSubgraph && !!node.subgraph;
+		// Check if this node is a FunctionValue node
 		const isFunctionValue = node.type === 'FunctionValue';
-		const hasFunction = hasSubgraph || isFunctionValue;
 
 		nodes.push({
 			id: node.id,
@@ -260,7 +254,7 @@ export function updateFlowWithPreservedPositions(
 				nodeId: node.id,
 				inputs: ports.inputs,
 				outputs: ports.outputs,
-				hasSubgraph: hasFunction,
+				hasSubgraph: isFunctionValue,
 				onNodeDoubleClick: nodeCallback
 			},
 			position: existingPosition || { x: 0, y: 0 } // Use existing position or default

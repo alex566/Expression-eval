@@ -122,28 +122,8 @@
 			return;
 		}
 
-		// Check if this node has a subgraph (legacy support)
-		if (clickedNode.subgraph) {
-			const definition = nodeRegistry.get(clickedNode.type);
-			if (!definition?.hasSubgraph) return;
-
-			// Navigate into the subgraph
-			breadcrumbs = [...breadcrumbs, {
-				label: `${clickedNode.type} (${nodeId})`,
-				nodeId,
-				graph: clickedNode.subgraph
-			}];
-			currentGraph = clickedNode.subgraph;
-
-			// Update visualization
-			const flow = graphToSvelteFlow(clickedNode.subgraph, undefined, handleNodeDoubleClick);
-			nodes = flow.nodes;
-			edges = flow.edges;
-
-			// Reset validation/evaluation when navigating
-			validationResult = null;
-			evaluationResult = null;
-		}
+		// FunctionValue nodes no longer support legacy subgraph navigation
+		// All function definitions are in graph.functions, not in node.subgraph
 	}
 
 	function handleBreadcrumbNavigate(index: number) {

@@ -1,6 +1,26 @@
 # Expression-eval
 
-A Svelte-based dataflow graph visualization and evaluation tool. This application allows you to create, visualize, and evaluate expression graphs with various node types including math operations, control flow, and value nodes.
+A Svelte-based dataflow graph visualization and evaluation tool with a **function-based architecture**. This application allows you to create, visualize, and evaluate expression graphs using functions as the main execution units.
+
+## Architecture Overview
+
+Expression-eval uses a **function-based architecture** where:
+
+- **Functions** are the main execution units with:
+  - **Name** (as ID) - Unique identifier for each function
+  - **Graph** - Contains nodes and edges defining the function logic
+  - **Nested Functions** - Functions can reference and call other functions
+  - **Input** - Single JSON object with properties
+  - **Output** - Produced at the end of execution
+
+- **FunctionInput Node** - Generic object properties accessor:
+  - Automatically creates output pins for each property of the input object
+  - Provides both full object (`out` port) and individual property ports
+  - Example: Input `{ element: 5, index: 0 }` exposes ports: `out`, `element`, `index`
+
+- **Array Operations** (Map/Filter/Reduce) use FunctionValue nodes to reference functions
+
+For detailed architecture documentation, see [DATAFLOW.md](DATAFLOW.md).
 
 ## Creating a project
 
