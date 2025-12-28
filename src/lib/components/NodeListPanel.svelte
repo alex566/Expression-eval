@@ -3,13 +3,11 @@
 	import type { NodeDefinition } from '$lib/dataflow/types';
 
 	let isExpanded = $state(false);
-	let allNodes = $state<NodeDefinition[]>([]);
-	let nodesByCategory = $state<Record<string, NodeDefinition[]>>({});
-
-	// Load all nodes
-	allNodes = nodeRegistry.getAll();
 	
-	// Group nodes by category
+	// Load all nodes and group by category immediately
+	const allNodes = nodeRegistry.getAll();
+	const nodesByCategory: Record<string, NodeDefinition[]> = {};
+	
 	allNodes.forEach(node => {
 		if (!nodesByCategory[node.category]) {
 			nodesByCategory[node.category] = [];
