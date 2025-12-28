@@ -2,77 +2,44 @@ import type { NodeDefinition } from '../../dataflow/types';
 
 /**
  * If node - conditional branching
- * Supports both single values and arrays:
- * - Single condition: outputs either true or false value
- * - Array condition: filters input arrays based on boolean array
+ * Outputs either the true or false value based on condition
+ * For array filtering operations, use Filter node
  */
 export const IfNode: NodeDefinition = {
 	type: 'If',
 	category: 'control',
-	description: 'Conditional execution based on a condition. Arrays of booleans filter input arrays.',
+	description: 'Conditional execution based on a condition. For array filtering, use Filter node.',
 	inputs: [
 		{ name: 'condition', type: 'boolean' },
 		{ name: 'true', type: 'any' },
 		{ name: 'false', type: 'any' }
 	],
 	outputs: [
-		{ name: 'out', type: 'any' },
-		{ name: 'trueOut', type: 'any' },
-		{ name: 'falseOut', type: 'any' }
+		{ name: 'out', type: 'any' }
 	],
 	execute(context) {
 		const condition = context.getInputValue('condition');
 		const trueValue = context.getInputValue('true');
 		const falseValue = context.getInputValue('false');
 
-		// If condition is an array of booleans, filter the input arrays
-		if (Array.isArray(condition)) {
-			const trueResults: any[] = [];
-			const falseResults: any[] = [];
-
-			// Ensure input values are arrays for filtering
-			const trueArray = Array.isArray(trueValue) ? trueValue : [trueValue];
-			const falseArray = Array.isArray(falseValue) ? falseValue : [falseValue];
-
-			// Filter based on condition array
-			condition.forEach((cond, index) => {
-				if (cond) {
-					if (index < trueArray.length) {
-						trueResults.push(trueArray[index]);
-					}
-				} else {
-					if (index < falseArray.length) {
-						falseResults.push(falseArray[index]);
-					}
-				}
-			});
-
-			// Output both arrays
-			context.setOutputValue('trueOut', trueResults);
-			context.setOutputValue('falseOut', falseResults);
-			// For backward compatibility, output true array as 'out'
-			context.setOutputValue('out', trueResults);
+		// Single condition - standard behavior
+		if (condition) {
+			context.setOutputValue('out', trueValue);
 		} else {
-			// Single condition - standard behavior
-			if (condition) {
-				context.setOutputValue('out', trueValue);
-			} else {
-				context.setOutputValue('out', falseValue);
-			}
+			context.setOutputValue('out', falseValue);
 		}
 	}
 };
 
 /**
  * Compare node - compares two values
- * Supports both single values and arrays:
- * - Single values: outputs a single boolean
- * - Arrays: performs element-wise comparison and outputs an array of booleans
+ * Outputs a single boolean result
+ * For array comparison operations, use Map node with a comparison function
  */
 export const CompareNode: NodeDefinition = {
 	type: 'Compare',
 	category: 'control',
-	description: 'Compares two values using a specified operator. Supports element-wise array comparison.',
+	description: 'Compares two values using a specified operator. For array comparisons, use Map node.',
 	inputs: [
 		{ name: 'a', type: 'number | string' },
 		{ name: 'b', type: 'number | string' }
@@ -108,36 +75,9 @@ export const CompareNode: NodeDefinition = {
 			}
 		};
 
-		// Array-aware comparison
-		if (Array.isArray(a) || Array.isArray(b)) {
-			const aArray = Array.isArray(a) ? a : [a];
-			const bArray = Array.isArray(b) ? b : [b];
-			
-			// Handle empty arrays
-			if (aArray.length === 0 && bArray.length === 0) {
-				context.setOutputValue('out', []);
-				return;
-			}
-			
-			const maxLength = Math.max(aArray.length, bArray.length);
-			const results: boolean[] = [];
-
-			for (let i = 0; i < maxLength; i++) {
-				const aVal = aArray.length > 0 
-					? (i < aArray.length ? aArray[i] : aArray[aArray.length - 1])
-					: undefined;
-				const bVal = bArray.length > 0
-					? (i < bArray.length ? bArray[i] : bArray[bArray.length - 1])
-					: undefined;
-				results.push(compare(aVal, bVal));
-			}
-
-			context.setOutputValue('out', results);
-		} else {
-			// Single value comparison
-			const result = compare(a, b);
-			context.setOutputValue('out', result);
-		}
+		// Single value comparison
+		const result = compare(a, b);
+		context.setOutputValue('out', result);
 	}
 };
 
