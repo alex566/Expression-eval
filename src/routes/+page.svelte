@@ -11,6 +11,8 @@
 	import EvaluationReport from '$lib/components/EvaluationReport.svelte';
 	import AddNodeModal from '$lib/components/AddNodeModal.svelte';
 	import Breadcrumbs from '$lib/components/Breadcrumbs.svelte';
+	import NodeListPanel from '$lib/components/NodeListPanel.svelte';
+	import SampleGraphsPanel from '$lib/components/SampleGraphsPanel.svelte';
 	import { GRAPHS } from '$lib/data/graphs';
 
 	let nodes = $state.raw<Node[]>([]);
@@ -151,6 +153,11 @@
 	function handleGraphChange(event: Event) {
 		const target = event.target as HTMLSelectElement;
 		selectedGraph = target.value;
+		loadGraph(selectedGraph);
+	}
+
+	function handleGraphChangeFromPanel(graphKey: string) {
+		selectedGraph = graphKey;
 		loadGraph(selectedGraph);
 	}
 
@@ -361,22 +368,18 @@
 	{:else if error}
 		<div class="error">Error: {error}</div>
 	{:else}
-		<!-- Toolbar with graph picker -->
+		<!-- Toolbar -->
 		<div class="toolbar">
-			<div class="graph-selector">
-				<label for="graph-select">Load Graph:</label>
-				<select id="graph-select" bind:value={selectedGraph} onchange={handleGraphChange}>
-					<option value="sample">Sample Graph</option>
-					<option value="complex">Complex Graph</option>
-					<option value="dates">Date Operations</option>
-					<option value="arrays">Array Operations</option>
-					<option value="mapfilterreduce">Map/Filter/Reduce</option>
-					<option value="functions">Function-Based</option>
-				</select>
-			</div>
-			<div class="toolbar-buttons">
-				<button onclick={validateGraph}>Validate Graph</button>
-				<button onclick={evaluateGraph}>Evaluate Graph</button>
+			<div class="toolbar-title">Expression Graph Evaluator</div>
+			<div class="toolbar-actions">
+				<button class="toolbar-btn" onclick={validateGraph}>
+					<span class="btn-icon">✓</span>
+					Validate
+				</button>
+				<button class="toolbar-btn" onclick={evaluateGraph}>
+					<span class="btn-icon">▶</span>
+					Evaluate
+				</button>
 			</div>
 		</div>
 
@@ -385,10 +388,9 @@
 			<Breadcrumbs breadcrumbs={breadcrumbs} onNavigate={handleBreadcrumbNavigate} />
 		{/if}
 
-		<div class="content">
-			<!-- Graph visualization -->
-			<div class="graph-container">
-				<h2>Graph Visualization</h2>
+		<div class="main-content">
+			<!-- Left side: Graph visualization (50%) -->
+			<div class="graph-panel">
 				<div class="flow">
 					<SvelteFlow 
 						{nodes} 
@@ -407,51 +409,68 @@
 				</div>
 			</div>
 
-			<!-- Output information -->
-			<div class="sidebar">
+			<!-- Right side: Data panel (50%) -->
+			<div class="data-panel">
+				<!-- Sample Graphs List -->
+				<SampleGraphsPanel selectedGraph={selectedGraph} onGraphChange={handleGraphChangeFromPanel} />
 
+				<!-- Node List -->
+				<NodeListPanel />
+
+				<!-- Validation Results -->
 				{#if validationResult}
-					<div class="results">
-						<h3>Validation Result</h3>
-						<div class="result-status" class:success={validationResult.success} class:failure={!validationResult.success}>
-							Status: {validationResult.success ? 'Valid' : 'Invalid'}
+					<div class="collapsible-section">
+						<div class="section-header">Validation Result</div>
+						<div class="section-content">
+							<div class="result-status" class:success={validationResult.success} class:failure={!validationResult.success}>
+								{validationResult.success ? '✓ Valid' : '✗ Invalid'}
+							</div>
+
+							{#if validationResult.errors.length > 0}
+								<div class="error-list">
+									<h4>Errors:</h4>
+									{#each validationResult.errors as err}
+										<div class="error-item">{err}</div>
+									{/each}
+								</div>
+							{/if}
+
+							{#if validationResult.warnings.length > 0}
+								<div class="warning-list">
+									<h4>Warnings:</h4>
+									{#each validationResult.warnings as warn}
+										<div class="warning-item">{warn}</div>
+									{/each}
+								</div>
+							{/if}
+
+							{#if validationResult.success && validationResult.inferredTypes && Object.keys(validationResult.inferredTypes).length > 0}
+								<div class="inferred-types">
+									<h4>Inferred Types:</h4>
+									<pre class="json-display">{JSON.stringify(validationResult.inferredTypes, null, 2)}</pre>
+								</div>
+							{/if}
 						</div>
-
-						{#if validationResult.errors.length > 0}
-							<div class="error-list">
-								<h4>Errors:</h4>
-								{#each validationResult.errors as err}
-									<div class="error-item">{err}</div>
-								{/each}
-							</div>
-						{/if}
-
-						{#if validationResult.warnings.length > 0}
-							<div class="warning-list">
-								<h4>Warnings:</h4>
-								{#each validationResult.warnings as warn}
-									<div class="warning-item">{warn}</div>
-								{/each}
-							</div>
-						{/if}
-
-						{#if validationResult.success && validationResult.inferredTypes && Object.keys(validationResult.inferredTypes).length > 0}
-							<h4>Inferred Types:</h4>
-							<pre>{JSON.stringify(validationResult.inferredTypes, null, 2)}</pre>
-						{/if}
 					</div>
 				{/if}
 
+				<!-- Evaluation Results -->
 				{#if evaluationResult && graph}
-					<div class="results">
-						<EvaluationReport result={evaluationResult} {graph} />
+					<div class="collapsible-section">
+						<div class="section-header">Evaluation Result</div>
+						<div class="section-content">
+							<EvaluationReport result={evaluationResult} {graph} />
+						</div>
 					</div>
 				{/if}
 
+				<!-- Graph JSON -->
 				{#if graph}
-					<div class="graph-json">
-						<h3>Graph JSON</h3>
-						<pre>{JSON.stringify(graph, null, 2)}</pre>
+					<div class="collapsible-section">
+						<div class="section-header">Graph JSON</div>
+						<div class="section-content">
+							<pre class="json-display">{JSON.stringify(graph, null, 2)}</pre>
+						</div>
 					</div>
 				{/if}
 			</div>
@@ -470,7 +489,9 @@
 	:global(body) {
 		margin: 0;
 		padding: 0;
-		font-family: system-ui, -apple-system, sans-serif;
+		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+		background: #1e1e1e;
+		color: #cccccc;
 	}
 
 	:global(html) {
@@ -482,53 +503,73 @@
 		width: 100vw;
 	}
 
+	/* VS Code color variables */
+	:global(:root) {
+		--vscode-bg: #1e1e1e;
+		--vscode-sidebar-bg: #252526;
+		--vscode-editor-bg: #1e1e1e;
+		--vscode-toolbar-bg: #333333;
+		--vscode-border: #3c3c3c;
+		--vscode-text: #cccccc;
+		--vscode-text-muted: #858585;
+		--vscode-accent: #007acc;
+		--vscode-accent-hover: #005a9e;
+		--vscode-success: #4ec9b0;
+		--vscode-error: #f48771;
+		--vscode-warning: #dcdcaa;
+	}
+
 	.container {
 		width: 100%;
 		height: 100%;
 		display: flex;
 		flex-direction: column;
+		background: var(--vscode-bg);
 	}
 
 	.toolbar {
 		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-		padding: 1rem;
-		background: #f3f4f6;
-		border-bottom: 1px solid #e5e7eb;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0.5rem 1rem;
+		background: var(--vscode-toolbar-bg);
+		border-bottom: 1px solid var(--vscode-border);
 		flex-shrink: 0;
+		height: 48px;
 	}
 
-	.toolbar-buttons {
+	.toolbar-title {
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: var(--vscode-text);
+	}
+
+	.toolbar-actions {
 		display: flex;
 		gap: 0.5rem;
 	}
 
-	.toolbar-buttons button {
-		flex: 1;
-		margin-bottom: 0;
+	.toolbar-btn {
+		display: flex;
+		align-items: center;
+		gap: 0.375rem;
+		padding: 0.375rem 0.75rem;
+		background: var(--vscode-accent);
+		color: white;
+		border: none;
+		border-radius: 2px;
+		font-size: 0.813rem;
+		cursor: pointer;
+		transition: background 0.2s;
+		font-family: inherit;
 	}
 
-	/* Mobile-first: stack toolbar elements */
-	@media (min-width: 640px) {
-		.toolbar {
-			flex-direction: row;
-			align-items: center;
-		}
+	.toolbar-btn:hover {
+		background: var(--vscode-accent-hover);
+	}
 
-		.toolbar .graph-selector {
-			flex: 1;
-			margin-bottom: 0;
-		}
-
-		.toolbar-buttons {
-			flex-shrink: 0;
-		}
-
-		.toolbar-buttons button {
-			width: auto;
-			padding: 0.5rem 1rem;
-		}
+	.btn-icon {
+		font-size: 0.75rem;
 	}
 
 	.loading,
@@ -538,209 +579,181 @@
 		justify-content: center;
 		height: 100%;
 		font-size: 1.5rem;
+		color: var(--vscode-text);
 	}
 
 	.error {
-		color: #dc2626;
+		color: var(--vscode-error);
 	}
 
-	.content {
+	.main-content {
 		display: flex;
 		flex: 1;
 		overflow: hidden;
-		flex-direction: column;
 		min-height: 0;
+		flex-direction: column;
 	}
 
-	.graph-container {
+	/* Mobile-first: Single column layout */
+	.graph-panel {
 		flex: 1;
 		display: flex;
 		flex-direction: column;
-		min-width: 0;
 		min-height: 300px;
+		background: var(--vscode-editor-bg);
+		border-bottom: 1px solid var(--vscode-border);
 	}
 
-	.graph-container h2 {
-		margin: 0;
-		padding: 1rem;
-		background: #f3f4f6;
-		border-bottom: 1px solid #e5e7eb;
-		display: none;
+	.data-panel {
+		flex: 1;
+		background: var(--vscode-sidebar-bg);
+		overflow-y: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+
+	/* Desktop layout: 50/50 split */
+	@media (min-width: 768px) {
+		.main-content {
+			flex-direction: row;
+		}
+
+		.graph-panel {
+			width: 50%;
+			flex: 0 0 50%;
+			min-height: 0;
+			border-bottom: none;
+			border-right: 1px solid var(--vscode-border);
+		}
+
+		.data-panel {
+			width: 50%;
+			flex: 0 0 50%;
+		}
 	}
 
 	.flow {
 		flex: 1;
-		min-height: 300px;
-	}
-
-	.sidebar {
-		width: 100%;
-		background: #f9fafb;
-		border-top: 1px solid #e5e7eb;
-		overflow-y: auto;
-		-webkit-overflow-scrolling: touch;
-		padding: 1rem;
-		flex: 1 1 auto;
 		min-height: 0;
 	}
 
-	/* Desktop layout */
-	@media (min-width: 768px) {
-		.content {
-			flex-direction: row;
-		}
-
-		.graph-container {
-			min-height: 0;
-		}
-
-		.graph-container h2 {
-			display: block;
-		}
-
-		.flow {
-			min-height: 0;
-		}
-
-		.sidebar {
-			width: 400px;
-			border-top: none;
-			border-left: 1px solid #e5e7eb;
-		}
+	/* Collapsible sections in data panel */
+	.collapsible-section {
+		border-bottom: 1px solid var(--vscode-border);
 	}
 
-	.sidebar h3,
-	.sidebar h4 {
-		margin-top: 0;
-		margin-bottom: 1rem;
-	}
-
-	.graph-selector {
-		margin-bottom: 0.5rem;
-		padding: 0.75rem;
-		background: white;
-		border-radius: 0.375rem;
-		border: 1px solid #e5e7eb;
-	}
-
-	.toolbar .graph-selector {
-		margin-bottom: 0;
-	}
-
-	.graph-selector label {
-		display: block;
+	.section-header {
+		padding: 0.75rem 1rem;
+		background: #2d2d30;
+		color: var(--vscode-text);
 		font-size: 0.875rem;
 		font-weight: 600;
-		margin-bottom: 0.5rem;
-		color: #374151;
+		border-bottom: 1px solid var(--vscode-border);
 	}
 
-	.graph-selector select {
-		width: 100%;
-		padding: 0.5rem;
-		border: 1px solid #d1d5db;
-		border-radius: 0.25rem;
-		font-size: 0.875rem;
-		background: white;
-		cursor: pointer;
-	}
-
-	.graph-selector select:focus {
-		outline: none;
-		border-color: #3b82f6;
-		box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-	}
-
-	button {
-		width: 100%;
-		padding: 0.75rem 1rem;
-		background: #3b82f6;
-		color: white;
-		border: none;
-		border-radius: 0.375rem;
-		font-size: 1rem;
-		cursor: pointer;
-		transition: background 0.2s;
-		margin-bottom: 0.5rem;
-	}
-
-	button:hover {
-		background: #2563eb;
-	}
-
-	.results {
-		margin-top: 1.5rem;
+	.section-content {
 		padding: 1rem;
-		background: white;
-		border-radius: 0.375rem;
-		border: 1px solid #e5e7eb;
 	}
 
 	.result-status {
-		padding: 0.5rem;
-		border-radius: 0.25rem;
+		padding: 0.5rem 0.75rem;
+		border-radius: 3px;
 		font-weight: 600;
-		margin-bottom: 0.5rem;
+		margin-bottom: 0.75rem;
+		font-size: 0.875rem;
 	}
 
 	.result-status.success {
-		background: #dcfce7;
-		color: #166534;
+		background: rgba(78, 201, 176, 0.2);
+		color: var(--vscode-success);
+		border: 1px solid var(--vscode-success);
 	}
 
 	.result-status.failure {
-		background: #fee2e2;
-		color: #991b1b;
+		background: rgba(244, 135, 113, 0.2);
+		color: var(--vscode-error);
+		border: 1px solid var(--vscode-error);
 	}
 
 	.error-list,
 	.warning-list {
-		margin-top: 0.5rem;
+		margin-top: 0.75rem;
 	}
 
 	.error-list h4,
 	.warning-list h4 {
 		margin-bottom: 0.5rem;
-		font-size: 0.9rem;
+		font-size: 0.813rem;
+		color: var(--vscode-text);
 	}
 
 	.error-item {
 		padding: 0.5rem;
-		background: #fee2e2;
-		color: #991b1b;
-		border-radius: 0.25rem;
-		margin-bottom: 0.25rem;
-		font-size: 0.875rem;
+		background: rgba(244, 135, 113, 0.1);
+		color: var(--vscode-error);
+		border-left: 3px solid var(--vscode-error);
+		margin-bottom: 0.5rem;
+		font-size: 0.813rem;
+		font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
 	}
 
 	.warning-item {
 		padding: 0.5rem;
-		background: #fef3c7;
-		color: #92400e;
-		border-radius: 0.25rem;
-		margin-bottom: 0.25rem;
-		font-size: 0.875rem;
+		background: rgba(220, 220, 170, 0.1);
+		color: var(--vscode-warning);
+		border-left: 3px solid var(--vscode-warning);
+		margin-bottom: 0.5rem;
+		font-size: 0.813rem;
+		font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
 	}
 
-	pre {
-		background: #1f2937;
-		color: #f3f4f6;
+	.inferred-types {
+		margin-top: 0.75rem;
+	}
+
+	.inferred-types h4 {
+		margin-bottom: 0.5rem;
+		font-size: 0.813rem;
+		color: var(--vscode-text);
+	}
+
+	.json-display {
+		background: #1e1e1e;
+		color: #d4d4d4;
 		padding: 1rem;
-		border-radius: 0.375rem;
+		border-radius: 3px;
 		overflow-x: auto;
-		font-size: 0.875rem;
+		font-size: 0.813rem;
 		line-height: 1.5;
+		font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+		border: 1px solid var(--vscode-border);
 	}
 
-	.graph-json {
-		margin-top: 1.5rem;
-		padding: 1rem;
-		background: white;
-		border-radius: 0.375rem;
-		border: 1px solid #e5e7eb;
+	/* Override SvelteFlow styles for dark theme */
+	:global(.svelte-flow) {
+		background: var(--vscode-editor-bg) !important;
 	}
 
-	.graph-json h3 {
-		margin-top: 0;
+	:global(.svelte-flow__background) {
+		--xy-background-color-default: var(--vscode-editor-bg);
+		--xy-background-pattern-color-default: #2d2d30;
+	}
+
+	:global(.svelte-flow__controls) {
+		background: var(--vscode-sidebar-bg);
+		border: 1px solid var(--vscode-border);
+	}
+
+	:global(.svelte-flow__controls button) {
+		background: var(--vscode-sidebar-bg);
+		border-bottom: 1px solid var(--vscode-border);
+		color: var(--vscode-text);
+	}
+
+	:global(.svelte-flow__controls button:hover) {
+		background: #3e3e42;
+	}
+
+	:global(.svelte-flow__edge-path) {
+		stroke: var(--vscode-accent);
 	}
 </style>

@@ -16,6 +16,8 @@
 	$: nodeId = (data.nodeId as string) || '';
 	$: hasSubgraph = (data.hasSubgraph as boolean) || false;
 	$: onNodeDoubleClick = (data.onNodeDoubleClick as ((nodeId: string) => void) | undefined);
+	$: nodeValue = data.value !== undefined ? data.value : null;
+	$: nodeType = (data.nodeType as string) || '';
 	
 	// Calculate dynamic height based on number of ports
 	$: maxPorts = Math.max(inputs.length, outputs.length);
@@ -67,6 +69,13 @@
 		</div>
 		{#if nodeId}
 			<div class="node-id">({nodeId})</div>
+		{/if}
+		{#if nodeType === 'Value' && nodeValue !== null}
+			<div class="node-value-preview" title={`Value: ${JSON.stringify(nodeValue)}`}>
+				{typeof nodeValue === 'string' ? `"${nodeValue}"` : 
+				 typeof nodeValue === 'object' ? JSON.stringify(nodeValue).substring(0, 20) + '...' :
+				 String(nodeValue)}
+			</div>
 		{/if}
 	</div>
 
@@ -137,6 +146,20 @@
 		font-size: 11px;
 		color: #64748b;
 		margin-top: 2px;
+	}
+
+	.node-value-preview {
+		font-size: 11px;
+		color: #4ec9b0;
+		margin-top: 4px;
+		font-family: 'Courier New', monospace;
+		background: rgba(78, 201, 176, 0.1);
+		padding: 2px 6px;
+		border-radius: 3px;
+		max-width: 120px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
 	.handles-container {
