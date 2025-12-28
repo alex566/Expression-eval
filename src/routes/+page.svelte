@@ -89,28 +89,61 @@
 
 		// Find the clicked node in the current graph
 		const clickedNode = currentGraph.nodes.find(n => n.id === nodeId);
-		if (!clickedNode || !clickedNode.subgraph) return;
+		if (!clickedNode) return;
 
-		// Check if this node has a subgraph
-		const definition = nodeRegistry.get(clickedNode.type);
-		if (!definition?.hasSubgraph) return;
+		// Check if this is a FunctionValue node
+		if (clickedNode.type === 'FunctionValue') {
+			const functionName = clickedNode.data.functionName as string | undefined;
+			if (!functionName) return;
 
-		// Navigate into the subgraph
-		breadcrumbs = [...breadcrumbs, {
-			label: `${clickedNode.type} (${nodeId})`,
-			nodeId,
-			graph: clickedNode.subgraph
-		}];
-		currentGraph = clickedNode.subgraph;
+			// Find the function definition in the graph
+			const functionDef = currentGraph.functions?.find(f => f.name === functionName);
+			if (!functionDef) {
+				error = `Function '${functionName}' not found`;
+				return;
+			}
 
-		// Update visualization
-		const flow = graphToSvelteFlow(clickedNode.subgraph, undefined, handleNodeDoubleClick);
-		nodes = flow.nodes;
-		edges = flow.edges;
+			// Navigate into the function
+			breadcrumbs = [...breadcrumbs, {
+				label: `Function: ${functionName}`,
+				nodeId,
+				graph: functionDef.graph
+			}];
+			currentGraph = functionDef.graph;
 
-		// Reset validation/evaluation when navigating
-		validationResult = null;
-		evaluationResult = null;
+			// Update visualization
+			const flow = graphToSvelteFlow(functionDef.graph, undefined, handleNodeDoubleClick);
+			nodes = flow.nodes;
+			edges = flow.edges;
+
+			// Reset validation/evaluation when navigating
+			validationResult = null;
+			evaluationResult = null;
+			return;
+		}
+
+		// Check if this node has a subgraph (legacy support)
+		if (clickedNode.subgraph) {
+			const definition = nodeRegistry.get(clickedNode.type);
+			if (!definition?.hasSubgraph) return;
+
+			// Navigate into the subgraph
+			breadcrumbs = [...breadcrumbs, {
+				label: `${clickedNode.type} (${nodeId})`,
+				nodeId,
+				graph: clickedNode.subgraph
+			}];
+			currentGraph = clickedNode.subgraph;
+
+			// Update visualization
+			const flow = graphToSvelteFlow(clickedNode.subgraph, undefined, handleNodeDoubleClick);
+			nodes = flow.nodes;
+			edges = flow.edges;
+
+			// Reset validation/evaluation when navigating
+			validationResult = null;
+			evaluationResult = null;
+		}
 	}
 
 	function handleBreadcrumbNavigate(index: number) {

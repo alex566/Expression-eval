@@ -104,3 +104,26 @@ export const FunctionInputNode: NodeDefinition = {
 		context.setOutputValue('out', value);
 	}
 };
+
+/**
+ * FunctionValue node - outputs a function name as a string value
+ * This can be connected to Map/Filter/Reduce function input pins
+ */
+export const FunctionValueNode: NodeDefinition = {
+	type: 'FunctionValue',
+	category: 'function',
+	description: 'Provides a function name as a value that can be connected to function pins',
+	inputs: [],
+	outputs: [
+		{ name: 'out', type: 'string' }
+	],
+	execute(context) {
+		const functionName = context.getNodeData().functionName as string | undefined;
+		
+		if (!functionName) {
+			throw new Error('FunctionValue node requires a functionName in data');
+		}
+
+		context.setOutputValue('out', functionName);
+	}
+};

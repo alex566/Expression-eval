@@ -820,18 +820,28 @@ export const FUNCTION_BASED_GRAPH: Graph = {
 			}
 		},
 		{
-			id: "map_double",
-			type: "Map",
+			id: "double_func",
+			type: "FunctionValue",
 			data: {
 				functionName: "double"
 			}
 		},
 		{
-			id: "filter_even",
-			type: "Filter",
+			id: "isEven_func",
+			type: "FunctionValue",
 			data: {
 				functionName: "isEven"
 			}
+		},
+		{
+			id: "map_double",
+			type: "Map",
+			data: {}
+		},
+		{
+			id: "filter_even",
+			type: "Filter",
+			data: {}
 		},
 		{
 			id: "output",
@@ -847,8 +857,16 @@ export const FUNCTION_BASED_GRAPH: Graph = {
 			to: { node: "map_double", port: "array" }
 		},
 		{
+			from: { node: "double_func", port: "out" },
+			to: { node: "map_double", port: "function" }
+		},
+		{
 			from: { node: "map_double", port: "out" },
 			to: { node: "filter_even", port: "array" }
+		},
+		{
+			from: { node: "isEven_func", port: "out" },
+			to: { node: "filter_even", port: "function" }
 		},
 		{
 			from: { node: "filter_even", port: "out" },
