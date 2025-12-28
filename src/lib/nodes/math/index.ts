@@ -3,12 +3,12 @@ import type { NodeDefinition } from '../../dataflow/types';
 /**
  * Add node - adds all connected input values together
  * Dynamically accepts any number of inputs (in0, in1, in2, ...)
- * Array-aware: if any input is an array, performs element-wise addition
+ * For array operations, use Map/Filter/Reduce nodes
  */
 export const AddNode: NodeDefinition = {
 	type: 'Add',
 	category: 'math',
-	description: 'Adds all connected input values together. Array-aware for element-wise operations.',
+	description: 'Adds all connected input values together. For array operations, use Map node.',
 	inputs: [], // Dynamic inputs - will accept in0, in1, in2, etc.
 	outputs: [
 		{ name: 'out', type: 'number' }
@@ -21,52 +21,31 @@ export const AddNode: NodeDefinition = {
 		while (true) {
 			const value = context.getInputValue(`in${index}`);
 			if (value === undefined) break;
+			if (Array.isArray(value)) {
+				throw new Error('Add node does not support array inputs. Use Map/Filter/Reduce nodes for array operations.');
+			}
 			inputs.push(value);
 			index++;
 		}
 
-		// Check if any input is an array
-		const hasArray = inputs.some(input => Array.isArray(input));
-
-		if (hasArray) {
-			// Array-aware addition: element-wise operation
-			const arrays = inputs.map(input => Array.isArray(input) ? input : [input]);
-			const lengths = arrays.map(arr => arr.length).filter(len => len > 0);
-			const maxLength = lengths.length > 0 ? Math.max(...lengths) : 0;
-			const result: number[] = [];
-
-			for (let i = 0; i < maxLength; i++) {
-				let sum = 0;
-				for (const arr of arrays) {
-					if (arr.length > 0) {
-						const val = i < arr.length ? arr[i] : arr[arr.length - 1];
-						sum += Number(val) || 0;
-					}
-				}
-				result.push(sum);
-			}
-
-			context.setOutputValue('out', result);
-		} else {
-			// Standard single value addition
-			let result = 0;
-			for (const input of inputs) {
-				result += Number(input) || 0;
-			}
-			context.setOutputValue('out', result);
+		// Standard single value addition
+		let result = 0;
+		for (const input of inputs) {
+			result += Number(input) || 0;
 		}
+		context.setOutputValue('out', result);
 	}
 };
 
 /**
  * Subtract node - subtracts all inputs from the first input
  * First input (in0) is the base, subsequent inputs (in1, in2, ...) are subtracted from it
- * Array-aware: if any input is an array, performs element-wise subtraction
+ * For array operations, use Map/Filter/Reduce nodes
  */
 export const SubtractNode: NodeDefinition = {
 	type: 'Subtract',
 	category: 'math',
-	description: 'Subtracts all subsequent inputs from the first input. Array-aware for element-wise operations.',
+	description: 'Subtracts all subsequent inputs from the first input. For array operations, use Map node.',
 	inputs: [], // Dynamic inputs - will accept in0, in1, in2, etc.
 	outputs: [
 		{ name: 'out', type: 'number' }
@@ -79,6 +58,9 @@ export const SubtractNode: NodeDefinition = {
 		while (true) {
 			const value = context.getInputValue(`in${index}`);
 			if (value === undefined) break;
+			if (Array.isArray(value)) {
+				throw new Error('Subtract node does not support array inputs. Use Map/Filter/Reduce nodes for array operations.');
+			}
 			inputs.push(value);
 			index++;
 		}
@@ -88,52 +70,24 @@ export const SubtractNode: NodeDefinition = {
 			return;
 		}
 
-		// Check if any input is an array
-		const hasArray = inputs.some(input => Array.isArray(input));
-
-		if (hasArray) {
-			// Array-aware subtraction: element-wise operation
-			const arrays = inputs.map(input => Array.isArray(input) ? input : [input]);
-			const lengths = arrays.map(arr => arr.length).filter(len => len > 0);
-			const maxLength = lengths.length > 0 ? Math.max(...lengths) : 0;
-			const result: number[] = [];
-
-			for (let i = 0; i < maxLength; i++) {
-				const firstVal = arrays[0].length > 0 
-					? (i < arrays[0].length ? arrays[0][i] : arrays[0][arrays[0].length - 1])
-					: 0;
-				let diff = Number(firstVal) || 0;
-
-				for (let j = 1; j < arrays.length; j++) {
-					if (arrays[j].length > 0) {
-						const val = i < arrays[j].length ? arrays[j][i] : arrays[j][arrays[j].length - 1];
-						diff -= Number(val) || 0;
-					}
-				}
-				result.push(diff);
-			}
-
-			context.setOutputValue('out', result);
-		} else {
-			// Standard single value subtraction
-			let result = Number(inputs[0]) || 0;
-			for (let i = 1; i < inputs.length; i++) {
-				result -= Number(inputs[i]) || 0;
-			}
-			context.setOutputValue('out', result);
+		// Standard single value subtraction
+		let result = Number(inputs[0]) || 0;
+		for (let i = 1; i < inputs.length; i++) {
+			result -= Number(inputs[i]) || 0;
 		}
+		context.setOutputValue('out', result);
 	}
 };
 
 /**
  * Multiply node - multiplies all connected input values together
  * Dynamically accepts any number of inputs (in0, in1, in2, ...)
- * Array-aware: if any input is an array, performs element-wise multiplication
+ * For array operations, use Map/Filter/Reduce nodes
  */
 export const MultiplyNode: NodeDefinition = {
 	type: 'Multiply',
 	category: 'math',
-	description: 'Multiplies all connected input values together. Array-aware for element-wise operations.',
+	description: 'Multiplies all connected input values together. For array operations, use Map node.',
 	inputs: [], // Dynamic inputs - will accept in0, in1, in2, etc.
 	outputs: [
 		{ name: 'out', type: 'number' }
@@ -146,6 +100,9 @@ export const MultiplyNode: NodeDefinition = {
 		while (true) {
 			const value = context.getInputValue(`in${index}`);
 			if (value === undefined) break;
+			if (Array.isArray(value)) {
+				throw new Error('Multiply node does not support array inputs. Use Map/Filter/Reduce nodes for array operations.');
+			}
 			inputs.push(value);
 			index++;
 		}
@@ -155,48 +112,24 @@ export const MultiplyNode: NodeDefinition = {
 			return;
 		}
 
-		// Check if any input is an array
-		const hasArray = inputs.some(input => Array.isArray(input));
-
-		if (hasArray) {
-			// Array-aware multiplication: element-wise operation
-			const arrays = inputs.map(input => Array.isArray(input) ? input : [input]);
-			const lengths = arrays.map(arr => arr.length).filter(len => len > 0);
-			const maxLength = lengths.length > 0 ? Math.max(...lengths) : 0;
-			const result: number[] = [];
-
-			for (let i = 0; i < maxLength; i++) {
-				let product = 1;
-				for (const arr of arrays) {
-					if (arr.length > 0) {
-						const val = i < arr.length ? arr[i] : arr[arr.length - 1];
-						product *= Number(val) || 0;
-					}
-				}
-				result.push(product);
-			}
-
-			context.setOutputValue('out', result);
-		} else {
-			// Standard single value multiplication
-			let result = 1;
-			for (const input of inputs) {
-				result *= Number(input) || 0;
-			}
-			context.setOutputValue('out', result);
+		// Standard single value multiplication
+		let result = 1;
+		for (const input of inputs) {
+			result *= Number(input) || 0;
 		}
+		context.setOutputValue('out', result);
 	}
 };
 
 /**
  * Divide node - divides the first input by subsequent inputs
  * First input (in0) is the dividend, subsequent inputs (in1, in2, ...) are divisors
- * Array-aware: if any input is an array, performs element-wise division
+ * For array operations, use Map/Filter/Reduce nodes
  */
 export const DivideNode: NodeDefinition = {
 	type: 'Divide',
 	category: 'math',
-	description: 'Divides the first input by all subsequent inputs. Array-aware for element-wise operations.',
+	description: 'Divides the first input by all subsequent inputs. For array operations, use Map node.',
 	inputs: [], // Dynamic inputs - will accept in0, in1, in2, etc.
 	outputs: [
 		{ name: 'out', type: 'number' }
@@ -209,6 +142,9 @@ export const DivideNode: NodeDefinition = {
 		while (true) {
 			const value = context.getInputValue(`in${index}`);
 			if (value === undefined) break;
+			if (Array.isArray(value)) {
+				throw new Error('Divide node does not support array inputs. Use Map/Filter/Reduce nodes for array operations.');
+			}
 			inputs.push(value);
 			index++;
 		}
@@ -218,60 +154,28 @@ export const DivideNode: NodeDefinition = {
 			return;
 		}
 
-		// Check if any input is an array
-		const hasArray = inputs.some(input => Array.isArray(input));
-
-		if (hasArray) {
-			// Array-aware division: element-wise operation
-			const arrays = inputs.map(input => Array.isArray(input) ? input : [input]);
-			const lengths = arrays.map(arr => arr.length).filter(len => len > 0);
-			const maxLength = lengths.length > 0 ? Math.max(...lengths) : 0;
-			const result: number[] = [];
-
-			for (let i = 0; i < maxLength; i++) {
-				const firstVal = arrays[0].length > 0
-					? (i < arrays[0].length ? arrays[0][i] : arrays[0][arrays[0].length - 1])
-					: 0;
-				let quotient = Number(firstVal) || 0;
-
-				for (let j = 1; j < arrays.length; j++) {
-					if (arrays[j].length > 0) {
-						const val = i < arrays[j].length ? arrays[j][i] : arrays[j][arrays[j].length - 1];
-						const divisor = Number(val) || 0;
-						if (divisor === 0) {
-							throw new Error('Division by zero in Divide node');
-						}
-						quotient /= divisor;
-					}
-				}
-				result.push(quotient);
+		// Standard single value division
+		let result = Number(inputs[0]) || 0;
+		for (let i = 1; i < inputs.length; i++) {
+			const divisor = Number(inputs[i]) || 0;
+			if (divisor === 0) {
+				throw new Error('Division by zero in Divide node');
 			}
-
-			context.setOutputValue('out', result);
-		} else {
-			// Standard single value division
-			let result = Number(inputs[0]) || 0;
-			for (let i = 1; i < inputs.length; i++) {
-				const divisor = Number(inputs[i]) || 0;
-				if (divisor === 0) {
-					throw new Error('Division by zero in Divide node');
-				}
-				result /= divisor;
-			}
-			context.setOutputValue('out', result);
+			result /= divisor;
 		}
+		context.setOutputValue('out', result);
 	}
 };
 
 /**
  * Modulo node - computes the remainder of division
  * First input (in0) is the dividend, second input (in1) is the divisor
- * Array-aware: if any input is an array, performs element-wise modulo
+ * For array operations, use Map/Filter/Reduce nodes
  */
 export const ModuloNode: NodeDefinition = {
 	type: 'Modulo',
 	category: 'math',
-	description: 'Computes the remainder of division (modulo). Array-aware for element-wise operations.',
+	description: 'Computes the remainder of division (modulo). For array operations, use Map node.',
 	inputs: [],
 	outputs: [
 		{ name: 'out', type: 'number' }
@@ -285,38 +189,16 @@ export const ModuloNode: NodeDefinition = {
 			return;
 		}
 
-		// Check if any input is an array
-		const isDividendArray = Array.isArray(dividend);
-		const isDivisorArray = Array.isArray(divisor);
-
-		if (isDividendArray || isDivisorArray) {
-			// Array-aware modulo: element-wise operation
-			const dividendArr = isDividendArray ? dividend : [dividend];
-			const divisorArr = isDivisorArray ? divisor : [divisor];
-			const maxLength = Math.max(dividendArr.length, divisorArr.length);
-			const result: number[] = [];
-
-			for (let i = 0; i < maxLength; i++) {
-				const a = i < dividendArr.length ? dividendArr[i] : dividendArr[dividendArr.length - 1];
-				const b = i < divisorArr.length ? divisorArr[i] : divisorArr[divisorArr.length - 1];
-				const divVal = Number(b) || 0;
-				
-				if (divVal === 0) {
-					throw new Error('Division by zero in Modulo node');
-				}
-				
-				result.push((Number(a) || 0) % divVal);
-			}
-
-			context.setOutputValue('out', result);
-		} else {
-			// Standard single value modulo
-			const divVal = Number(divisor) || 0;
-			if (divVal === 0) {
-				throw new Error('Division by zero in Modulo node');
-			}
-			const result = (Number(dividend) || 0) % divVal;
-			context.setOutputValue('out', result);
+		if (Array.isArray(dividend) || Array.isArray(divisor)) {
+			throw new Error('Modulo node does not support array inputs. Use Map/Filter/Reduce nodes for array operations.');
 		}
+
+		// Standard single value modulo
+		const divVal = Number(divisor) || 0;
+		if (divVal === 0) {
+			throw new Error('Division by zero in Modulo node');
+		}
+		const result = (Number(dividend) || 0) % divVal;
+		context.setOutputValue('out', result);
 	}
 };
