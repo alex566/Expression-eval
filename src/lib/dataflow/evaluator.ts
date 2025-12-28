@@ -6,10 +6,9 @@ import type {
 	EvaluationResult,
 	ValidationResult,
 	NodeRegistry,
-	DataType,
 	InferredTypeInfo
 } from './types';
-import { isTypeCompatible, getValueType, areTypesCompatible } from './types';
+import { TSTypeChecker, type TSTypeCheckResult } from './ts-type-checker';
 
 /**
  * Graph evaluator - executes the dataflow graph with type inference
@@ -18,11 +17,14 @@ export class GraphEvaluator {
 	private nodeValues: Map<string, Map<string, any>> = new Map();
 	private inferredTypes: Map<string, InferredTypeInfo> = new Map();
 	private executedNodes: Set<string> = new Set();
+	private tsTypeChecker: TSTypeChecker;
 
 	constructor(
 		private graph: Graph,
 		private registry: NodeRegistry
-	) {}
+	) {
+		this.tsTypeChecker = new TSTypeChecker(registry);
+	}
 
 	/**
 	 * Evaluate the graph and return the result
@@ -114,24 +116,35 @@ export class GraphEvaluator {
 				errors.push(`Graph contains cycles: ${cycleCheck.cycleDescription}`);
 			}
 
-			// 5. Infer types for Value nodes and constant data
+			// 5. Use TypeScript-based type checking for powerful type inference
+			const tsCheckResult: TSTypeCheckResult = await this.tsTypeChecker.checkGraph(this.graph);
+			
+			// Merge TypeScript errors and warnings
+			errors.push(...tsCheckResult.errors);
+			warnings.push(...tsCheckResult.warnings);
+
+			// 6. Infer types for Value nodes using TS inference
 			for (const node of this.graph.nodes) {
 				const definition = this.registry.get(node.type);
 				if (!definition) continue;
 
-				// For Value nodes, infer type from the value
+				// For Value nodes, get the inferred TypeScript type
 				if (node.type === 'Value' && node.data.value !== undefined) {
-					const valueType = getValueType(node.data.value);
+					const key = `${node.id}.out`;
+					const tsTypeInfo = tsCheckResult.inferredTypes[key];
 					const outputPort = definition.outputs?.[0];
-					inferredTypes[`${node.id}.out`] = {
-						inferredType: valueType,
-						declaredType: outputPort?.type,
-						isCompatible: outputPort ? isTypeCompatible(node.data.value, outputPort.type) : true
-					};
+					
+					if (tsTypeInfo) {
+						inferredTypes[key] = {
+							type: tsTypeInfo.type,
+							declaredType: outputPort?.type,
+							isCompatible: outputPort ? this.tsTypeChecker.areTypesCompatible(tsTypeInfo.type, outputPort.type) : true
+						};
+					}
 				}
 			}
 
-			// 6. Type check edges based on node definitions
+			// 7. Type check edges based on TypeScript inference
 			for (const edge of this.graph.edges) {
 				const sourceNode = nodeMap.get(edge.from.node);
 				const targetNode = nodeMap.get(edge.to.node);
@@ -147,28 +160,30 @@ export class GraphEvaluator {
 				const sourcePort = sourceDefinition.outputs?.find(p => p.name === edge.from.port);
 				const targetPort = targetDefinition.inputs?.find(p => p.name === edge.to.port);
 
-				// If we have inferred type for source, use it; otherwise use declared type
+				// Get TypeScript types from inference
 				const sourceKey = `${edge.from.node}.${edge.from.port}`;
-				const sourceType = inferredTypes[sourceKey]?.inferredType || sourcePort?.type || 'any';
-				const targetType = targetPort?.type || 'any';
+				const sourceTsType = tsCheckResult.inferredTypes[sourceKey]?.type || sourcePort?.type || 'any';
+				const targetTsType = targetPort?.type || 'any';
 
-				// Check type compatibility
-				if (!areTypesCompatible(sourceType, targetType)) {
+				// Check type compatibility using TS types
+				const compatible = this.tsTypeChecker.areTypesCompatible(sourceTsType, targetTsType);
+
+				if (!compatible) {
 					errors.push(
-						`Type mismatch: cannot connect '${sourceNode.type}.${edge.from.port}' (${sourceType}) ` +
-						`to '${targetNode.type}.${edge.to.port}' (expected ${targetType})`
+						`Type mismatch: cannot connect '${sourceNode.type}.${edge.from.port}' (${sourceTsType}) ` +
+						`to '${targetNode.type}.${edge.to.port}' (expected ${targetTsType})`
 					);
 				}
 
 				// Store inferred type information for the target input
 				inferredTypes[`${edge.to.node}.input.${edge.to.port}`] = {
-					inferredType: sourceType,
-					declaredType: targetType,
-					isCompatible: areTypesCompatible(sourceType, targetType)
+					type: sourceTsType,
+					declaredType: targetTsType,
+					isCompatible: compatible
 				};
 			}
 
-			// 7. Check for unreachable nodes (optional warning)
+			// 8. Check for unreachable nodes (optional warning)
 			const reachableNodes = this.findReachableNodes();
 			for (const node of this.graph.nodes) {
 				if (!reachableNodes.has(node.id)) {
@@ -370,15 +385,54 @@ export class GraphEvaluator {
 	/**
 	 * Infer type for a port based on its value and store type information
 	 */
-	private inferTypeForPort(nodeId: string, port: string, value: any, declaredType?: DataType): void {
-		const inferredType = getValueType(value);
+	private inferTypeForPort(nodeId: string, port: string, value: any, declaredType?: string): void {
 		const key = `${nodeId}.${port}`;
 		
+		// Infer TypeScript type from value
+		const inferredType = this.inferTSTypeFromValue(value);
+		
 		this.inferredTypes.set(key, {
-			inferredType,
+			type: inferredType,
 			declaredType,
-			isCompatible: declaredType ? isTypeCompatible(value, declaredType) : true
+			isCompatible: declaredType ? this.tsTypeChecker.areTypesCompatible(inferredType, declaredType) : true
 		});
+	}
+
+	/**
+	 * Infer TypeScript type from a runtime value (helper method)
+	 */
+	private inferTSTypeFromValue(value: any): string {
+		if (value === null || value === undefined) {
+			return 'any';
+		}
+		if (value instanceof Date) {
+			return 'Date';
+		}
+		if (Array.isArray(value)) {
+			if (value.length === 0) {
+				return 'any[]';
+			}
+			const elementType = this.inferTSTypeFromValue(value[0]);
+			return `${elementType}[]`;
+		}
+		if (typeof value === 'object') {
+			const props: string[] = [];
+			for (const [key, val] of Object.entries(value)) {
+				const valueType = this.inferTSTypeFromValue(val);
+				props.push(`${key}: ${valueType}`);
+			}
+			return props.length > 0 ? `{ ${props.join('; ')} }` : 'Record<string, any>';
+		}
+		if (typeof value === 'number') {
+			return 'number';
+		}
+		if (typeof value === 'string') {
+			return 'string';
+		}
+		if (typeof value === 'boolean') {
+			return 'boolean';
+		}
+		return 'any';
 	}
 
 	/**
@@ -395,12 +449,14 @@ export class GraphEvaluator {
 			// Type checking: verify output type matches port specification
 			if (definition?.outputs) {
 				const outputPort = definition.outputs.find(p => p.name === edge.from.port);
-				if (outputPort && value !== undefined && !isTypeCompatible(value, outputPort.type)) {
-					const actualType = getValueType(value);
-					throw new Error(
-						`Type mismatch at node '${node.id}' output port '${edge.from.port}': ` +
-						`expected '${outputPort.type}' but got '${actualType}'`
-					);
+				if (outputPort && value !== undefined) {
+					const actualType = this.inferTSTypeFromValue(value);
+					if (!this.tsTypeChecker.areTypesCompatible(actualType, outputPort.type)) {
+						throw new Error(
+							`Type mismatch at node '${node.id}' output port '${edge.from.port}': ` +
+							`expected '${outputPort.type}' but got '${actualType}'`
+						);
+					}
 				}
 			}
 
@@ -410,12 +466,14 @@ export class GraphEvaluator {
 				const targetDefinition = this.registry.get(targetNode.type);
 				if (targetDefinition?.inputs) {
 					const inputPort = targetDefinition.inputs.find(p => p.name === edge.to.port);
-					if (inputPort && value !== undefined && !isTypeCompatible(value, inputPort.type)) {
-						const actualType = getValueType(value);
-						throw new Error(
-							`Type mismatch: cannot connect '${node.type}.${edge.from.port}' (${actualType}) ` +
-							`to '${targetNode.type}.${edge.to.port}' (expected ${inputPort.type})`
-						);
+					if (inputPort && value !== undefined) {
+						const actualType = this.inferTSTypeFromValue(value);
+						if (!this.tsTypeChecker.areTypesCompatible(actualType, inputPort.type)) {
+							throw new Error(
+								`Type mismatch: cannot connect '${node.type}.${edge.from.port}' (${actualType}) ` +
+								`to '${targetNode.type}.${edge.to.port}' (expected ${inputPort.type})`
+							);
+						}
 					}
 				}
 

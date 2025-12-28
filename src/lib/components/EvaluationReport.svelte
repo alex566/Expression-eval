@@ -33,7 +33,7 @@
 					inputs.push({
 						port,
 						value,
-						type: typeInfo?.inferredType || 'unknown'
+						type: typeInfo?.type || 'unknown'
 					});
 				}
 			}
@@ -49,7 +49,7 @@
 					outputs.push({
 						port,
 						value,
-						type: typeInfo?.inferredType || 'unknown'
+						type: typeInfo?.type || 'unknown'
 					});
 				}
 			}
@@ -92,7 +92,7 @@
 					finals.push({
 						name: outputName,
 						value,
-						type: typeInfo?.inferredType || 'unknown'
+						type: typeInfo?.type || 'unknown'
 					});
 				}
 			}
@@ -159,7 +159,9 @@
 									{#each nodeReport.inputs as input}
 										<div class="port-item">
 											<span class="port-name">{input.port}</span>
-											<span class="port-type">{input.type}</span>
+											<span class="port-type" title={`TypeScript: ${input.type}`}>
+												{input.type}
+											</span>
 											<span class="port-arrow">→</span>
 											<span class="port-value">{formatValue(input.value)}</span>
 										</div>
@@ -175,7 +177,9 @@
 									{#each nodeReport.outputs as output}
 										<div class="port-item">
 											<span class="port-name">{output.port}</span>
-											<span class="port-type">{output.type}</span>
+											<span class="port-type" title={`TypeScript: ${output.type}`}>
+												{output.type}
+											</span>
 											<span class="port-arrow">→</span>
 											<span class="port-value">{formatValue(output.value)}</span>
 										</div>

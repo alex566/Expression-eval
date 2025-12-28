@@ -19,11 +19,11 @@
 		"@types/dagre": "^0.7.53",
 		"svelte": "^5.45.6",
 		"svelte-check": "^4.3.4",
-		"typescript": "^5.9.3",
 		"vite": "^7.2.6"
 	},
 	"dependencies": {
 		"@xyflow/svelte": "latest",
-		"dagre": "^0.8.5"
+		"dagre": "^0.8.5",
+		"typescript": "^5.9.3"
 	}
 }

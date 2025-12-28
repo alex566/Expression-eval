@@ -93,7 +93,7 @@ function getNodePorts(
 			const inferred = inferredTypes[key];
 			return {
 				name: port.name,
-				type: inferred?.inferredType || port.type
+				type: inferred?.type || port.type
 			};
 		});
 
@@ -102,7 +102,7 @@ function getNodePorts(
 			const inferred = inferredTypes[key];
 			return {
 				name: port.name,
-				type: inferred?.inferredType || port.type
+				type: inferred?.type || port.type
 			};
 		});
 	}

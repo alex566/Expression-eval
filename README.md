@@ -1,6 +1,28 @@
 # Expression-eval
 
-A Svelte-based dataflow graph visualization and evaluation tool with a **function-based architecture**. This application allows you to create, visualize, and evaluate expression graphs using functions as the main execution units.
+A Svelte-based dataflow graph visualization and evaluation tool with a **function-based architecture** and **TypeScript-powered type inference**. This application allows you to create, visualize, and evaluate expression graphs using functions as the main execution units, with automatic real-time type checking.
+
+## Key Features
+
+- ✅ **TypeScript-Based Type Inference** - Automatic type checking using the TypeScript compiler API
+- ✅ **Real-Time Type Validation** - Types are inferred and validated as you build the graph
+- ✅ **Function-Based Architecture** - Reusable functions with proper type signatures
+- ✅ **Visual Type Information** - See inferred types directly on node ports
+- ✅ **Powerful Type System** - Supports complex types, generics, and union types
+- ✅ **Future-Proof** - Built on industry-standard TypeScript compiler
+
+## TypeScript Type System
+
+Expression-eval features a sophisticated type inference system powered by the TypeScript compiler API. This system automatically infers types as you build your graph and provides real-time type checking with the same power as TypeScript itself.
+
+**Key capabilities:**
+- Automatic type inference from values and node signatures
+- Real-time type checking on graph changes
+- Support for complex TypeScript types (generics, unions, mapped types)
+- Visual type information with hover tooltips
+- Detailed type error messages from TypeScript compiler
+
+For detailed information, see [TYPESCRIPT_TYPE_SYSTEM.md](TYPESCRIPT_TYPE_SYSTEM.md).
 
 ## Architecture Overview
 

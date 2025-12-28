@@ -13,6 +13,7 @@ export const AddNode: NodeDefinition = {
 	outputs: [
 		{ name: 'out', type: 'number' }
 	],
+	signature: '(...inputs: number[]) => number',
 	execute(context) {
 		const inputs: any[] = [];
 		let index = 0;

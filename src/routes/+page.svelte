@@ -24,6 +24,7 @@
 	let error = $state('');
 	let selectedGraph = $state('sample');
 	let showAddNodeModal = $state(false);
+	let autoTypeCheck = $state(true); // Enable automatic type checking
 
 	// Breadcrumb navigation state
 	interface BreadcrumbItem {
@@ -255,6 +256,11 @@
 		validationResult = null;
 		evaluationResult = null;
 		showAddNodeModal = false;
+		
+		// Automatically run type checking on graph change
+		if (autoTypeCheck) {
+			setTimeout(() => validateGraph(), 100);
+		}
 	}
 
 	function handleConnect(connection: Connection) {
@@ -290,6 +296,11 @@
 
 			// Update visualization while preserving positions
 			updateVisualizationPreservingPositions();
+			
+			// Automatically run type checking on graph change
+			if (autoTypeCheck) {
+				setTimeout(() => validateGraph(), 100);
+			}
 		}
 	}
 
