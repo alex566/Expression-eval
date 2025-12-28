@@ -1,16 +1,42 @@
 # Dataflow Logic Implementation
 
-This implementation provides a modular and clean dataflow graph system for Expression-eval with support for both traditional node-based graphs and modern function-based architecture.
+This implementation provides a modular and clean dataflow graph system for Expression-eval with a function-based architecture.
 
 ## Architecture
+
+### Core Concepts
+
+The architecture is built around **Functions** as the main execution unit:
+
+1. **Function** - The primary composition element
+   - Has a **name** (as ID)
+   - Contains a **graph** (nodes and edges)
+   - Can reference **nested functions** (other functions in the same graph)
+   - Accepts a single **JSON object** as input
+   - Produces **output** at the end of execution
+
+2. **FunctionInput Node** - Generic object properties accessor
+   - Entry point for function graphs
+   - Automatically creates **output pins for every property** of the input object
+   - Can be used anywhere to access object properties
+   - Example: Input object `{ element: 5, index: 0 }` creates output pins:
+     - `out`: The full object `{ element: 5, index: 0 }`
+     - `element`: The value `5`
+     - `index`: The value `0`
+
+3. **Function-Based Array Operations**
+   - Map, Filter, and Reduce use **FunctionValue** nodes
+   - Functions receive structured input objects:
+     - Map/Filter: `{ element: value }`
+     - Reduce: `{ accumulator: current, element: value }`
 
 ### Core Components
 
 1. **Types & Interfaces** (`src/lib/dataflow/types.ts`)
-   - `Graph`: Represents the complete dataflow graph
+   - `Graph`: Represents the complete dataflow graph with functions
    - `GraphNode`: Individual node in the graph
    - `GraphEdge`: Connections between nodes
-   - `FunctionDefinition`: Defines reusable functions within the graph
+   - `FunctionDefinition`: Defines reusable functions
    - `NodeDefinition`: Interface for defining node behavior
    - `NodeContext`: Execution context for nodes
 
@@ -27,45 +53,48 @@ This implementation provides a modular and clean dataflow graph system for Expre
 
 ## Function-Based Architecture
 
-The system now supports a **function-based architecture** where graphs can define reusable functions that can be called multiple times with different inputs.
+The system uses a **function-based architecture** where graphs define reusable functions that can be called with different inputs.
 
-### Key Concepts
+### Key Features
 
-#### 1. Functions
-Functions are the main composition element in the new architecture. Each function:
-- Has a unique name
-- Contains its own graph (nodes and edges)
-- Accepts a single JSON object as input
-- Returns a single output value
+#### 1. Functions as Main Execution Units
+Each function:
+- Has a unique **name** serving as its ID
+- Contains its own **graph** (nodes and edges)
+- Accepts a single **JSON object** as input
+- Returns a single **output** value
+- Can call other **nested functions** defined in the same graph
 
 #### 2. Main Function
-Every function-based graph has a "main" function that serves as the entry point. Other functions can be defined and called from the main function or from each other.
+Every function-based graph typically has a "main" function that serves as the entry point. Other functions can be defined and called from the main function or from each other.
 
-#### 3. Function Nodes
+#### 3. FunctionInput Node - Generic Object Properties Accessor
 
-##### FunctionInput Node
-- Represents the input to a function (JSON object)
-- Entry point for function graphs
-- Gets replaced with actual input values during execution
+The **FunctionInput** node is a powerful generic node that:
+- Serves as the entry point for function graphs
+- Receives a JSON object as input
+- Automatically creates **output pins for each property** of the object
+- Provides both the full object (`out` port) and individual properties
 
-##### GetProperty Node
-- Extracts a property from a JSON object
-- Takes a JSON object input and outputs a single property value
-- Essential for decomposing function inputs
+**Example:**
+```javascript
+// Input object
+{ element: 5, index: 0, name: "test" }
 
-##### FunctionRef Node
-- Calls a function by name
-- Accepts a JSON object as input
-- Returns the function's output
-- Currently used internally by Map/Filter/Reduce nodes
+// Available output ports on FunctionInput node:
+- out: { element: 5, index: 0, name: "test" }  // Full object
+- element: 5                                     // Individual property
+- index: 0                                       // Individual property  
+- name: "test"                                   // Individual property
+```
+
+This eliminates the need for GetProperty nodes in most cases, making graphs cleaner and more intuitive.
 
 ### Example: Function-Based Graph
 
 ```json
 {
-  "nodes": [...],  // Main graph nodes
-  "edges": [...],  // Main graph edges
-  "functions": [   // Function definitions
+  "functions": [
     {
       "name": "double",
       "description": "Doubles the element value",
@@ -75,11 +104,6 @@ Every function-based graph has a "main" function that serves as the entry point.
             "id": "input",
             "type": "FunctionInput",
             "data": {}
-          },
-          {
-            "id": "getElement",
-            "type": "GetProperty",
-            "data": { "property": "element" }
           },
           {
             "id": "two",
@@ -97,12 +121,27 @@ Every function-based graph has a "main" function that serves as the entry point.
             "data": { "outputs": ["result"] }
           }
         ],
-        "edges": [...]
+        "edges": [
+          {
+            "from": { "node": "input", "port": "element" },
+            "to": { "node": "multiply", "port": "in0" }
+          },
+          {
+            "from": { "node": "two", "port": "out" },
+            "to": { "node": "multiply", "port": "in1" }
+          },
+          {
+            "from": { "node": "multiply", "port": "out" },
+            "to": { "node": "output", "port": "result" }
+          }
+        ]
       }
     }
   ]
 }
 ```
+
+Note how the FunctionInput node's `element` property is accessed directly without needing a GetProperty node.
 
 ### Using Functions with Array Operations
 
@@ -136,28 +175,34 @@ The Map, Filter, and Reduce nodes are now **fully function-based** and require F
 When Map processes each array element:
 1. It wraps the element in a JSON object: `{ element: value }`
 2. Passes this object to the function
-3. The function uses GetProperty to extract the element
-4. Processes it and returns the result
+3. The function's FunctionInput node automatically exposes the `element` property as an output pin
+4. The function processes it and returns the result
 
 This approach provides:
 - **Reusability**: Define a function once, use it multiple times
-- **Composition**: Functions can call other functions
+- **Composition**: Functions can call other nested functions
 - **Clarity**: Function names describe what they do
-- **Modularity**: Functions are self-contained units
+- **Modularity**: Functions are self-contained units with clear input/output
 - **Navigation**: Double-click FunctionValue nodes to view/edit function definitions
+- **Simplicity**: Direct property access eliminates extra nodes
 
 ## Node Categories
 
 Nodes are organized in separate folders by category:
 
 #### Function Nodes (`src/lib/nodes/function/`)
-- **FunctionInput**: Represents the input JSON object to a function (entry point)
-- **GetProperty**: Extracts a property from a JSON object
+- **FunctionInput**: Generic object properties accessor (entry point for functions)
+  - Automatically creates output pins for each property of the input object
+  - Provides `out` port for full object and individual ports for each property
+  - Example: Input `{ element: 5, index: 0 }` exposes ports: `out`, `element`, `index`
+  - Eliminates need for GetProperty nodes in most cases
+- **GetProperty**: Extracts a property from a JSON object (optional, for advanced use)
   - Example: Extract "element" from `{ element: 5, index: 0 }` → returns `5`
+  - Useful for dynamic property access or nested objects
 - **FunctionValue**: Provides a function name as a value that can be connected to function pins
   - Used to reference functions in Map/Filter/Reduce operations
-  - Double-click to view/edit the function definition
-- **FunctionRef**: Calls a function by name with a JSON object input (internal use)
+  - Double-click to view/edit the function definition in the UI
+- **FunctionRef**: Calls a function by name with a JSON object input (internal use by array nodes)
 
 #### Math Operations (`src/lib/nodes/math/`)
 All math nodes now support **array-aware operations**. When any input is an array, the operation is performed element-wise:
@@ -397,18 +442,30 @@ npm run build
 - ✅ **Array filtering** - conditional node filters arrays with boolean arrays
 - ✅ **Switch node** - multi-case branching
 - ✅ Removed Map/ForEach in favor of native array support
-- ✅ **Function-based architecture** - reusable functions with JSON object inputs
-- ✅ **GetProperty node** - extract properties from JSON objects
-- ✅ **FunctionInput node** - define function entry points
+- ✅ **Function-based architecture** - functions as main execution units with name, graph, and nested functions
+- ✅ **FunctionInput node** - generic object properties accessor with automatic output pins
+- ✅ **GetProperty node** - optional property extraction for advanced cases
 - ✅ **FunctionValue node** - reference functions as values that can be connected to pins
 - ✅ **Interactive function navigation** - double-click FunctionValue nodes to view/edit functions
-- ✅ **Clean architecture** - Map/Filter/Reduce fully function-based, no more subgraphs
+- ✅ **Clean architecture** - Map/Filter/Reduce fully function-based, no subgraphs
 
-## Migration from Subgraphs to Functions
+## Architecture Highlights
 
-**Note:** As of the latest version, Map/Filter/Reduce nodes are **fully function-based** and no longer support the subgraph approach. All operations must use FunctionValue nodes connected to function pins.
+### Functions as Main Execution Units
+- **Name**: Each function has a unique name serving as its ID
+- **Graph**: Contains nodes and edges defining the function logic
+- **Nested Functions**: Functions can reference and call other functions in the same graph
+- **Input**: Single JSON object with properties
+- **Output**: Produced at the end of execution
 
-### Old Approach (Subgraphs - Deprecated)
+### Direct Property Access
+The FunctionInput node automatically creates output pins for object properties, eliminating the need for GetProperty nodes in most scenarios. This makes function graphs cleaner and more intuitive.
+
+**Note:** The system now uses a **pure function-based architecture**. Subgraphs are no longer supported.
+
+## Migration Guide
+
+### Old Approach (Subgraphs - No Longer Supported)
 ```json
 {
   "id": "map_double",
@@ -428,7 +485,7 @@ npm run build
 }
 ```
 
-### New Approach (Functions - Required)
+### New Approach (Function-Based - Current)
 ```json
 {
   "nodes": [
@@ -454,6 +511,7 @@ npm run build
   "functions": [
     {
       "name": "double",
+      "description": "Doubles the element value",
       "graph": {
         "nodes": [
           {
@@ -462,26 +520,51 @@ npm run build
             "data": {}
           },
           {
-            "id": "getElement",
-            "type": "GetProperty",
-            "data": { "property": "element" }
+            "id": "two",
+            "type": "Value",
+            "data": { "value": 2 }
           },
-          ...
+          {
+            "id": "multiply",
+            "type": "Multiply",
+            "data": {}
+          },
+          {
+            "id": "output",
+            "type": "Output",
+            "data": { "outputs": ["result"] }
+          }
         ],
-        "edges": [...]
+        "edges": [
+          {
+            "from": { "node": "input", "port": "element" },
+            "to": { "node": "multiply", "port": "in0" }
+          },
+          {
+            "from": { "node": "two", "port": "out" },
+            "to": { "node": "multiply", "port": "in1" }
+          },
+          {
+            "from": { "node": "multiply", "port": "out" },
+            "to": { "node": "output", "port": "result" }
+          }
+        ]
       }
     }
   ]
 }
 ```
 
+Note: The FunctionInput node now provides direct access to properties via output pins (`element`, `index`, etc.), eliminating the need for GetProperty nodes.
+
 ### Benefits of Function-Based Architecture
 
 1. **Reusability**: Define once, use multiple times across different operations
-2. **Naming**: Clear function names describe purpose
-3. **Organization**: Functions are listed separately from main graph
-4. **Composition**: Functions are the main composition element, everything is based on functions
+2. **Naming**: Clear function names (IDs) describe purpose
+3. **Organization**: Functions are the main execution units, listed separately from node instances
+4. **Composition**: Functions can reference and call other nested functions
 5. **Navigation**: Double-click FunctionValue nodes to view/edit function definitions
 6. **Clean Architecture**: Consistent pattern throughout - no mixed approaches
+7. **Direct Property Access**: FunctionInput automatically exposes object properties as output pins
 
 See `static/function-based.json` and `static/map-filter-reduce.json` for complete examples.

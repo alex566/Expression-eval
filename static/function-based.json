@@ -13,18 +13,28 @@
 						}
 					},
 					{
-						"id": "map_double",
-						"type": "Map",
+						"id": "double_func",
+						"type": "FunctionValue",
 						"data": {
 							"functionName": "double"
 						}
 					},
 					{
-						"id": "filter_even",
-						"type": "Filter",
+						"id": "map_double",
+						"type": "Map",
+						"data": {}
+					},
+					{
+						"id": "isEven_func",
+						"type": "FunctionValue",
 						"data": {
 							"functionName": "isEven"
 						}
+					},
+					{
+						"id": "filter_even",
+						"type": "Filter",
+						"data": {}
 					},
 					{
 						"id": "output",
@@ -40,8 +50,16 @@
 						"to": { "node": "map_double", "port": "array" }
 					},
 					{
+						"from": { "node": "double_func", "port": "out" },
+						"to": { "node": "map_double", "port": "function" }
+					},
+					{
 						"from": { "node": "map_double", "port": "out" },
 						"to": { "node": "filter_even", "port": "array" }
+					},
+					{
+						"from": { "node": "isEven_func", "port": "out" },
+						"to": { "node": "filter_even", "port": "function" }
 					},
 					{
 						"from": { "node": "filter_even", "port": "out" },
@@ -59,13 +77,6 @@
 						"id": "input",
 						"type": "FunctionInput",
 						"data": {}
-					},
-					{
-						"id": "getElement",
-						"type": "GetProperty",
-						"data": {
-							"property": "element"
-						}
 					},
 					{
 						"id": "two",
@@ -89,11 +100,7 @@
 				],
 				"edges": [
 					{
-						"from": { "node": "input", "port": "out" },
-						"to": { "node": "getElement", "port": "object" }
-					},
-					{
-						"from": { "node": "getElement", "port": "out" },
+						"from": { "node": "input", "port": "element" },
 						"to": { "node": "multiply", "port": "in0" }
 					},
 					{
@@ -116,13 +123,6 @@
 						"id": "input",
 						"type": "FunctionInput",
 						"data": {}
-					},
-					{
-						"id": "getElement",
-						"type": "GetProperty",
-						"data": {
-							"property": "element"
-						}
 					},
 					{
 						"id": "two",
@@ -160,11 +160,7 @@
 				],
 				"edges": [
 					{
-						"from": { "node": "input", "port": "out" },
-						"to": { "node": "getElement", "port": "object" }
-					},
-					{
-						"from": { "node": "getElement", "port": "out" },
+						"from": { "node": "input", "port": "element" },
 						"to": { "node": "modulo", "port": "in0" }
 					},
 					{

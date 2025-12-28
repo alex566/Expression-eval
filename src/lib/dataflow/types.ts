@@ -47,16 +47,19 @@ export interface GraphNode {
 	id: string;
 	type: string;
 	data: Record<string, any>;
-	/** Optional subgraph for nodes like Map, Filter, Reduce */
-	subgraph?: Graph;
 }
 
 /**
  * Represents a function definition in the graph
- * Functions are the main composition element with a single JSON object input and return output
+ * Functions are the main execution unit with:
+ * - Name (as ID)
+ * - Graph containing nodes and edges
+ * - Nested functions (can reference other functions)
+ * - Input: a single JSON object
+ * - Output: produced at the end of execution
  */
 export interface FunctionDefinition {
-	/** Unique name of the function */
+	/** Unique name/ID of the function */
 	name: string;
 	/** The function graph with nodes and edges */
 	graph: Graph;
@@ -65,12 +68,16 @@ export interface FunctionDefinition {
 }
 
 /**
- * Represents the complete dataflow graph with functions
+ * Represents the complete dataflow graph
+ * In function-based architecture, graphs define functions where:
+ * - Each function has a name (as ID), graph, and can contain nested functions
+ * - The main execution unit is a function which has an input object and produces output
+ * - Functions can reference and call other functions defined in the same graph
  */
 export interface Graph {
 	nodes: GraphNode[];
 	edges: GraphEdge[];
-	/** Optional list of function definitions. If provided, the graph uses function-based architecture */
+	/** List of function definitions. Each function is the main execution unit. */
 	functions?: FunctionDefinition[];
 }
 
@@ -92,8 +99,6 @@ export interface NodeDefinition {
 	description?: string;
 	inputs?: PortSpec[];
 	outputs?: PortSpec[];
-	/** Indicates if this node type supports subgraphs */
-	hasSubgraph?: boolean;
 	execute(context: NodeContext): void | Promise<void>;
 }
 
