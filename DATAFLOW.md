@@ -205,26 +205,25 @@ Nodes are organized in separate folders by category:
 - **FunctionRef**: Calls a function by name with a JSON object input (internal use by array nodes)
 
 #### Math Operations (`src/lib/nodes/math/`)
-All math nodes now support **array-aware operations**. When any input is an array, the operation is performed element-wise:
+All math nodes work with **single numeric values only**. For array operations, use Map/Filter/Reduce nodes:
 - **Add**: Adds all connected input values together (dynamic inputs: in0, in1, in2, ...)
-  - Arrays: `[1,2,3] + [10,20,30] = [11,22,33]`
-  - Mixed: `[1,2,3] + 5 = [6,7,8]`
+  - Example: `5 + 3 = 8`
 - **Subtract**: Subtracts all subsequent inputs from the first input (in0 - in1 - in2 - ...)
-  - Arrays: `[10,20,30] - [1,2,3] = [9,18,27]`
+  - Example: `10 - 3 = 7`
 - **Multiply**: Multiplies all connected input values together (dynamic inputs: in0, in1, in2, ...)
-  - Arrays: `[1,2,3] * [10,20,30] = [10,40,90]`
+  - Example: `5 * 3 = 15`
 - **Divide**: Divides the first input by all subsequent inputs (in0 / in1 / in2 / ...)
-  - Arrays: `[10,20,30] / [2,4,5] = [5,5,6]`
+  - Example: `10 / 2 = 5`
 - **Modulo**: Computes the remainder of division (in0 % in1)
-  - Arrays: `[10,15,20] % 3 = [1,0,2]`
+  - Example: `10 % 3 = 1`
 
 #### Control Flow (`src/lib/nodes/control/`)
-- **If**: Conditional branching (supports both single values and array filtering)
-  - Single: outputs either `true` or `false` value based on condition
-  - Array: when condition is an array of booleans, filters input arrays into `trueOut` and `falseOut`
-- **Compare**: Compares two values (supports element-wise array comparison)
-  - Single: `5 > 3 = true`
-  - Arrays: `[1,5,10] > 3 = [false, true, true]`
+- **If**: Conditional branching with single values
+  - Outputs either `true` or `false` value based on condition
+  - For array filtering, use Filter node
+- **Compare**: Compares two single values
+  - Example: `5 > 3 = true`
+  - For array comparisons, use Map node with a comparison function
 - **Switch**: Multi-case branching based on a value matching a case
 
 #### Array Operations (`src/lib/nodes/array/`)
@@ -358,28 +357,17 @@ All math and comparison operations now support **array-aware execution**:
 
 ### Examples
 ```javascript
-// Math operations
-[1, 2, 3] + [10, 20, 30] = [11, 22, 33]  // element-wise addition
-[1, 2, 3] * 5 = [5, 10, 15]              // scalar broadcast
-[10, 20, 30] - [1, 2, 3] = [9, 18, 27]   // element-wise subtraction
-
-// Comparison operations
-[1, 5, 10, 15, 20] > 10 = [false, false, false, true, true]
-[1, 2, 3] == [1, 5, 3] = [true, false, true]
-
-// Array filtering with If node
-condition: [true, false, true, false, true]
-true input: [10, 20, 30, 40, 50]
-false input: [10, 20, 30, 40, 50]
-→ trueOut: [10, 30, 50]
-→ falseOut: [20, 40]
+// Example: Transform and filter arrays
+// Use Map node to double each element: [1,2,3,4,5] → [2,4,6,8,10]
+// Use Filter node to keep only values > 5: [2,4,6,8,10] → [6,8,10]
+// Use Reduce node to sum: [6,8,10] → 24
 ```
 
-### Control Flow with Arrays
-- **Compare**: Produces boolean arrays when comparing arrays
-- **If**: Filters arrays based on boolean array conditions
-  - `trueOut`: Elements where condition is true
-  - `falseOut`: Elements where condition is false
+### Array Operations
+For array operations, use the dedicated array nodes:
+- **Map**: Transform each element using a function
+- **Filter**: Keep only elements matching a predicate
+- **Reduce**: Combine all elements into a single value
 - **Switch**: Routes values to different outputs based on case values
 
 ## Dynamic Inputs for Math Operations
