@@ -938,12 +938,12 @@ export const FUNCTION_BASED_GRAPH: Graph = {
 						}
 					},
 					{
-						id: "divide",
-						type: "Divide",
+						id: "modulo",
+						type: "Modulo",
 						data: {}
 					},
 					{
-						id: "floor",
+						id: "zero",
 						type: "Value",
 						data: {
 							value: 0
@@ -971,18 +971,18 @@ export const FUNCTION_BASED_GRAPH: Graph = {
 					},
 					{
 						from: { node: "getElement", port: "out" },
-						to: { node: "divide", port: "in0" }
+						to: { node: "modulo", port: "in0" }
 					},
 					{
 						from: { node: "two", port: "out" },
-						to: { node: "divide", port: "in1" }
+						to: { node: "modulo", port: "in1" }
 					},
 					{
-						from: { node: "divide", port: "out" },
+						from: { node: "modulo", port: "out" },
 						to: { node: "compare", port: "a" }
 					},
 					{
-						from: { node: "floor", port: "out" },
+						from: { node: "zero", port: "out" },
 						to: { node: "compare", port: "b" }
 					},
 					{
