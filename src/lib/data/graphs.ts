@@ -623,15 +623,115 @@ export const MAP_FILTER_REDUCE_GRAPH: Graph = {
 			}
 		},
 		{
+			id: "double_func",
+			type: "FunctionValue",
+			data: {
+				functionName: "double"
+			}
+		},
+		{
+			id: "gt10_func",
+			type: "FunctionValue",
+			data: {
+				functionName: "greaterThan10"
+			}
+		},
+		{
+			id: "sum_func",
+			type: "FunctionValue",
+			data: {
+				functionName: "sum"
+			}
+		},
+		{
 			id: "map_double",
 			type: "Map",
-			data: {},
-			subgraph: {
+			data: {}
+		},
+		{
+			id: "filter_gt5",
+			type: "Filter",
+			data: {}
+		},
+		{
+			id: "reduce_sum",
+			type: "Reduce",
+			data: {}
+		},
+		{
+			id: "initial_value",
+			type: "Value",
+			data: {
+				value: 0
+			}
+		},
+		{
+			id: "output",
+			type: "Output",
+			data: {
+				outputs: ["mapped", "filtered", "sum"]
+			}
+		}
+	],
+	edges: [
+		{
+			from: { node: "numbers", port: "out" },
+			to: { node: "map_double", port: "array" }
+		},
+		{
+			from: { node: "double_func", port: "out" },
+			to: { node: "map_double", port: "function" }
+		},
+		{
+			from: { node: "map_double", port: "out" },
+			to: { node: "output", port: "mapped" }
+		},
+		{
+			from: { node: "map_double", port: "out" },
+			to: { node: "filter_gt5", port: "array" }
+		},
+		{
+			from: { node: "gt10_func", port: "out" },
+			to: { node: "filter_gt5", port: "function" }
+		},
+		{
+			from: { node: "filter_gt5", port: "out" },
+			to: { node: "output", port: "filtered" }
+		},
+		{
+			from: { node: "filter_gt5", port: "out" },
+			to: { node: "reduce_sum", port: "array" }
+		},
+		{
+			from: { node: "initial_value", port: "out" },
+			to: { node: "reduce_sum", port: "initial" }
+		},
+		{
+			from: { node: "sum_func", port: "out" },
+			to: { node: "reduce_sum", port: "function" }
+		},
+		{
+			from: { node: "reduce_sum", port: "out" },
+			to: { node: "output", port: "sum" }
+		}
+	],
+	functions: [
+		{
+			name: "double",
+			description: "Doubles the element value",
+			graph: {
 				nodes: [
 					{
-						id: "element",
-						type: "Input",
+						id: "input",
+						type: "FunctionInput",
 						data: {}
+					},
+					{
+						id: "getElement",
+						type: "GetProperty",
+						data: {
+							property: "element"
+						}
 					},
 					{
 						id: "two",
@@ -655,7 +755,11 @@ export const MAP_FILTER_REDUCE_GRAPH: Graph = {
 				],
 				edges: [
 					{
-						from: { node: "element", port: "out" },
+						from: { node: "input", port: "out" },
+						to: { node: "getElement", port: "object" }
+					},
+					{
+						from: { node: "getElement", port: "out" },
 						to: { node: "multiply", port: "in0" }
 					},
 					{
@@ -670,15 +774,21 @@ export const MAP_FILTER_REDUCE_GRAPH: Graph = {
 			}
 		},
 		{
-			id: "filter_gt5",
-			type: "Filter",
-			data: {},
-			subgraph: {
+			name: "greaterThan10",
+			description: "Checks if element is greater than 10",
+			graph: {
 				nodes: [
 					{
-						id: "element",
-						type: "Input",
+						id: "input",
+						type: "FunctionInput",
 						data: {}
+					},
+					{
+						id: "getElement",
+						type: "GetProperty",
+						data: {
+							property: "element"
+						}
 					},
 					{
 						id: "threshold",
@@ -704,7 +814,11 @@ export const MAP_FILTER_REDUCE_GRAPH: Graph = {
 				],
 				edges: [
 					{
-						from: { node: "element", port: "out" },
+						from: { node: "input", port: "out" },
+						to: { node: "getElement", port: "object" }
+					},
+					{
+						from: { node: "getElement", port: "out" },
 						to: { node: "compare", port: "a" }
 					},
 					{
@@ -719,20 +833,28 @@ export const MAP_FILTER_REDUCE_GRAPH: Graph = {
 			}
 		},
 		{
-			id: "reduce_sum",
-			type: "Reduce",
-			data: {},
-			subgraph: {
+			name: "sum",
+			description: "Adds accumulator and element",
+			graph: {
 				nodes: [
 					{
-						id: "accumulator",
-						type: "Input",
+						id: "input",
+						type: "FunctionInput",
 						data: {}
 					},
 					{
-						id: "element",
-						type: "Input",
-						data: {}
+						id: "getAccumulator",
+						type: "GetProperty",
+						data: {
+							property: "accumulator"
+						}
+					},
+					{
+						id: "getElement",
+						type: "GetProperty",
+						data: {
+							property: "element"
+						}
 					},
 					{
 						id: "add",
@@ -749,11 +871,19 @@ export const MAP_FILTER_REDUCE_GRAPH: Graph = {
 				],
 				edges: [
 					{
-						from: { node: "accumulator", port: "out" },
+						from: { node: "input", port: "out" },
+						to: { node: "getAccumulator", port: "object" }
+					},
+					{
+						from: { node: "input", port: "out" },
+						to: { node: "getElement", port: "object" }
+					},
+					{
+						from: { node: "getAccumulator", port: "out" },
 						to: { node: "add", port: "in0" }
 					},
 					{
-						from: { node: "element", port: "out" },
+						from: { node: "getElement", port: "out" },
 						to: { node: "add", port: "in1" }
 					},
 					{
@@ -762,50 +892,6 @@ export const MAP_FILTER_REDUCE_GRAPH: Graph = {
 					}
 				]
 			}
-		},
-		{
-			id: "initial_value",
-			type: "Value",
-			data: {
-				value: 0
-			}
-		},
-		{
-			id: "output",
-			type: "Output",
-			data: {
-				outputs: ["mapped", "filtered", "sum"]
-			}
-		}
-	],
-	edges: [
-		{
-			from: { node: "numbers", port: "out" },
-			to: { node: "map_double", port: "array" }
-		},
-		{
-			from: { node: "map_double", port: "out" },
-			to: { node: "output", port: "mapped" }
-		},
-		{
-			from: { node: "map_double", port: "out" },
-			to: { node: "filter_gt5", port: "array" }
-		},
-		{
-			from: { node: "filter_gt5", port: "out" },
-			to: { node: "output", port: "filtered" }
-		},
-		{
-			from: { node: "filter_gt5", port: "out" },
-			to: { node: "reduce_sum", port: "array" }
-		},
-		{
-			from: { node: "initial_value", port: "out" },
-			to: { node: "reduce_sum", port: "initial" }
-		},
-		{
-			from: { node: "reduce_sum", port: "out" },
-			to: { node: "output", port: "sum" }
 		}
 	]
 };
