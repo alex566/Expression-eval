@@ -361,9 +361,7 @@ export class GraphEvaluator {
 			},
 			getNodeData: () => ({
 				...node.data,
-				// Include subgraph if it exists (needed for Map/Filter/Reduce nodes)
-				...(node.subgraph ? { subgraph: node.subgraph } : {}),
-				// Include functions list if it exists (needed for FunctionRef nodes)
+				// Include functions list if it exists (needed for FunctionRef and array operation nodes)
 				...(this.graph.functions ? { functions: this.graph.functions } : {})
 			})
 		};

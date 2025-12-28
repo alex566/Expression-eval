@@ -19,20 +19,20 @@ export const ValueNode: NodeDefinition = {
 };
 
 /**
- * Input node - represents an input to a subgraph
- * Used in Map/Filter/Reduce subgraphs to represent the current element
+ * Input node - DEPRECATED: Use FunctionInput instead
+ * This node is kept for backward compatibility with old graphs
+ * In function-based architecture, use FunctionInput which provides direct property access
  */
 export const InputNode: NodeDefinition = {
 	type: 'Input',
 	category: 'special',
-	description: 'Represents an input to a subgraph (used in Map/Filter/Reduce)',
+	description: 'DEPRECATED: Use FunctionInput instead. Kept for backward compatibility.',
 	inputs: [],
 	outputs: [
 		{ name: 'out', type: 'any' }
 	],
 	execute(context) {
-		// In subgraph context, this will be replaced with a Value node
-		// For standalone usage, output undefined
+		// For backward compatibility, behaves like a Value node
 		const value = context.getNodeData().value;
 		context.setOutputValue('out', value);
 	}

@@ -87,13 +87,14 @@ export const GetPropertyNode: NodeDefinition = {
 };
 
 /**
- * FunctionInput node - represents the input to a function (JSON object)
- * This is the entry point for function graphs
+ * FunctionInput node - generic object properties accessor
+ * This is the entry point for function graphs and provides output pins for each property
+ * It can also be used to access properties of any object in the graph
  */
 export const FunctionInputNode: NodeDefinition = {
 	type: 'FunctionInput',
 	category: 'function',
-	description: 'Represents the input JSON object to a function',
+	description: 'Generic object properties accessor with output pins for each property',
 	inputs: [],
 	outputs: [
 		{ name: 'out', type: 'object' }
@@ -101,7 +102,16 @@ export const FunctionInputNode: NodeDefinition = {
 	execute(context) {
 		// In function context, this will be replaced with a Value node containing the input object
 		const value = context.getNodeData().value || {};
+		
+		// Set the full object as 'out' output
 		context.setOutputValue('out', value);
+		
+		// If value is an object, also set individual property outputs
+		if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+			for (const [key, val] of Object.entries(value)) {
+				context.setOutputValue(key, val);
+			}
+		}
 	}
 };
 
