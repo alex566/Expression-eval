@@ -170,8 +170,8 @@ export class TSTypeChecker {
 			if (definition.outputs && definition.outputs.length > 0) {
 				for (const output of definition.outputs) {
 					const varName = `${this.sanitizeIdentifier(node.id)}_${output.name}`;
-					// Use TypeScript type from port spec if available, otherwise map DataType
-					const tsType = output.tsType || this.mapDataTypeToTS(output.type);
+					// Use TypeScript type directly from port spec
+					const tsType = output.type;
 					lines.push(`  let ${varName}: ${tsType};`);
 				}
 			}
@@ -242,35 +242,6 @@ export class TSTypeChecker {
 		};
 
 		visit(sourceFile);
-	}
-
-	/**
-	 * Map our DataType to TypeScript type string
-	 */
-	private mapDataTypeToTS(dataType: string): string {
-		// Handle union types
-		if (dataType.includes(' | ')) {
-			return dataType; // Already in TS union format
-		}
-
-		// Map simple types
-		switch (dataType) {
-			case 'number':
-				return 'number';
-			case 'string':
-				return 'string';
-			case 'boolean':
-				return 'boolean';
-			case 'array':
-				return 'any[]';
-			case 'object':
-				return 'Record<string, any>';
-			case 'Date':
-				return 'Date';
-			case 'any':
-			default:
-				return 'any';
-		}
 	}
 
 	/**

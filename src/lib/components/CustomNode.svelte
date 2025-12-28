@@ -52,8 +52,8 @@
 						style="top: {(i + 1) * (100 / (inputs.length + 1))}%"
 					/>
 					<span class="handle-label left">
-						{input.name}: <span class="type-label" title={input.tsType ? `TS: ${input.tsType}` : ''}>
-							{input.tsType || input.type}
+						{input.name}: <span class="type-label" title={`TypeScript: ${input.type}`}>
+							{input.type}
 						</span>
 					</span>
 				</div>
@@ -93,8 +93,8 @@
 						style="top: {(i + 1) * (100 / (outputs.length + 1))}%"
 					/>
 					<span class="handle-label right">
-						{output.name}: <span class="type-label" title={output.tsType ? `TS: ${output.tsType}` : ''}>
-							{output.tsType || output.type}
+						{output.name}: <span class="type-label" title={`TypeScript: ${output.type}`}>
+							{output.type}
 						</span>
 					</span>
 				</div>
