@@ -1,24 +1,28 @@
-import type { NodeDefinition, Graph } from '../../dataflow/types';
+import type { NodeDefinition, Graph, FunctionDefinition } from '../../dataflow/types';
 import { GraphEvaluator } from '../../dataflow/evaluator';
 import { nodeRegistry } from '../../dataflow/registry';
+import { createFunctionGraphWithInput, extractFunctionOutput } from '../../utils/function-helpers';
 
 /**
- * Map node - applies a transformation subgraph to each element of an array
- * The subgraph receives the current element and produces the transformed output
+ * Map node - applies a transformation to each element of an array
+ * Supports both subgraph (legacy) and function reference modes
+ * In function mode, passes each element as { element: value } to the function
  */
 export const MapNode: NodeDefinition = {
 	type: 'Map',
 	category: 'array',
-	description: 'Maps each element of an array through a transformation subgraph',
+	description: 'Maps each element of an array through a transformation function',
 	hasSubgraph: true,
 	inputs: [
-		{ name: 'array', type: 'array' }
+		{ name: 'array', type: 'array' },
+		{ name: 'function', type: 'any' } // Optional function reference
 	],
 	outputs: [
 		{ name: 'out', type: 'array' }
 	],
 	async execute(context) {
 		const inputArray = context.getInputValue('array');
+		const functionRef = context.getInputValue('function');
 		const nodeData = context.getNodeData();
 		const subgraph = nodeData.subgraph as Graph | undefined;
 
@@ -26,29 +30,62 @@ export const MapNode: NodeDefinition = {
 			throw new Error('Map node requires an array input');
 		}
 
-		if (!subgraph) {
-			// No subgraph defined, pass through the array
+		// Determine if we're using function reference or subgraph
+		const functionName = functionRef || nodeData.functionName;
+		const useFunctionMode = !!functionName;
+
+		if (!useFunctionMode && !subgraph) {
+			// No transformation defined, pass through the array
 			context.setOutputValue('out', inputArray);
 			return;
 		}
 
-		// Process each element through the subgraph
+		// Process each element
 		const results: any[] = [];
-		for (const element of inputArray) {
-			// Create a modified subgraph with the current element as input
-			const modifiedGraph = createSubgraphWithInput(subgraph, element);
-			
-			// Evaluate the subgraph
-			const evaluator = new GraphEvaluator(modifiedGraph, nodeRegistry);
-			const result = await evaluator.evaluate();
-
-			if (!result.success) {
-				throw new Error(`Map subgraph evaluation failed: ${result.error}`);
+		
+		if (useFunctionMode) {
+			// Function reference mode: pass { element: value } to the function
+			const functions = nodeData.functions as FunctionDefinition[] | undefined;
+			if (!functions) {
+				throw new Error('Map node in function mode requires functions list');
 			}
 
-			// Extract the output from the subgraph
-			const output = extractSubgraphOutput(result.outputs);
-			results.push(output);
+			const functionDef = functions.find(f => f.name === functionName);
+			if (!functionDef) {
+				throw new Error(`Function '${functionName}' not found`);
+			}
+
+			for (const element of inputArray) {
+				// Create input object with element property
+				const inputObject = { element };
+				const modifiedGraph = createFunctionGraphWithInput(functionDef.graph, inputObject);
+				
+				// Evaluate the function
+				const evaluator = new GraphEvaluator(modifiedGraph, nodeRegistry);
+				const result = await evaluator.evaluate();
+
+				if (!result.success) {
+					throw new Error(`Map function evaluation failed: ${result.error}`);
+				}
+
+				const output = extractFunctionOutput(result.outputs);
+				results.push(output);
+			}
+		} else {
+			// Subgraph mode (legacy)
+			for (const element of inputArray) {
+				const modifiedGraph = createSubgraphWithInput(subgraph!, element);
+				
+				const evaluator = new GraphEvaluator(modifiedGraph, nodeRegistry);
+				const result = await evaluator.evaluate();
+
+				if (!result.success) {
+					throw new Error(`Map subgraph evaluation failed: ${result.error}`);
+				}
+
+				const output = extractSubgraphOutput(result.outputs);
+				results.push(output);
+			}
 		}
 
 		context.setOutputValue('out', results);
@@ -56,22 +93,25 @@ export const MapNode: NodeDefinition = {
 };
 
 /**
- * Filter node - filters elements of an array using a predicate subgraph
- * The subgraph receives the current element and produces a boolean indicating if it should be included
+ * Filter node - filters elements of an array using a predicate
+ * Supports both subgraph (legacy) and function reference modes
+ * In function mode, passes each element as { element: value } to the function
  */
 export const FilterNode: NodeDefinition = {
 	type: 'Filter',
 	category: 'array',
-	description: 'Filters array elements using a predicate subgraph',
+	description: 'Filters array elements using a predicate function',
 	hasSubgraph: true,
 	inputs: [
-		{ name: 'array', type: 'array' }
+		{ name: 'array', type: 'array' },
+		{ name: 'function', type: 'any' } // Optional function reference
 	],
 	outputs: [
 		{ name: 'out', type: 'array' }
 	],
 	async execute(context) {
 		const inputArray = context.getInputValue('array');
+		const functionRef = context.getInputValue('function');
 		const nodeData = context.getNodeData();
 		const subgraph = nodeData.subgraph as Graph | undefined;
 
@@ -79,30 +119,65 @@ export const FilterNode: NodeDefinition = {
 			throw new Error('Filter node requires an array input');
 		}
 
-		if (!subgraph) {
-			// No subgraph defined, pass through the array
+		// Determine if we're using function reference or subgraph
+		const functionName = functionRef || nodeData.functionName;
+		const useFunctionMode = !!functionName;
+
+		if (!useFunctionMode && !subgraph) {
+			// No predicate defined, pass through the array
 			context.setOutputValue('out', inputArray);
 			return;
 		}
 
-		// Filter elements based on the subgraph predicate
+		// Filter elements
 		const results: any[] = [];
-		for (const element of inputArray) {
-			// Create a modified subgraph with the current element as input
-			const modifiedGraph = createSubgraphWithInput(subgraph, element);
-			
-			// Evaluate the subgraph
-			const evaluator = new GraphEvaluator(modifiedGraph, nodeRegistry);
-			const result = await evaluator.evaluate();
-
-			if (!result.success) {
-				throw new Error(`Filter subgraph evaluation failed: ${result.error}`);
+		
+		if (useFunctionMode) {
+			// Function reference mode
+			const functions = nodeData.functions as FunctionDefinition[] | undefined;
+			if (!functions) {
+				throw new Error('Filter node in function mode requires functions list');
 			}
 
-			// Extract the output from the subgraph (should be boolean)
-			const shouldInclude = extractSubgraphOutput(result.outputs);
-			if (shouldInclude) {
-				results.push(element);
+			const functionDef = functions.find(f => f.name === functionName);
+			if (!functionDef) {
+				throw new Error(`Function '${functionName}' not found`);
+			}
+
+			for (const element of inputArray) {
+				// Create input object with element property
+				const inputObject = { element };
+				const modifiedGraph = createFunctionGraphWithInput(functionDef.graph, inputObject);
+				
+				// Evaluate the function
+				const evaluator = new GraphEvaluator(modifiedGraph, nodeRegistry);
+				const result = await evaluator.evaluate();
+
+				if (!result.success) {
+					throw new Error(`Filter function evaluation failed: ${result.error}`);
+				}
+
+				const shouldInclude = extractFunctionOutput(result.outputs);
+				if (shouldInclude) {
+					results.push(element);
+				}
+			}
+		} else {
+			// Subgraph mode (legacy)
+			for (const element of inputArray) {
+				const modifiedGraph = createSubgraphWithInput(subgraph!, element);
+				
+				const evaluator = new GraphEvaluator(modifiedGraph, nodeRegistry);
+				const result = await evaluator.evaluate();
+
+				if (!result.success) {
+					throw new Error(`Filter subgraph evaluation failed: ${result.error}`);
+				}
+
+				const shouldInclude = extractSubgraphOutput(result.outputs);
+				if (shouldInclude) {
+					results.push(element);
+				}
 			}
 		}
 
@@ -111,17 +186,19 @@ export const FilterNode: NodeDefinition = {
 };
 
 /**
- * Reduce node - reduces an array to a single value using an accumulator subgraph
- * The subgraph receives the accumulator and current element, and produces the next accumulator value
+ * Reduce node - reduces an array to a single value using an accumulator
+ * Supports both subgraph (legacy) and function reference modes
+ * In function mode, passes { accumulator, element } to the function
  */
 export const ReduceNode: NodeDefinition = {
 	type: 'Reduce',
 	category: 'array',
-	description: 'Reduces an array to a single value using an accumulator subgraph',
+	description: 'Reduces an array to a single value using an accumulator function',
 	hasSubgraph: true,
 	inputs: [
 		{ name: 'array', type: 'array' },
-		{ name: 'initial', type: 'any' }
+		{ name: 'initial', type: 'any' },
+		{ name: 'function', type: 'any' } // Optional function reference
 	],
 	outputs: [
 		{ name: 'out', type: 'any' }
@@ -129,6 +206,7 @@ export const ReduceNode: NodeDefinition = {
 	async execute(context) {
 		const inputArray = context.getInputValue('array');
 		const initialValue = context.getInputValue('initial');
+		const functionRef = context.getInputValue('function');
 		const nodeData = context.getNodeData();
 		const subgraph = nodeData.subgraph as Graph | undefined;
 
@@ -136,30 +214,61 @@ export const ReduceNode: NodeDefinition = {
 			throw new Error('Reduce node requires an array input');
 		}
 
-		if (!subgraph) {
-			// No subgraph defined, return initial value or undefined
+		// Determine if we're using function reference or subgraph
+		const functionName = functionRef || nodeData.functionName;
+		const useFunctionMode = !!functionName;
+
+		if (!useFunctionMode && !subgraph) {
+			// No reducer defined, return initial value or undefined
 			context.setOutputValue('out', initialValue);
 			return;
 		}
 
-		// Reduce the array using the subgraph
+		// Initialize accumulator
 		let accumulator = initialValue !== undefined ? initialValue : (inputArray.length > 0 ? inputArray[0] : undefined);
 		const startIndex = initialValue !== undefined ? 0 : 1;
 
-		for (let i = startIndex; i < inputArray.length; i++) {
-			// Create a modified subgraph with accumulator and current element as inputs
-			const modifiedGraph = createReduceSubgraphWithInputs(subgraph, accumulator, inputArray[i]);
-			
-			// Evaluate the subgraph
-			const evaluator = new GraphEvaluator(modifiedGraph, nodeRegistry);
-			const result = await evaluator.evaluate();
-
-			if (!result.success) {
-				throw new Error(`Reduce subgraph evaluation failed: ${result.error}`);
+		if (useFunctionMode) {
+			// Function reference mode
+			const functions = nodeData.functions as FunctionDefinition[] | undefined;
+			if (!functions) {
+				throw new Error('Reduce node in function mode requires functions list');
 			}
 
-			// Extract the output from the subgraph (next accumulator value)
-			accumulator = extractSubgraphOutput(result.outputs);
+			const functionDef = functions.find(f => f.name === functionName);
+			if (!functionDef) {
+				throw new Error(`Function '${functionName}' not found`);
+			}
+
+			for (let i = startIndex; i < inputArray.length; i++) {
+				// Create input object with accumulator and element properties
+				const inputObject = { accumulator, element: inputArray[i] };
+				const modifiedGraph = createFunctionGraphWithInput(functionDef.graph, inputObject);
+				
+				// Evaluate the function
+				const evaluator = new GraphEvaluator(modifiedGraph, nodeRegistry);
+				const result = await evaluator.evaluate();
+
+				if (!result.success) {
+					throw new Error(`Reduce function evaluation failed: ${result.error}`);
+				}
+
+				accumulator = extractFunctionOutput(result.outputs);
+			}
+		} else {
+			// Subgraph mode (legacy)
+			for (let i = startIndex; i < inputArray.length; i++) {
+				const modifiedGraph = createReduceSubgraphWithInputs(subgraph!, accumulator, inputArray[i]);
+				
+				const evaluator = new GraphEvaluator(modifiedGraph, nodeRegistry);
+				const result = await evaluator.evaluate();
+
+				if (!result.success) {
+					throw new Error(`Reduce subgraph evaluation failed: ${result.error}`);
+				}
+
+				accumulator = extractSubgraphOutput(result.outputs);
+			}
 		}
 
 		context.setOutputValue('out', accumulator);

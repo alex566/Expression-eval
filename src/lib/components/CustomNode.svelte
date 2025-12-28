@@ -35,7 +35,7 @@
 	class:has-subgraph={hasSubgraph} 
 	style="min-height: {minHeight}px;"
 	role="button"
-	tabindex={hasSubgraph ? "0" : undefined}
+	tabindex={hasSubgraph ? 0 : undefined}
 	ondblclick={handleDoubleClick}
 >
 	<!-- Input handles on the left -->

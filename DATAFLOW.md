@@ -1,6 +1,6 @@
 # Dataflow Logic Implementation
 
-This implementation provides a modular and clean dataflow graph system for Expression-eval.
+This implementation provides a modular and clean dataflow graph system for Expression-eval with support for both traditional node-based graphs and modern function-based architecture.
 
 ## Architecture
 
@@ -10,6 +10,7 @@ This implementation provides a modular and clean dataflow graph system for Expre
    - `Graph`: Represents the complete dataflow graph
    - `GraphNode`: Individual node in the graph
    - `GraphEdge`: Connections between nodes
+   - `FunctionDefinition`: Defines reusable functions within the graph
    - `NodeDefinition`: Interface for defining node behavior
    - `NodeContext`: Execution context for nodes
 
@@ -24,9 +25,120 @@ This implementation provides a modular and clean dataflow graph system for Expre
    - Maintains state during evaluation
    - Propagates values between nodes
 
-### Node Categories
+## Function-Based Architecture
+
+The system now supports a **function-based architecture** where graphs can define reusable functions that can be called multiple times with different inputs.
+
+### Key Concepts
+
+#### 1. Functions
+Functions are the main composition element in the new architecture. Each function:
+- Has a unique name
+- Contains its own graph (nodes and edges)
+- Accepts a single JSON object as input
+- Returns a single output value
+
+#### 2. Main Function
+Every function-based graph has a "main" function that serves as the entry point. Other functions can be defined and called from the main function or from each other.
+
+#### 3. Function Nodes
+
+##### FunctionInput Node
+- Represents the input to a function (JSON object)
+- Entry point for function graphs
+- Gets replaced with actual input values during execution
+
+##### GetProperty Node
+- Extracts a property from a JSON object
+- Takes a JSON object input and outputs a single property value
+- Essential for decomposing function inputs
+
+##### FunctionRef Node
+- Calls a function by name
+- Accepts a JSON object as input
+- Returns the function's output
+- Currently used internally by Map/Filter/Reduce nodes
+
+### Example: Function-Based Graph
+
+```json
+{
+  "nodes": [...],  // Main graph nodes
+  "edges": [...],  // Main graph edges
+  "functions": [   // Function definitions
+    {
+      "name": "double",
+      "description": "Doubles the element value",
+      "graph": {
+        "nodes": [
+          {
+            "id": "input",
+            "type": "FunctionInput",
+            "data": {}
+          },
+          {
+            "id": "getElement",
+            "type": "GetProperty",
+            "data": { "property": "element" }
+          },
+          {
+            "id": "two",
+            "type": "Value",
+            "data": { "value": 2 }
+          },
+          {
+            "id": "multiply",
+            "type": "Multiply",
+            "data": {}
+          },
+          {
+            "id": "output",
+            "type": "Output",
+            "data": { "outputs": ["result"] }
+          }
+        ],
+        "edges": [...]
+      }
+    }
+  ]
+}
+```
+
+### Using Functions with Array Operations
+
+The Map, Filter, and Reduce nodes now support function references:
+
+```json
+{
+  "id": "map_double",
+  "type": "Map",
+  "data": {
+    "functionName": "double"
+  }
+}
+```
+
+When Map processes each array element:
+1. It wraps the element in a JSON object: `{ element: value }`
+2. Passes this object to the function
+3. The function uses GetProperty to extract the element
+4. Processes it and returns the result
+
+This approach provides:
+- **Reusability**: Define a function once, use it multiple times
+- **Composition**: Functions can call other functions
+- **Clarity**: Function names describe what they do
+- **Modularity**: Functions are self-contained units
+
+## Node Categories
 
 Nodes are organized in separate folders by category:
+
+#### Function Nodes (`src/lib/nodes/function/`)
+- **FunctionInput**: Represents the input JSON object to a function (entry point)
+- **GetProperty**: Extracts a property from a JSON object
+  - Example: Extract "element" from `{ element: 5, index: 0 }` → returns `5`
+- **FunctionRef**: Calls a function by name with a JSON object input (internal use)
 
 #### Math Operations (`src/lib/nodes/math/`)
 All math nodes now support **array-aware operations**. When any input is an array, the operation is performed element-wise:
@@ -39,6 +151,8 @@ All math nodes now support **array-aware operations**. When any input is an arra
   - Arrays: `[1,2,3] * [10,20,30] = [10,40,90]`
 - **Divide**: Divides the first input by all subsequent inputs (in0 / in1 / in2 / ...)
   - Arrays: `[10,20,30] / [2,4,5] = [5,5,6]`
+- **Modulo**: Computes the remainder of division (in0 % in1)
+  - Arrays: `[10,15,20] % 3 = [1,0,2]`
 
 #### Control Flow (`src/lib/nodes/control/`)
 - **If**: Conditional branching (supports both single values and array filtering)
@@ -249,3 +363,77 @@ npm run build
 - ✅ **Array filtering** - conditional node filters arrays with boolean arrays
 - ✅ **Switch node** - multi-case branching
 - ✅ Removed Map/ForEach in favor of native array support
+- ✅ **Function-based architecture** - reusable functions with JSON object inputs
+- ✅ **GetProperty node** - extract properties from JSON objects
+- ✅ **FunctionInput node** - define function entry points
+- ✅ **Backward compatibility** - supports both function-based and legacy subgraph approaches
+
+## Migration from Subgraphs to Functions
+
+The system maintains backward compatibility with the old subgraph approach while supporting the new function-based architecture.
+
+### Old Approach (Subgraphs)
+```json
+{
+  "id": "map_double",
+  "type": "Map",
+  "data": {},
+  "subgraph": {
+    "nodes": [
+      {
+        "id": "element",
+        "type": "Input",
+        "data": {}
+      },
+      ...
+    ],
+    "edges": [...]
+  }
+}
+```
+
+### New Approach (Functions)
+```json
+{
+  "nodes": [
+    {
+      "id": "map_double",
+      "type": "Map",
+      "data": {
+        "functionName": "double"
+      }
+    }
+  ],
+  "functions": [
+    {
+      "name": "double",
+      "graph": {
+        "nodes": [
+          {
+            "id": "input",
+            "type": "FunctionInput",
+            "data": {}
+          },
+          {
+            "id": "getElement",
+            "type": "GetProperty",
+            "data": { "property": "element" }
+          },
+          ...
+        ],
+        "edges": [...]
+      }
+    }
+  ]
+}
+```
+
+### Benefits of Function-Based Architecture
+
+1. **Reusability**: Define once, use multiple times
+2. **Naming**: Clear function names describe purpose
+3. **Organization**: Functions are listed separately from main graph
+4. **Composition**: Functions can call other functions (future enhancement)
+5. **Testing**: Functions can be tested independently (future enhancement)
+
+See `static/function-based.json` for a complete example.

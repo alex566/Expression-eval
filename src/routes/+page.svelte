@@ -358,6 +358,7 @@
 					<option value="dates">Date Operations</option>
 					<option value="arrays">Array Operations</option>
 					<option value="mapfilterreduce">Map/Filter/Reduce</option>
+					<option value="functions">Function-Based</option>
 				</select>
 			</div>
 			<div class="toolbar-buttons">

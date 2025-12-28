@@ -52,11 +52,26 @@ export interface GraphNode {
 }
 
 /**
- * Represents the complete dataflow graph
+ * Represents a function definition in the graph
+ * Functions are the main composition element with a single JSON object input and return output
+ */
+export interface FunctionDefinition {
+	/** Unique name of the function */
+	name: string;
+	/** The function graph with nodes and edges */
+	graph: Graph;
+	/** Optional description of what the function does */
+	description?: string;
+}
+
+/**
+ * Represents the complete dataflow graph with functions
  */
 export interface Graph {
 	nodes: GraphNode[];
 	edges: GraphEdge[];
+	/** Optional list of function definitions. If provided, the graph uses function-based architecture */
+	functions?: FunctionDefinition[];
 }
 
 /**
