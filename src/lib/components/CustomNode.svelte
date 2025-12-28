@@ -150,10 +150,10 @@
 
 	.node-value-preview {
 		font-size: 11px;
-		color: #3b82f6;
+		color: #4ec9b0;
 		margin-top: 4px;
 		font-family: 'Courier New', monospace;
-		background: #eff6ff;
+		background: rgba(78, 201, 176, 0.1);
 		padding: 2px 6px;
 		border-radius: 3px;
 		max-width: 120px;

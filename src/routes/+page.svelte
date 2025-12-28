@@ -443,6 +443,13 @@
 									{/each}
 								</div>
 							{/if}
+
+							{#if validationResult.success && validationResult.inferredTypes && Object.keys(validationResult.inferredTypes).length > 0}
+								<div class="inferred-types">
+									<h4>Inferred Types:</h4>
+									<pre class="json-display">{JSON.stringify(validationResult.inferredTypes, null, 2)}</pre>
+								</div>
+							{/if}
 						</div>
 					</div>
 				{/if}
@@ -697,6 +704,16 @@
 		margin-bottom: 0.5rem;
 		font-size: 0.813rem;
 		font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+	}
+
+	.inferred-types {
+		margin-top: 0.75rem;
+	}
+
+	.inferred-types h4 {
+		margin-bottom: 0.5rem;
+		font-size: 0.813rem;
+		color: var(--vscode-text);
 	}
 
 	.json-display {
