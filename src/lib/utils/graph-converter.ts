@@ -179,10 +179,12 @@ export function graphToSvelteFlow(
 			data: {
 				label: node.type,
 				nodeId: node.id,
+				nodeType: node.type,
 				inputs: ports.inputs,
 				outputs: ports.outputs,
 				hasSubgraph: isFunctionValue,
-				onNodeDoubleClick
+				onNodeDoubleClick,
+				...node.data // Include original node data (like value)
 			},
 			position: {
 				// dagre returns center position, we need top-left for SvelteFlow
@@ -252,10 +254,12 @@ export function updateFlowWithPreservedPositions(
 			data: {
 				label: node.type,
 				nodeId: node.id,
+				nodeType: node.type,
 				inputs: ports.inputs,
 				outputs: ports.outputs,
 				hasSubgraph: isFunctionValue,
-				onNodeDoubleClick: nodeCallback
+				onNodeDoubleClick: nodeCallback,
+				...node.data // Include original node data
 			},
 			position: existingPosition || { x: 0, y: 0 } // Use existing position or default
 		});
