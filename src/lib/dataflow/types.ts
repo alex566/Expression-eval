@@ -122,6 +122,8 @@ export interface InferredTypeInfo {
 	declaredType?: DataType;
 	/** Whether the inferred type is compatible with declared type */
 	isCompatible: boolean;
+	/** TypeScript type string (when available from TS type checker) */
+	tsType?: string;
 }
 
 /**
