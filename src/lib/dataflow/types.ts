@@ -22,6 +22,8 @@ export type DataType =
 export interface PortSpec {
 	name: string;
 	type: DataType;
+	/** Optional TypeScript type signature for more precise type information */
+	tsType?: string;
 }
 
 /**
@@ -100,6 +102,8 @@ export interface NodeDefinition {
 	inputs?: PortSpec[];
 	outputs?: PortSpec[];
 	execute(context: NodeContext): void | Promise<void>;
+	/** Optional TypeScript function signature for the entire node */
+	tsSignature?: string;
 }
 
 /**

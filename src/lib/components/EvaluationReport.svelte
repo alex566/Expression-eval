@@ -7,8 +7,8 @@
 	interface NodeReport {
 		id: string;
 		type: string;
-		inputs: { port: string; value: any; type: string }[];
-		outputs: { port: string; value: any; type: string }[];
+		inputs: { port: string; value: any; type: string; tsType?: string }[];
+		outputs: { port: string; value: any; type: string; tsType?: string }[];
 	}
 
 	// Build a structured report from the evaluation result
@@ -21,8 +21,8 @@
 		const reports: NodeReport[] = [];
 
 		for (const node of graph.nodes) {
-			const inputs: { port: string; value: any; type: string }[] = [];
-			const outputs: { port: string; value: any; type: string }[] = [];
+			const inputs: { port: string; value: any; type: string; tsType?: string }[] = [];
+			const outputs: { port: string; value: any; type: string; tsType?: string }[] = [];
 
 			// Collect inputs
 			for (const key in result.outputs) {
@@ -33,7 +33,8 @@
 					inputs.push({
 						port,
 						value,
-						type: typeInfo?.inferredType || 'unknown'
+						type: typeInfo?.inferredType || 'unknown',
+						tsType: typeInfo?.tsType
 					});
 				}
 			}
@@ -49,7 +50,8 @@
 					outputs.push({
 						port,
 						value,
-						type: typeInfo?.inferredType || 'unknown'
+						type: typeInfo?.inferredType || 'unknown',
+						tsType: typeInfo?.tsType
 					});
 				}
 			}
@@ -68,10 +70,10 @@
 		return reports;
 	}
 
-	function extractFinalOutputs(result: EvaluationResult, graph: Graph): { name: string; value: any; type: string }[] {
+	function extractFinalOutputs(result: EvaluationResult, graph: Graph): { name: string; value: any; type: string; tsType?: string }[] {
 		if (!result.success || !result.outputs) return [];
 
-		const finals: { name: string; value: any; type: string }[] = [];
+		const finals: { name: string; value: any; type: string; tsType?: string }[] = [];
 
 		// Find Output nodes
 		const outputNodes = graph.nodes.filter(n => n.type === 'Output');
@@ -92,7 +94,8 @@
 					finals.push({
 						name: outputName,
 						value,
-						type: typeInfo?.inferredType || 'unknown'
+						type: typeInfo?.inferredType || 'unknown',
+						tsType: typeInfo?.tsType
 					});
 				}
 			}
@@ -159,7 +162,9 @@
 									{#each nodeReport.inputs as input}
 										<div class="port-item">
 											<span class="port-name">{input.port}</span>
-											<span class="port-type">{input.type}</span>
+											<span class="port-type" title={input.tsType ? `TypeScript: ${input.tsType}` : ''}>
+												{input.tsType || input.type}
+											</span>
 											<span class="port-arrow">→</span>
 											<span class="port-value">{formatValue(input.value)}</span>
 										</div>
@@ -175,7 +180,9 @@
 									{#each nodeReport.outputs as output}
 										<div class="port-item">
 											<span class="port-name">{output.port}</span>
-											<span class="port-type">{output.type}</span>
+											<span class="port-type" title={output.tsType ? `TypeScript: ${output.tsType}` : ''}>
+												{output.tsType || output.type}
+											</span>
 											<span class="port-arrow">→</span>
 											<span class="port-value">{formatValue(output.value)}</span>
 										</div>

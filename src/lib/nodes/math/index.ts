@@ -11,8 +11,9 @@ export const AddNode: NodeDefinition = {
 	description: 'Adds all connected input values together. For array operations, use Map node.',
 	inputs: [], // Dynamic inputs - will accept in0, in1, in2, etc.
 	outputs: [
-		{ name: 'out', type: 'number' }
+		{ name: 'out', type: 'number', tsType: 'number' }
 	],
+	tsSignature: '(...inputs: number[]) => number',
 	execute(context) {
 		const inputs: any[] = [];
 		let index = 0;

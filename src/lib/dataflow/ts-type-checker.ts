@@ -166,7 +166,8 @@ export class TSTypeChecker {
 			if (definition.outputs && definition.outputs.length > 0) {
 				for (const output of definition.outputs) {
 					const varName = `${this.sanitizeIdentifier(node.id)}_${output.name}`;
-					const tsType = this.mapDataTypeToTS(output.type);
+					// Use TypeScript type from port spec if available, otherwise map DataType
+					const tsType = output.tsType || this.mapDataTypeToTS(output.type);
 					lines.push(`  let ${varName}: ${tsType};`);
 				}
 			}
