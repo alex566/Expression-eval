@@ -442,8 +442,22 @@ export class GraphEvaluator {
 			if (value.length === 0) {
 				return 'any[]';
 			}
-			const elementType = this.inferTSTypeFromValue(value[0]);
-			return `${elementType}[]`;
+			// Infer array element type from ALL elements, not just the first
+			// This provides more accurate type inference for heterogeneous arrays
+			const elementTypes = new Set<string>();
+			for (const element of value) {
+				elementTypes.add(this.inferTSTypeFromValue(element));
+			}
+			
+			// If all elements have the same type, use that type
+			if (elementTypes.size === 1) {
+				const elementType = Array.from(elementTypes)[0];
+				return `${elementType}[]`;
+			}
+			
+			// If elements have different types, create a union type
+			const unionType = Array.from(elementTypes).join(' | ');
+			return `(${unionType})[]`;
 		}
 		if (typeof value === 'object') {
 			const props: string[] = [];
