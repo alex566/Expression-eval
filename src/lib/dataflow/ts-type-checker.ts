@@ -292,20 +292,24 @@ export class TSTypeChecker {
 
 	/**
 	 * Infer function signature from a function's graph structure
+	 * TODO: Currently returns generic (input: any) => any signature.
+	 * Future enhancement: Analyze FunctionInput and Output nodes to infer precise types.
 	 */
 	private inferFunctionSignature(func: FunctionDefinition): ts.TypeNode {
 		const factory = ts.factory;
 		
 		// Find FunctionInput node to determine input type
-		const inputNode = func.graph.nodes.find((n: GraphNode) => n.type === 'FunctionInput');
+		const inputNode = func.graph.nodes.find(n => n.type === 'FunctionInput');
 		
 		// Find Output node to determine return type
-		const outputNode = func.graph.nodes.find((n: GraphNode) => n.type === 'Output');
+		const outputNode = func.graph.nodes.find(n => n.type === 'Output');
 		
-		// Build input type from FunctionInput node
+		// TODO: Extract actual input type from FunctionInput node's data or connected edges
+		// This would require analyzing the function's graph structure
 		let inputType: ts.TypeNode = factory.createKeywordTypeNode(ts.SyntaxKind.AnyKeyword);
 		
-		// Build output type from the graph's final output
+		// TODO: Extract actual return type from Output node's inputs
+		// This would require tracing back through the graph to find the output value type
 		let returnType: ts.TypeNode = factory.createKeywordTypeNode(ts.SyntaxKind.AnyKeyword);
 		
 		// Create a function type: (input: InputType) => ReturnType
@@ -575,9 +579,11 @@ export class TSTypeChecker {
 		}
 
 		// Handle function types like "(element: T) => U"
+		// TODO: Implement full function type parsing for better type safety
+		// This would require parsing parameter types and return types separately
 		if (trimmed.includes('=>')) {
 			// For now, treat function types as 'any' to avoid complexity
-			// In a full implementation, we would parse the function signature
+			// Full implementation would parse: (param: Type) => ReturnType
 			return factory.createKeywordTypeNode(ts.SyntaxKind.AnyKeyword);
 		}
 
@@ -798,9 +804,11 @@ export class TSTypeChecker {
 		}
 
 		// Handle object types - check structural compatibility
+		// TODO: Implement proper structural type checking for object literal types
+		// This is a simplification - should parse and compare property signatures
 		if (cleanSource.startsWith('{') && cleanTarget.startsWith('{')) {
-			// For object literal types, we'd need to parse and check each property
-			// For now, accept if both are object types
+			// Accept if both are object types (permissive for now)
+			// Full implementation would compare property names and types
 			return true;
 		}
 
@@ -810,8 +818,11 @@ export class TSTypeChecker {
 		}
 
 		// Handle Record types
+		// TODO: Parse and validate key/value type compatibility
+		// Currently: Record<string, number> and Record<number, string> would both pass
 		if (cleanSource.startsWith('Record<') && cleanTarget.startsWith('Record<')) {
-			// Could parse and check key/value types, but for now accept matching Record types
+			// Accept matching Record types (permissive for now)
+			// Full implementation would extract and compare K and V types
 			return true;
 		}
 
