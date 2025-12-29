@@ -260,25 +260,7 @@ export class TSTypeChecker {
 					
 					// Special handling for FunctionRef nodes to infer proper types
 					if (node.type === 'FunctionRef' && node.data.functionName) {
-						const functionName = node.data.functionName as string;
-						
-						if (graph.functions) {
-							const functionDef = graph.functions.find(f => f.name === functionName);
-							if (functionDef) {
-								const funcSignature = this.inferFunctionSignature(functionDef);
-								
-								// Extract return type from function signature
-								if (ts.isFunctionTypeNode(funcSignature)) {
-									tsType = funcSignature.type;
-								} else {
-									tsType = this.parseTypeString(output.type);
-								}
-							} else {
-								tsType = this.parseTypeString(output.type);
-							}
-						} else {
-							tsType = this.parseTypeString(output.type);
-						}
+						tsType = this.inferFunctionRefOutputType(node, graph, output) || this.parseTypeString(output.type);
 					}
 					// Special handling for array operation nodes to infer proper generic types
 					else if (node.type === 'Map' && output.name === 'out') {
@@ -490,6 +472,32 @@ export class TSTypeChecker {
 	}
 
 	/**
+	 * Infer output type for FunctionRef node based on referenced function's return type
+	 */
+	private inferFunctionRefOutputType(node: GraphNode, graph: Graph, output: any): ts.TypeNode | null {
+		const factory = ts.factory;
+		const functionName = node.data.functionName as string;
+		
+		if (!graph.functions) {
+			return null;
+		}
+		
+		const functionDef = graph.functions.find(f => f.name === functionName);
+		if (!functionDef) {
+			return null;
+		}
+		
+		const funcSignature = this.inferFunctionSignature(functionDef);
+		
+		// Extract return type from function signature
+		if (ts.isFunctionTypeNode(funcSignature)) {
+			return funcSignature.type;
+		}
+		
+		return null;
+	}
+
+	/**
 	 * Infer output type for Filter operation - same as input array type
 	 */
 	private inferFilterOutputType(node: GraphNode, graph: Graph): ts.TypeNode | null {
@@ -618,7 +626,8 @@ export class TSTypeChecker {
 		
 		try {
 			// Match pattern: (params) => returnType
-			const arrowIndex = trimmed.lastIndexOf('=>');
+			// Use a more robust approach that respects nesting
+			const arrowIndex = this.findArrowOperatorIndex(trimmed);
 			if (arrowIndex === -1) {
 				return factory.createKeywordTypeNode(ts.SyntaxKind.AnyKeyword);
 			}
@@ -680,9 +689,32 @@ export class TSTypeChecker {
 				returnType
 			);
 		} catch (error) {
-			// If parsing fails, return any
+			// Log parsing errors to help debug issues
+			console.warn('Failed to parse function type:', typeStr, error);
 			return factory.createKeywordTypeNode(ts.SyntaxKind.AnyKeyword);
 		}
+	}
+
+	/**
+	 * Find the arrow operator (=>) at the top level (depth 0) of a function type string
+	 */
+	private findArrowOperatorIndex(typeStr: string): number {
+		let depth = 0;
+		
+		for (let i = 0; i < typeStr.length - 1; i++) {
+			const char = typeStr[i];
+			const nextChar = typeStr[i + 1];
+			
+			if (char === '(' || char === '{' || char === '<') {
+				depth++;
+			} else if (char === ')' || char === '}' || char === '>') {
+				depth--;
+			} else if (char === '=' && nextChar === '>' && depth === 0) {
+				return i;
+			}
+		}
+		
+		return -1;
 	}
 
 	/**
@@ -828,7 +860,7 @@ export class TSTypeChecker {
 			);
 		}
 
-		// Handle function types like "(element: T) => U" or "(input: any) => any"
+		// Handle function types like "(input: any) => any"
 		if (trimmed.includes('=>')) {
 			return this.parseFunctionTypeString(trimmed);
 		}
