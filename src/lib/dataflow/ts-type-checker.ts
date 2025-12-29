@@ -40,7 +40,7 @@ export class TSTypeChecker {
 		this.compilerOptions = {
 			target: ts.ScriptTarget.ESNext,
 			module: ts.ModuleKind.ESNext,
-			strict: false,  // Relax strict mode to avoid lib.d.ts requirements
+			strict: false,  // Relax strict mode for simpler type checking
 			noEmit: true,
 			skipLibCheck: true,
 			skipDefaultLibCheck: true,
@@ -371,7 +371,7 @@ export class TSTypeChecker {
 			return factory.createIdentifier('undefined');
 		}
 		if (typeof value === 'number') {
-			return factory.createNumericLiteral(value);
+			return factory.createNumericLiteral(value.toString());
 		}
 		if (typeof value === 'string') {
 			return factory.createStringLiteral(value);
@@ -385,12 +385,16 @@ export class TSTypeChecker {
 			);
 		}
 		if (typeof value === 'object') {
-			const properties = Object.entries(value).map(([key, val]) =>
-				factory.createPropertyAssignment(
-					factory.createIdentifier(key),
+			const properties = Object.entries(value).map(([key, val]) => {
+				// Use string literal for keys that aren't valid identifiers
+				const propertyName = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(key)
+					? factory.createIdentifier(key)
+					: factory.createStringLiteral(key);
+				return factory.createPropertyAssignment(
+					propertyName,
 					this.valueToExpression(val)
-				)
-			);
+				);
+			});
 			return factory.createObjectLiteralExpression(properties);
 		}
 
