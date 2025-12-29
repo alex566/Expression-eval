@@ -891,6 +891,14 @@ export class TSTypeChecker {
 		if (value === undefined) {
 			return factory.createIdentifier('undefined');
 		}
+		if (value instanceof Date) {
+			// Create a new Date expression: new Date(timestamp)
+			return factory.createNewExpression(
+				factory.createIdentifier('Date'),
+				undefined,
+				[factory.createNumericLiteral(value.getTime().toString())]
+			);
+		}
 		if (typeof value === 'number') {
 			return factory.createNumericLiteral(value.toString());
 		}
