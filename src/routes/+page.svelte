@@ -503,6 +503,7 @@
 		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 		background: #1e1e1e;
 		color: #cccccc;
+		height: 100%;
 		/* Fix iOS viewport height issues with dynamic toolbars */
 		height: -webkit-fill-available;
 	}
