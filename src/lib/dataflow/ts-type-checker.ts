@@ -217,8 +217,10 @@ export class TSTypeChecker {
 			}
 
 			// For FunctionValue nodes, create a variable with the function type
-			if (node.type === 'FunctionValue' && node.data.functionName) {
-				const functionName = node.data.functionName as string;
+			if (node.type === 'FunctionValue' && node.data.functionName && typeof node.data.functionName === 'string') {
+				const functionName = node.data.functionName.trim();
+				if (!functionName) continue; // Skip if empty after trimming
+				
 				const varName = this.getIdentifierForPort(node.id, 'out');
 				
 				// Find the function definition to get its type
@@ -259,7 +261,7 @@ export class TSTypeChecker {
 					let tsType: ts.TypeNode;
 					
 					// Special handling for FunctionRef nodes to infer proper types
-					if (node.type === 'FunctionRef' && node.data.functionName) {
+					if (node.type === 'FunctionRef' && node.data.functionName && typeof node.data.functionName === 'string' && node.data.functionName.trim()) {
 						tsType = this.inferFunctionRefOutputType(node, graph, output) || this.parseTypeString(output.type);
 					}
 					// Special handling for array operation nodes to infer proper generic types
@@ -476,9 +478,9 @@ export class TSTypeChecker {
 	 */
 	private inferFunctionRefOutputType(node: GraphNode, graph: Graph, output: any): ts.TypeNode | null {
 		const factory = ts.factory;
-		const functionName = node.data.functionName as string;
+		const functionName = (node.data.functionName as string).trim();
 		
-		if (!graph.functions) {
+		if (!functionName || !graph.functions) {
 			return null;
 		}
 		
