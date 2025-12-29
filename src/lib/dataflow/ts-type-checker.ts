@@ -28,12 +28,12 @@ export interface TSTypeCheckResult {
 
 /**
  * TypeScript-based type checker service
- * Converts graph structure to TypeScript AST and uses TS compiler for type inference
+ * Uses TypeScript AST factory API directly for type inference
  */
 export class TSTypeChecker {
-	private compilerHost: ts.CompilerHost;
 	private compilerOptions: ts.CompilerOptions;
-	private sanitizedToOriginal: Map<string, string> = new Map();
+	private nodeIdToIdentifier: Map<string, string> = new Map();
+	private identifierToNodeId: Map<string, string> = new Map();
 
 	constructor(private registry: NodeRegistry) {
 		// Configure TypeScript compiler options for type inference
@@ -46,26 +46,10 @@ export class TSTypeChecker {
 			skipDefaultLibCheck: true,
 			types: [],
 		};
-
-		// Create a simple in-memory compiler host
-		this.compilerHost = {
-			getSourceFile: (fileName: string, languageVersion: ts.ScriptTarget) => {
-				// We'll provide source files dynamically
-				return undefined;
-			},
-			getDefaultLibFileName: () => 'lib.d.ts',
-			writeFile: () => {},
-			getCurrentDirectory: () => '',
-			getCanonicalFileName: (fileName) => fileName,
-			useCaseSensitiveFileNames: () => true,
-			getNewLine: () => '\n',
-			fileExists: () => true,
-			readFile: () => '',
-		};
 	}
 
 	/**
-	 * Type check a graph and infer types using TypeScript compiler
+	 * Type check a graph and infer types using TypeScript AST API directly
 	 */
 	async checkGraph(graph: Graph): Promise<TSTypeCheckResult> {
 		const errors: string[] = [];
@@ -73,34 +57,45 @@ export class TSTypeChecker {
 		const inferredTypes: Record<string, TSTypeInfo> = {};
 
 		try {
-			// Clear the mapping for this graph
-			this.sanitizedToOriginal.clear();
+			// Clear the mappings for this graph
+			this.nodeIdToIdentifier.clear();
+			this.identifierToNodeId.clear();
 
-			// 1. Build TypeScript code from graph
-			const tsCode = this.graphToTypeScript(graph);
+			// 1. Build TypeScript AST directly from graph using factory API
+			const statements = this.buildASTFromGraph(graph);
 
-			// 2. Create a source file from the generated code
-			const sourceFile = ts.createSourceFile(
-				'graph.ts',
-				tsCode,
-				ts.ScriptTarget.ESNext,
-				true,
-				ts.ScriptKind.TS
+			// 2. Create a source file with the statements
+			const sourceFile = ts.factory.createSourceFile(
+				statements,
+				ts.factory.createToken(ts.SyntaxKind.EndOfFileToken),
+				ts.NodeFlags.None
 			);
 
-			// 3. Create a program for type checking
+			// Set the file name and text for the source file
+			(sourceFile as any).fileName = 'graph.ts';
+
+			// 3. Create a minimal program for type checking
+			const host: ts.CompilerHost = {
+				getSourceFile: (fileName: string) => {
+					if (fileName === 'graph.ts') {
+						return sourceFile;
+					}
+					return undefined;
+				},
+				getDefaultLibFileName: () => 'lib.d.ts',
+				writeFile: () => {},
+				getCurrentDirectory: () => '',
+				getCanonicalFileName: (fileName) => fileName,
+				useCaseSensitiveFileNames: () => true,
+				getNewLine: () => '\n',
+				fileExists: () => true,
+				readFile: () => '',
+			};
+
 			const program = ts.createProgram({
 				rootNames: ['graph.ts'],
 				options: this.compilerOptions,
-				host: {
-					...this.compilerHost,
-					getSourceFile: (fileName: string) => {
-						if (fileName === 'graph.ts') {
-							return sourceFile;
-						}
-						return undefined;
-					},
-				},
+				host,
 			});
 
 			// 4. Get type checker
@@ -109,27 +104,17 @@ export class TSTypeChecker {
 			// 5. Collect diagnostics (errors/warnings)
 			const diagnostics = ts.getPreEmitDiagnostics(program);
 			for (const diagnostic of diagnostics) {
-				if (diagnostic.file && diagnostic.start !== undefined) {
-					const { line } = diagnostic.file.getLineAndCharacterOfPosition(diagnostic.start);
-					const message = ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n');
-					
-					if (diagnostic.category === ts.DiagnosticCategory.Error) {
-						errors.push(`Line ${line + 1}: ${message}`);
-					} else if (diagnostic.category === ts.DiagnosticCategory.Warning) {
-						warnings.push(`Line ${line + 1}: ${message}`);
-					}
-				} else {
-					const message = ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n');
-					if (diagnostic.category === ts.DiagnosticCategory.Error) {
-						errors.push(message);
-					} else if (diagnostic.category === ts.DiagnosticCategory.Warning) {
-						warnings.push(message);
-					}
+				const message = ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n');
+				
+				if (diagnostic.category === ts.DiagnosticCategory.Error) {
+					errors.push(message);
+				} else if (diagnostic.category === ts.DiagnosticCategory.Warning) {
+					warnings.push(message);
 				}
 			}
 
-			// 6. Extract inferred types from the generated code
-			this.extractInferredTypes(sourceFile, checker, graph, inferredTypes);
+			// 6. Extract inferred types from the AST
+			this.extractInferredTypesFromAST(sourceFile, checker, graph, inferredTypes);
 
 			return {
 				success: errors.length === 0,
@@ -149,19 +134,16 @@ export class TSTypeChecker {
 	}
 
 	/**
-	 * Convert graph structure to TypeScript code for type checking
+	 * Build TypeScript AST directly from graph structure using factory API
 	 */
-	private graphToTypeScript(graph: Graph): string {
-		const lines: string[] = [];
-		
-		// Generate TypeScript code that represents the graph structure
-		lines.push('// Generated TypeScript code from dataflow graph');
-		lines.push('');
+	private buildASTFromGraph(graph: Graph): ts.Statement[] {
+		const statements: ts.Statement[] = [];
+		const factory = ts.factory;
 
-		// Create a namespace to encapsulate the graph
-		lines.push('namespace DataflowGraph {');
+		// Create a module declaration to encapsulate the graph
+		const moduleStatements: ts.Statement[] = [];
 
-		// 1. Generate type definitions for node outputs
+		// 1. Generate variable declarations for node outputs
 		for (const node of graph.nodes) {
 			const definition = this.registry.get(node.type);
 			if (!definition) continue;
@@ -169,42 +151,95 @@ export class TSTypeChecker {
 			// Generate variable declarations for node outputs
 			if (definition.outputs && definition.outputs.length > 0) {
 				for (const output of definition.outputs) {
-					const varName = `${this.sanitizeIdentifier(node.id)}_${output.name}`;
-					// Use TypeScript type directly from port spec
-					const tsType = output.type;
-					lines.push(`  let ${varName}: ${tsType};`);
+					const varName = this.getIdentifierForPort(node.id, output.name);
+					const tsType = this.parseTypeString(output.type);
+					
+					// Create: let varName: type;
+					const declaration = factory.createVariableDeclaration(
+						factory.createIdentifier(varName),
+						undefined,
+						tsType,
+						undefined
+					);
+
+					const varStatement = factory.createVariableStatement(
+						undefined,
+						factory.createVariableDeclarationList(
+							[declaration],
+							ts.NodeFlags.Let
+						)
+					);
+
+					moduleStatements.push(varStatement);
 				}
 			}
 
-			// For Value nodes, infer type from the actual value
+			// For Value nodes, create initialized variable with inferred type
 			if (node.type === 'Value' && node.data.value !== undefined) {
-				const varName = `${this.sanitizeIdentifier(node.id)}_out`;
+				const varName = this.getIdentifierForPort(node.id, 'out');
 				const inferredType = this.inferTSTypeFromValue(node.data.value);
-				lines.push(`  // Value node with inferred type`);
-				lines.push(`  ${varName} = ${JSON.stringify(node.data.value)} as ${inferredType};`);
+				const valueExpression = this.valueToExpression(node.data.value);
+				const typeNode = this.parseTypeString(inferredType);
+
+				// Create: varName = value as type;
+				const asExpression = factory.createAsExpression(
+					valueExpression,
+					typeNode
+				);
+
+				const assignment = factory.createExpressionStatement(
+					factory.createBinaryExpression(
+						factory.createIdentifier(varName),
+						factory.createToken(ts.SyntaxKind.EqualsToken),
+						asExpression
+					)
+				);
+
+				moduleStatements.push(assignment);
 			}
 		}
 
-		lines.push('');
-
 		// 2. Generate assignments based on edges (data flow)
 		for (const edge of graph.edges) {
-			const fromVar = `${this.sanitizeIdentifier(edge.from.node)}_${edge.from.port}`;
-			const toVar = `${this.sanitizeIdentifier(edge.to.node)}_input_${edge.to.port}`;
-			
-			lines.push(`  let ${toVar} = ${fromVar};`);
+			const fromVar = this.getIdentifierForPort(edge.from.node, edge.from.port);
+			const toVar = this.getIdentifierForPort(edge.to.node, `input_${edge.to.port}`);
+
+			// Create: let toVar = fromVar;
+			const declaration = factory.createVariableDeclaration(
+				factory.createIdentifier(toVar),
+				undefined,
+				undefined,
+				factory.createIdentifier(fromVar)
+			);
+
+			const varStatement = factory.createVariableStatement(
+				undefined,
+				factory.createVariableDeclarationList(
+					[declaration],
+					ts.NodeFlags.Let
+				)
+			);
+
+			moduleStatements.push(varStatement);
 		}
 
-		lines.push('}');
-		lines.push('');
+		// Create a module declaration to wrap all statements
+		const moduleDecl = factory.createModuleDeclaration(
+			undefined,
+			factory.createIdentifier('DataflowGraph'),
+			factory.createModuleBlock(moduleStatements),
+			ts.NodeFlags.Namespace
+		);
 
-		return lines.join('\n');
+		statements.push(moduleDecl);
+
+		return statements;
 	}
 
 	/**
 	 * Extract inferred types from TypeScript AST
 	 */
-	private extractInferredTypes(
+	private extractInferredTypesFromAST(
 		sourceFile: ts.SourceFile,
 		checker: ts.TypeChecker,
 		graph: Graph,
@@ -212,29 +247,22 @@ export class TSTypeChecker {
 	): void {
 		// Visit all variable declarations and extract their types
 		const visit = (node: ts.Node) => {
-			if (ts.isVariableDeclaration(node) && node.name) {
-				const symbol = checker.getSymbolAtLocation(node.name);
-				if (symbol) {
-					const type = checker.getTypeOfSymbolAtLocation(symbol, node);
-					const typeString = checker.typeToString(type);
-					const identifierText = node.name.getText(sourceFile);
-					
-					// Map back to graph node.port format
-					const match = identifierText.match(/^(.+?)_(out|input_.+)$/);
-					if (match) {
-						const nodeId = this.unsanitizeIdentifier(match[1]);
-						const portPart = match[2];
-						const portName = portPart.startsWith('input_') 
-							? portPart.substring(6) 
-							: portPart;
-						
-						const key = `${nodeId}.${portName}`;
-						inferredTypes[key] = {
-							type: typeString,
-							isInferred: !node.type, // If no explicit type annotation, it's inferred
-							source: `node:${nodeId}`,
-						};
-					}
+			if (ts.isVariableDeclaration(node) && node.name && ts.isIdentifier(node.name)) {
+				const identifierText = node.name.text;
+				
+				// Get the type from the type checker
+				const type = checker.getTypeAtLocation(node);
+				const typeString = checker.typeToString(type);
+				
+				// Map back to graph node.port format
+				const portInfo = this.getPortFromIdentifier(identifierText);
+				if (portInfo) {
+					const key = `${portInfo.nodeId}.${portInfo.portName}`;
+					inferredTypes[key] = {
+						type: typeString,
+						isInferred: !node.type, // If no explicit type annotation, it's inferred
+						source: `node:${portInfo.nodeId}`,
+					};
 				}
 			}
 			
@@ -242,6 +270,111 @@ export class TSTypeChecker {
 		};
 
 		visit(sourceFile);
+	}
+
+	/**
+	 * Get a unique identifier for a node's port
+	 */
+	private getIdentifierForPort(nodeId: string, portName: string): string {
+		const identifier = `${this.sanitizeIdentifier(nodeId)}_${portName}`;
+		this.identifierToNodeId.set(identifier, nodeId);
+		this.nodeIdToIdentifier.set(`${nodeId}.${portName}`, identifier);
+		return identifier;
+	}
+
+	/**
+	 * Get port information from an identifier
+	 */
+	private getPortFromIdentifier(identifier: string): { nodeId: string; portName: string } | null {
+		const match = identifier.match(/^(.+?)_(.+)$/);
+		if (match) {
+			const sanitizedNodeId = match[1];
+			const portPart = match[2];
+			const nodeId = this.unsanitizeIdentifier(sanitizedNodeId);
+			const portName = portPart.startsWith('input_') 
+				? portPart.substring(6) 
+				: portPart;
+			
+			return { nodeId, portName };
+		}
+		return null;
+	}
+
+	/**
+	 * Parse a type string into a TypeScript type node
+	 */
+	private parseTypeString(typeStr: string): ts.TypeNode {
+		const factory = ts.factory;
+
+		// Handle basic types
+		switch (typeStr) {
+			case 'number':
+				return factory.createKeywordTypeNode(ts.SyntaxKind.NumberKeyword);
+			case 'string':
+				return factory.createKeywordTypeNode(ts.SyntaxKind.StringKeyword);
+			case 'boolean':
+				return factory.createKeywordTypeNode(ts.SyntaxKind.BooleanKeyword);
+			case 'any':
+				return factory.createKeywordTypeNode(ts.SyntaxKind.AnyKeyword);
+			case 'void':
+				return factory.createKeywordTypeNode(ts.SyntaxKind.VoidKeyword);
+			case 'Date':
+				return factory.createTypeReferenceNode(
+					factory.createIdentifier('Date'),
+					undefined
+				);
+			default:
+				// For complex types, we need to parse them
+				// For now, handle array types
+				if (typeStr.endsWith('[]')) {
+					const elementType = typeStr.slice(0, -2);
+					return factory.createArrayTypeNode(
+						this.parseTypeString(elementType)
+					);
+				}
+				// For object types and other complex types, fallback to any
+				return factory.createKeywordTypeNode(ts.SyntaxKind.AnyKeyword);
+		}
+	}
+
+	/**
+	 * Convert a runtime value to a TypeScript expression
+	 */
+	private valueToExpression(value: any): ts.Expression {
+		const factory = ts.factory;
+
+		if (value === null) {
+			return factory.createNull();
+		}
+		if (value === undefined) {
+			return factory.createIdentifier('undefined');
+		}
+		if (typeof value === 'number') {
+			return factory.createNumericLiteral(value);
+		}
+		if (typeof value === 'string') {
+			return factory.createStringLiteral(value);
+		}
+		if (typeof value === 'boolean') {
+			return value ? factory.createTrue() : factory.createFalse();
+		}
+		if (Array.isArray(value)) {
+			return factory.createArrayLiteralExpression(
+				value.map(v => this.valueToExpression(v))
+			);
+		}
+		if (typeof value === 'object') {
+			const properties = Object.entries(value).map(([key, val]) =>
+				factory.createPropertyAssignment(
+					factory.createIdentifier(key),
+					this.valueToExpression(val)
+				)
+			);
+			return factory.createObjectLiteralExpression(properties);
+		}
+
+		// Fallback to null for unsupported types
+		return factory.createNull();
 	}
 
 	/**
@@ -290,7 +423,8 @@ export class TSTypeChecker {
 		// Replace invalid characters with underscores
 		const sanitized = id.replace(/[^a-zA-Z0-9_]/g, '_');
 		// Store mapping for reverse lookup
-		this.sanitizedToOriginal.set(sanitized, id);
+		this.identifierToNodeId.set(sanitized, id);
+		this.nodeIdToIdentifier.set(id, sanitized);
 		return sanitized;
 	}
 
@@ -299,7 +433,7 @@ export class TSTypeChecker {
 	 */
 	private unsanitizeIdentifier(sanitized: string): string {
 		// Use stored mapping to get original ID
-		return this.sanitizedToOriginal.get(sanitized) || sanitized;
+		return this.identifierToNodeId.get(sanitized) || sanitized;
 	}
 
 	/**
