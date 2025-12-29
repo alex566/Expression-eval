@@ -24,10 +24,13 @@
 		width: 100%;
 		height: 100vh;
 		overflow: hidden;
-		padding-top: max(env(safe-area-inset-top), 20px);
+		/* Ensure proper spacing for iOS status bar and safe areas */
+		padding-top: env(safe-area-inset-top);
 		padding-bottom: env(safe-area-inset-bottom);
 		padding-left: env(safe-area-inset-left);
 		padding-right: env(safe-area-inset-right);
+		/* Enable momentum scrolling on iOS */
+		-webkit-overflow-scrolling: touch;
 	}
 </style>
 

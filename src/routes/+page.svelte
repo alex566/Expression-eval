@@ -503,15 +503,21 @@
 		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 		background: #1e1e1e;
 		color: #cccccc;
+		/* Fix iOS viewport height issues with dynamic toolbars */
+		height: -webkit-fill-available;
 	}
 
 	:global(html) {
 		height: 100%;
+		/* Fix iOS viewport height issues with dynamic toolbars */
+		height: -webkit-fill-available;
 	}
 
 	:global(#svelte-app) {
 		height: 100vh;
 		width: 100vw;
+		/* Fix iOS viewport height issues */
+		height: -webkit-fill-available;
 	}
 
 	/* VS Code color variables */
@@ -536,6 +542,8 @@
 		display: flex;
 		flex-direction: column;
 		background: var(--vscode-bg);
+		/* Ensure proper height on iOS */
+		min-height: -webkit-fill-available;
 	}
 
 	.toolbar {
@@ -547,6 +555,9 @@
 		border-bottom: 1px solid var(--vscode-border);
 		flex-shrink: 0;
 		height: 48px;
+		/* Ensure toolbar is visible on iOS below status bar */
+		position: relative;
+		z-index: 10;
 	}
 
 	.toolbar-title {
@@ -603,6 +614,10 @@
 		overflow: hidden;
 		min-height: 0;
 		flex-direction: column;
+		/* Improve touch handling on iOS */
+		-webkit-overflow-scrolling: touch;
+		/* Prevent rubber-band scrolling from interfering */
+		overscroll-behavior: none;
 	}
 
 	/* Mobile-first: Single column layout */
@@ -613,13 +628,20 @@
 		min-height: 300px;
 		background: var(--vscode-editor-bg);
 		border-bottom: 1px solid var(--vscode-border);
+		/* Improve touch scrolling on iOS */
+		-webkit-overflow-scrolling: touch;
+		/* Prevent scroll chaining on iOS */
+		overscroll-behavior: contain;
 	}
 
 	.data-panel {
 		flex: 1;
 		background: var(--vscode-sidebar-bg);
 		overflow-y: auto;
+		/* Improve touch scrolling on iOS */
 		-webkit-overflow-scrolling: touch;
+		/* Prevent scroll chaining on iOS */
+		overscroll-behavior: contain;
 	}
 
 	/* Desktop layout: 50/50 split */
