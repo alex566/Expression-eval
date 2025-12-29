@@ -197,13 +197,30 @@ Manual tests verify:
 - ✅ Complex type parsing with nesting
 - ✅ Type compatibility checking
 
+## Known Limitations
+
+The current implementation uses a gradual typing approach with some intentionally permissive checks:
+
+1. **Function Type Parsing**: Function types (e.g., `(x: number) => string`) are treated as `any` to avoid parsing complexity. This is marked with TODO for future enhancement.
+
+2. **Object Structural Compatibility**: Object literal types are compared permissively - any two object types are considered compatible. This allows flexibility but reduces type safety. Future enhancement would compare property names and types.
+
+3. **Record Generic Validation**: `Record<K, V>` types are compared by checking if both are Record types, not by validating K and V parameters. This means `Record<string, number>` and `Record<number, string>` are considered compatible.
+
+4. **Function Signature Inference**: Nested function signatures currently return `(input: any) => any`. The infrastructure is in place to extract precise types from FunctionInput and Output nodes, marked with TODO.
+
+These limitations are documented in the code with TODO comments and don't affect the main improvements to array type inference and union type support.
+
 ## Future Enhancements
 
 1. **Full Generic Support**: Implement proper type parameters (`T`, `U`) for Map/Filter/Reduce
-2. **Function Type Inference**: Analyze transform functions to infer output types
-3. **Type Narrowing**: Implement control flow analysis for conditional types
-4. **Performance**: Cache type inference results for large graphs
-5. **Error Messages**: Provide more detailed type mismatch explanations
+2. **Function Type Parsing**: Parse function type strings to preserve parameter and return types
+3. **Structural Object Checking**: Compare object property names and types for compatibility
+4. **Record Type Validation**: Parse and validate key/value types in Record generics
+5. **Function Type Inference**: Extract precise types from FunctionInput/Output nodes
+6. **Type Narrowing**: Implement control flow analysis for conditional types
+7. **Performance**: Cache type inference results for large graphs
+8. **Error Messages**: Provide more detailed type mismatch explanations
 
 ## Impact
 
@@ -213,4 +230,4 @@ These improvements make the type system:
 - **More Helpful**: Better error messages and type inference
 - **TypeScript-like**: Behaves consistently with TypeScript's type system
 
-The node type system now properly behaves like TypeScript's type system, accurately inferring types for arrays, objects, and complex nested structures.
+The node type system now properly behaves like TypeScript's type system, accurately inferring types for arrays, objects, and complex nested structures. The gradual typing approach ensures backwards compatibility while enabling future enhancements.
