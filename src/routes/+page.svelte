@@ -650,11 +650,9 @@
 	/* Desktop: full height */
 	@media (min-width: 768px) {
 		.graph-panel {
-			flex: 1;
+			flex: 0 0 50%;
 			height: auto;
 			min-height: 0;
-			width: 50%;
-			flex: 0 0 50%;
 			border-bottom: none;
 			border-right: 1px solid var(--vscode-border);
 		}
@@ -673,7 +671,6 @@
 	@media (min-width: 768px) {
 		.data-panel {
 			overflow-y: auto;
-			width: 50%;
 			flex: 0 0 50%;
 		}
 	}
