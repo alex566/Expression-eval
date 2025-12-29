@@ -543,12 +543,18 @@
 		display: flex;
 		flex-direction: column;
 		background: var(--vscode-bg);
-		/* Ensure proper height on iOS */
-		min-height: 100vh;
-		min-height: -webkit-fill-available;
 	}
 	
-	/* On mobile, allow container to grow beyond viewport */
+	/* Desktop: fixed height for split view */
+	@media (min-width: 768px) {
+		.container {
+			/* Ensure proper height on iOS */
+			min-height: 100vh;
+			min-height: -webkit-fill-available;
+		}
+	}
+	
+	/* Mobile: allow container to grow beyond viewport */
 	@media (max-width: 767px) {
 		.container {
 			height: auto;
