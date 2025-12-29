@@ -188,6 +188,34 @@ export class TSTypeChecker {
 			const definition = this.registry.get(node.type);
 			if (!definition) continue;
 
+			// For Value nodes, create initialized variable with inferred type
+			// This must come BEFORE generating output declarations to allow proper inference
+			if (node.type === 'Value' && node.data.value !== undefined) {
+				const varName = this.getIdentifierForPort(node.id, 'out');
+				const inferredType = this.inferTSTypeFromValue(node.data.value);
+				const valueExpression = this.valueToExpression(node.data.value);
+				const typeNode = this.parseTypeString(inferredType);
+
+				// Create: let varName = value as type; (with explicit type for clarity)
+				const declaration = factory.createVariableDeclaration(
+					factory.createIdentifier(varName),
+					undefined,
+					typeNode,  // Explicit type annotation for better inference
+					factory.createAsExpression(valueExpression, typeNode)
+				);
+
+				const varStatement = factory.createVariableStatement(
+					undefined,
+					factory.createVariableDeclarationList(
+						[declaration],
+						ts.NodeFlags.Let
+					)
+				);
+
+				moduleStatements.push(varStatement);
+				continue; // Skip the general output handling for Value nodes
+			}
+
 			// Generate variable declarations for node outputs
 			if (definition.outputs && definition.outputs.length > 0) {
 				for (const output of definition.outputs) {
@@ -226,30 +254,6 @@ export class TSTypeChecker {
 
 					moduleStatements.push(varStatement);
 				}
-			}
-
-			// For Value nodes, create initialized variable with inferred type
-			if (node.type === 'Value' && node.data.value !== undefined) {
-				const varName = this.getIdentifierForPort(node.id, 'out');
-				const inferredType = this.inferTSTypeFromValue(node.data.value);
-				const valueExpression = this.valueToExpression(node.data.value);
-				const typeNode = this.parseTypeString(inferredType);
-
-				// Create: varName = value as type;
-				const asExpression = factory.createAsExpression(
-					valueExpression,
-					typeNode
-				);
-
-				const assignment = factory.createExpressionStatement(
-					factory.createBinaryExpression(
-						factory.createIdentifier(varName),
-						factory.createToken(ts.SyntaxKind.EqualsToken),
-						asExpression
-					)
-				);
-
-				moduleStatements.push(assignment);
 			}
 		}
 
@@ -421,7 +425,17 @@ export class TSTypeChecker {
 				
 				// Get the type from the type checker
 				const type = checker.getTypeAtLocation(node);
-				const typeString = checker.typeToString(type);
+				let typeString = checker.typeToString(type);
+				
+				// TypeScript sometimes returns "{}" for array types in certain contexts
+				// If we see "{}" but the node has an array type annotation, use that instead
+				if (typeString === '{}' && node.type) {
+					// Try to extract the type from the type annotation
+					const typeNode = node.type;
+					if (ts.isArrayTypeNode(typeNode) || ts.isTypeReferenceNode(typeNode)) {
+						typeString = node.type.getText();
+					}
+				}
 				
 				// Map back to graph node.port format
 				const portInfo = this.getPortFromIdentifier(identifierText);

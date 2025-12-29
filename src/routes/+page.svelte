@@ -77,6 +77,11 @@
 			edges = flow.edges;
 
 			error = '';
+
+			// Automatically validate the graph after loading
+			if (autoTypeCheck) {
+				setTimeout(() => validateGraph(), 100);
+			}
 		} catch (err) {
 			error = err instanceof Error ? err.message : String(err);
 		}
@@ -351,6 +356,11 @@
 			// Reset validation and evaluation results when graph changes
 			validationResult = null;
 			evaluationResult = null;
+
+			// Automatically run type checking on graph change
+			if (autoTypeCheck) {
+				setTimeout(() => validateGraph(), 100);
+			}
 		}
 	}
 
