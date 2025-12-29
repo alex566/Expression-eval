@@ -29,8 +29,6 @@
 		padding-bottom: env(safe-area-inset-bottom);
 		padding-left: env(safe-area-inset-left);
 		padding-right: env(safe-area-inset-right);
-		/* Enable momentum scrolling on iOS */
-		-webkit-overflow-scrolling: touch;
 	}
 </style>
 

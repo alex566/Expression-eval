@@ -614,8 +614,6 @@
 		overflow: hidden;
 		min-height: 0;
 		flex-direction: column;
-		/* Improve touch handling on iOS */
-		-webkit-overflow-scrolling: touch;
 		/* Prevent rubber-band scrolling from interfering */
 		overscroll-behavior: none;
 	}
@@ -628,8 +626,6 @@
 		min-height: 300px;
 		background: var(--vscode-editor-bg);
 		border-bottom: 1px solid var(--vscode-border);
-		/* Improve touch scrolling on iOS */
-		-webkit-overflow-scrolling: touch;
 		/* Prevent scroll chaining on iOS */
 		overscroll-behavior: contain;
 	}
@@ -638,8 +634,6 @@
 		flex: 1;
 		background: var(--vscode-sidebar-bg);
 		overflow-y: auto;
-		/* Improve touch scrolling on iOS */
-		-webkit-overflow-scrolling: touch;
 		/* Prevent scroll chaining on iOS */
 		overscroll-behavior: contain;
 	}
