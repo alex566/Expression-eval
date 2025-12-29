@@ -8,7 +8,8 @@ import type {
 	NodeRegistry,
 	InferredTypeInfo
 } from './types';
-import type { TSTypeChecker, TSTypeCheckResult } from './ts-type-checker';
+import type { TSTypeCheckResult } from './ts-type-checker';
+import { TSTypeCheckerClient } from './ts-type-checker-client';
 
 /**
  * Graph evaluator - executes the dataflow graph with type inference
@@ -17,14 +18,26 @@ export class GraphEvaluator {
 	private nodeValues: Map<string, Map<string, any>> = new Map();
 	private inferredTypes: Map<string, InferredTypeInfo> = new Map();
 	private executedNodes: Set<string> = new Set();
-	private tsTypeChecker: TSTypeChecker | null = null;
+	private tsTypeChecker: TSTypeCheckerClient | null = null;
 
 	constructor(
 		private graph: Graph,
-		private registry: NodeRegistry
+		private registry: NodeRegistry,
+		enableTypeScript: boolean = true
 	) {
-		// TSTypeChecker is not initialized by default to avoid importing
-		// the TypeScript compiler in the browser
+		// Initialize TypeScript type checker using Web Worker (browser-compatible)
+		if (enableTypeScript) {
+			try {
+				this.tsTypeChecker = new TSTypeCheckerClient(registry);
+				if (!this.tsTypeChecker.isAvailable()) {
+					console.warn('TypeScript type checker not available, using simple type checking');
+					this.tsTypeChecker = null;
+				}
+			} catch (error) {
+				console.warn('Failed to initialize TypeScript type checker:', error);
+				this.tsTypeChecker = null;
+			}
+		}
 	}
 
 	/**
