@@ -637,6 +637,7 @@
 		overflow-y: auto;
 		/* Prevent scroll chaining on iOS */
 		overscroll-behavior: contain;
+		/* Note: -webkit-overflow-scrolling: touch removed - deprecated in iOS 13+, momentum scrolling is now automatic */
 	}
 
 	/* Desktop layout: 50/50 split */
