@@ -40,10 +40,11 @@ export class TSTypeChecker {
 		this.compilerOptions = {
 			target: ts.ScriptTarget.ESNext,
 			module: ts.ModuleKind.ESNext,
-			strict: true,
+			strict: false,  // Relax strict mode to avoid lib.d.ts requirements
 			noEmit: true,
 			skipLibCheck: true,
 			skipDefaultLibCheck: true,
+			noLib: true,  // Don't require lib.d.ts
 			types: [],
 		};
 	}
@@ -64,17 +65,32 @@ export class TSTypeChecker {
 			// 1. Build TypeScript AST directly from graph using factory API
 			const statements = this.buildASTFromGraph(graph);
 
-			// 2. Create a source file with the statements
-			const sourceFile = ts.factory.createSourceFile(
-				statements,
-				ts.factory.createToken(ts.SyntaxKind.EndOfFileToken),
-				ts.NodeFlags.None
+			// 2. Convert AST to source file using printer
+			// This is more reliable than factory.createSourceFile
+			const printer = ts.createPrinter({ newLine: ts.NewLineKind.LineFeed });
+			const resultFile = ts.createSourceFile(
+				'temp.ts',
+				'',
+				ts.ScriptTarget.ESNext,
+				false,
+				ts.ScriptKind.TS
+			);
+			
+			// Print each statement and collect the source code
+			const sourceCode = statements.map(stmt => 
+				printer.printNode(ts.EmitHint.Unspecified, stmt, resultFile)
+			).join('\n');
+
+			// 3. Create the actual source file from the generated code
+			const sourceFile = ts.createSourceFile(
+				'graph.ts',
+				sourceCode,
+				ts.ScriptTarget.ESNext,
+				true,
+				ts.ScriptKind.TS
 			);
 
-			// Set the file name and text for the source file
-			(sourceFile as any).fileName = 'graph.ts';
-
-			// 3. Create a minimal program for type checking
+			// 4. Create a minimal program for type checking
 			const host: ts.CompilerHost = {
 				getSourceFile: (fileName: string) => {
 					if (fileName === 'graph.ts') {
@@ -98,13 +114,18 @@ export class TSTypeChecker {
 				host,
 			});
 
-			// 4. Get type checker
+			// 5. Get type checker
 			const checker = program.getTypeChecker();
 
-			// 5. Collect diagnostics (errors/warnings)
+			// 6. Collect diagnostics (errors/warnings)
 			const diagnostics = ts.getPreEmitDiagnostics(program);
 			for (const diagnostic of diagnostics) {
 				const message = ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n');
+				
+				// Filter out global type errors from missing lib.d.ts
+				if (message.startsWith('Cannot find global type') || message.includes('lib.d.ts')) {
+					continue;
+				}
 				
 				if (diagnostic.category === ts.DiagnosticCategory.Error) {
 					errors.push(message);
@@ -113,7 +134,7 @@ export class TSTypeChecker {
 				}
 			}
 
-			// 6. Extract inferred types from the AST
+			// 7. Extract inferred types from the AST
 			this.extractInferredTypesFromAST(sourceFile, checker, graph, inferredTypes);
 
 			return {
