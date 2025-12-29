@@ -1,5 +1,5 @@
 import ts from 'typescript';
-import type { Graph, GraphNode, GraphEdge, NodeRegistry, NodeDefinition } from './types';
+import type { Graph, GraphNode, GraphEdge, NodeRegistry, NodeDefinition, FunctionDefinition } from './types';
 
 /**
  * TypeScript-based type information
@@ -156,6 +156,7 @@ export class TSTypeChecker {
 
 	/**
 	 * Build TypeScript AST directly from graph structure using factory API
+	 * Enhanced to handle function definitions and infer generic types
 	 */
 	private buildASTFromGraph(graph: Graph): ts.Statement[] {
 		const statements: ts.Statement[] = [];
@@ -164,7 +165,25 @@ export class TSTypeChecker {
 		// Create a module declaration to encapsulate the graph
 		const moduleStatements: ts.Statement[] = [];
 
-		// 1. Generate variable declarations for node outputs
+		// 0. Generate function type declarations if functions are defined
+		if (graph.functions && graph.functions.length > 0) {
+			for (const func of graph.functions) {
+				// Infer function signature from the function's graph
+				const funcSignature = this.inferFunctionSignature(func);
+				
+				// Create a type alias for the function: type FuncName = (input: InputType) => OutputType
+				const funcTypeAlias = factory.createTypeAliasDeclaration(
+					undefined,
+					factory.createIdentifier(`${this.sanitizeIdentifier(func.name)}_Type`),
+					undefined,
+					funcSignature
+				);
+				
+				moduleStatements.push(funcTypeAlias);
+			}
+		}
+
+		// 1. Generate variable declarations for node outputs with enhanced type inference
 		for (const node of graph.nodes) {
 			const definition = this.registry.get(node.type);
 			if (!definition) continue;
@@ -173,7 +192,21 @@ export class TSTypeChecker {
 			if (definition.outputs && definition.outputs.length > 0) {
 				for (const output of definition.outputs) {
 					const varName = this.getIdentifierForPort(node.id, output.name);
-					const tsType = this.parseTypeString(output.type);
+					let tsType: ts.TypeNode;
+					
+					// Special handling for array operation nodes to infer proper generic types
+					if (node.type === 'Map' && output.name === 'out') {
+						// Map output type should be inferred from input array and function
+						tsType = this.inferMapOutputType(node, graph) || this.parseTypeString(output.type);
+					} else if (node.type === 'Filter' && output.name === 'out') {
+						// Filter output type is same as input array type
+						tsType = this.inferFilterOutputType(node, graph) || this.parseTypeString(output.type);
+					} else if (node.type === 'Reduce' && output.name === 'out') {
+						// Reduce output type should be inferred from initial value or function return type
+						tsType = this.inferReduceOutputType(node, graph) || this.parseTypeString(output.type);
+					} else {
+						tsType = this.parseTypeString(output.type);
+					}
 					
 					// Create: let varName: type;
 					const declaration = factory.createVariableDeclaration(
@@ -258,6 +291,121 @@ export class TSTypeChecker {
 	}
 
 	/**
+	 * Infer function signature from a function's graph structure
+	 * TODO: Currently returns generic (input: any) => any signature.
+	 * Future enhancement: Analyze FunctionInput and Output nodes to infer precise types.
+	 */
+	private inferFunctionSignature(func: FunctionDefinition): ts.TypeNode {
+		const factory = ts.factory;
+		
+		// Find FunctionInput node to determine input type
+		const inputNode = func.graph.nodes.find(n => n.type === 'FunctionInput');
+		
+		// Find Output node to determine return type
+		const outputNode = func.graph.nodes.find(n => n.type === 'Output');
+		
+		// TODO: Extract actual input type from FunctionInput node's data or connected edges
+		// This would require analyzing the function's graph structure
+		let inputType: ts.TypeNode = factory.createKeywordTypeNode(ts.SyntaxKind.AnyKeyword);
+		
+		// TODO: Extract actual return type from Output node's inputs
+		// This would require tracing back through the graph to find the output value type
+		let returnType: ts.TypeNode = factory.createKeywordTypeNode(ts.SyntaxKind.AnyKeyword);
+		
+		// Create a function type: (input: InputType) => ReturnType
+		return factory.createFunctionTypeNode(
+			undefined,
+			[factory.createParameterDeclaration(
+				undefined,
+				undefined,
+				factory.createIdentifier('input'),
+				undefined,
+				inputType,
+				undefined
+			)],
+			returnType
+		);
+	}
+
+	/**
+	 * Infer output type for Map operation based on input array and transform function
+	 */
+	private inferMapOutputType(node: GraphNode, graph: Graph): ts.TypeNode | null {
+		const factory = ts.factory;
+		
+		// Find the input array edge
+		const arrayEdge = graph.edges.find(e => e.to.node === node.id && e.to.port === 'array');
+		if (!arrayEdge) return null;
+		
+		// Get the source node
+		const sourceNode = graph.nodes.find(n => n.id === arrayEdge.from.node);
+		if (!sourceNode) return null;
+		
+		// If source is a Value node with an array, infer element type
+		if (sourceNode.type === 'Value' && Array.isArray(sourceNode.data.value)) {
+			const arrayValue = sourceNode.data.value;
+			if (arrayValue.length === 0) {
+				return factory.createArrayTypeNode(
+					factory.createKeywordTypeNode(ts.SyntaxKind.AnyKeyword)
+				);
+			}
+			
+			// The output type after map is still an array
+			// For now, we return the same element type (transform function type inference would be complex)
+			const inferredType = this.inferTSTypeFromValue(arrayValue);
+			return this.parseTypeString(inferredType);
+		}
+		
+		return null;
+	}
+
+	/**
+	 * Infer output type for Filter operation - same as input array type
+	 */
+	private inferFilterOutputType(node: GraphNode, graph: Graph): ts.TypeNode | null {
+		const factory = ts.factory;
+		
+		// Find the input array edge
+		const arrayEdge = graph.edges.find(e => e.to.node === node.id && e.to.port === 'array');
+		if (!arrayEdge) return null;
+		
+		// Get the source node
+		const sourceNode = graph.nodes.find(n => n.id === arrayEdge.from.node);
+		if (!sourceNode) return null;
+		
+		// If source is a Value node with an array, infer the same type
+		if (sourceNode.type === 'Value' && Array.isArray(sourceNode.data.value)) {
+			const inferredType = this.inferTSTypeFromValue(sourceNode.data.value);
+			return this.parseTypeString(inferredType);
+		}
+		
+		return null;
+	}
+
+	/**
+	 * Infer output type for Reduce operation from initial value
+	 */
+	private inferReduceOutputType(node: GraphNode, graph: Graph): ts.TypeNode | null {
+		const factory = ts.factory;
+		
+		// Find the initial value edge
+		const initialEdge = graph.edges.find(e => e.to.node === node.id && e.to.port === 'initial');
+		if (!initialEdge) return null;
+		
+		// Get the source node
+		const sourceNode = graph.nodes.find(n => n.id === initialEdge.from.node);
+		if (!sourceNode) return null;
+		
+		// If source is a Value node, infer type from the value
+		if (sourceNode.type === 'Value' && sourceNode.data.value !== undefined) {
+			const inferredType = this.inferTSTypeFromValue(sourceNode.data.value);
+			return this.parseTypeString(inferredType);
+		}
+		
+		return null;
+	}
+
+	/**
 	 * Extract inferred types from TypeScript AST
 	 */
 	private extractInferredTypesFromAST(
@@ -323,12 +471,14 @@ export class TSTypeChecker {
 
 	/**
 	 * Parse a type string into a TypeScript type node
+	 * Enhanced to handle union types, object types, and complex generics
 	 */
 	private parseTypeString(typeStr: string): ts.TypeNode {
 		const factory = ts.factory;
+		const trimmed = typeStr.trim();
 
 		// Handle basic types
-		switch (typeStr) {
+		switch (trimmed) {
 			case 'number':
 				return factory.createKeywordTypeNode(ts.SyntaxKind.NumberKeyword);
 			case 'string':
@@ -339,23 +489,148 @@ export class TSTypeChecker {
 				return factory.createKeywordTypeNode(ts.SyntaxKind.AnyKeyword);
 			case 'void':
 				return factory.createKeywordTypeNode(ts.SyntaxKind.VoidKeyword);
+			case 'object':
+				return factory.createKeywordTypeNode(ts.SyntaxKind.ObjectKeyword);
 			case 'Date':
 				return factory.createTypeReferenceNode(
 					factory.createIdentifier('Date'),
 					undefined
 				);
-			default:
-				// For complex types, we need to parse them
-				// For now, handle array types
-				if (typeStr.endsWith('[]')) {
-					const elementType = typeStr.slice(0, -2);
-					return factory.createArrayTypeNode(
-						this.parseTypeString(elementType)
+		}
+
+		// Handle union types (e.g., "number | string" or "(number | string)[]")
+		if (trimmed.includes(' | ')) {
+			// Check if the union is wrapped in parentheses followed by []
+			const arrayMatch = trimmed.match(/^\((.+)\)\[\]$/);
+			if (arrayMatch) {
+				// Handle "(type1 | type2)[]"
+				const unionTypes = arrayMatch[1].split('|').map(t => this.parseTypeString(t.trim()));
+				return factory.createArrayTypeNode(
+					factory.createUnionTypeNode(unionTypes)
+				);
+			}
+			
+			// Handle regular union types "type1 | type2"
+			const unionTypes = trimmed.split('|').map(t => this.parseTypeString(t.trim()));
+			return factory.createUnionTypeNode(unionTypes);
+		}
+
+		// Handle array types with [] syntax
+		if (trimmed.endsWith('[]')) {
+			const elementType = trimmed.slice(0, -2).trim();
+			// Handle nested arrays
+			return factory.createArrayTypeNode(
+				this.parseTypeString(elementType)
+			);
+		}
+
+		// Handle Array<T> generic syntax
+		const genericArrayMatch = trimmed.match(/^Array<(.+)>$/);
+		if (genericArrayMatch) {
+			const elementType = genericArrayMatch[1].trim();
+			return factory.createTypeReferenceNode(
+				factory.createIdentifier('Array'),
+				[this.parseTypeString(elementType)]
+			);
+		}
+
+		// Handle object types like "{ x: number; y: string }"
+		if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+			const propsStr = trimmed.slice(1, -1).trim();
+			if (propsStr.length === 0) {
+				// Empty object type {}
+				return factory.createTypeLiteralNode([]);
+			}
+			
+			// Parse property signatures
+			const properties: ts.TypeElement[] = [];
+			// Split by semicolon or comma, handling nested types
+			const propParts = this.splitObjectProperties(propsStr);
+			
+			for (const propPart of propParts) {
+				const colonIndex = propPart.indexOf(':');
+				if (colonIndex > 0) {
+					const propName = propPart.slice(0, colonIndex).trim();
+					const propType = propPart.slice(colonIndex + 1).trim();
+					
+					properties.push(
+						factory.createPropertySignature(
+							undefined,
+							factory.createIdentifier(propName),
+							undefined,
+							this.parseTypeString(propType)
+						)
 					);
 				}
-				// For object types and other complex types, fallback to any
-				return factory.createKeywordTypeNode(ts.SyntaxKind.AnyKeyword);
+			}
+			
+			return factory.createTypeLiteralNode(properties);
 		}
+
+		// Handle Record<K, V> generic syntax
+		const recordMatch = trimmed.match(/^Record<(.+),\s*(.+)>$/);
+		if (recordMatch) {
+			const keyType = recordMatch[1].trim();
+			const valueType = recordMatch[2].trim();
+			return factory.createTypeReferenceNode(
+				factory.createIdentifier('Record'),
+				[this.parseTypeString(keyType), this.parseTypeString(valueType)]
+			);
+		}
+
+		// Handle function types like "(element: T) => U"
+		// TODO: Implement full function type parsing for better type safety
+		// This would require parsing parameter types and return types separately
+		if (trimmed.includes('=>')) {
+			// For now, treat function types as 'any' to avoid complexity
+			// Full implementation would parse: (param: Type) => ReturnType
+			return factory.createKeywordTypeNode(ts.SyntaxKind.AnyKeyword);
+		}
+
+		// Handle type parameters (T, U, etc.) as identifiers
+		if (/^[A-Z][a-zA-Z0-9]*$/.test(trimmed)) {
+			return factory.createTypeReferenceNode(
+				factory.createIdentifier(trimmed),
+				undefined
+			);
+		}
+
+		// For other complex types, fallback to any
+		return factory.createKeywordTypeNode(ts.SyntaxKind.AnyKeyword);
+	}
+
+	/**
+	 * Split object property signatures, handling nested types
+	 */
+	private splitObjectProperties(propsStr: string): string[] {
+		const properties: string[] = [];
+		let current = '';
+		let depth = 0;
+		
+		for (let i = 0; i < propsStr.length; i++) {
+			const char = propsStr[i];
+			
+			if (char === '{' || char === '(' || char === '<') {
+				depth++;
+				current += char;
+			} else if (char === '}' || char === ')' || char === '>') {
+				depth--;
+				current += char;
+			} else if ((char === ';' || char === ',') && depth === 0) {
+				if (current.trim().length > 0) {
+					properties.push(current.trim());
+				}
+				current = '';
+			} else {
+				current += char;
+			}
+		}
+		
+		if (current.trim().length > 0) {
+			properties.push(current.trim());
+		}
+		
+		return properties;
 	}
 
 	/**
@@ -416,9 +691,22 @@ export class TSTypeChecker {
 			if (value.length === 0) {
 				return 'any[]';
 			}
-			// Infer array element type from first element
-			const elementType = this.inferTSTypeFromValue(value[0]);
-			return `${elementType}[]`;
+			// Infer array element type from ALL elements, not just the first
+			// This provides more accurate type inference for heterogeneous arrays
+			const elementTypes = new Set<string>();
+			for (const element of value) {
+				elementTypes.add(this.inferTSTypeFromValue(element));
+			}
+			
+			// If all elements have the same type, use that type
+			if (elementTypes.size === 1) {
+				const elementType = Array.from(elementTypes)[0];
+				return `${elementType}[]`;
+			}
+			
+			// If elements have different types, create a union type
+			const unionType = Array.from(elementTypes).join(' | ');
+			return `(${unionType})[]`;
 		}
 		if (typeof value === 'object') {
 			// Infer object shape
@@ -463,29 +751,127 @@ export class TSTypeChecker {
 
 	/**
 	 * Check if two TypeScript types are compatible
+	 * Enhanced to handle union types, array types, and object types
 	 */
 	areTypesCompatible(sourceType: string, targetType: string): boolean {
-		// Use TypeScript's type checker for compatibility
-		// For now, implement basic rules
-		if (targetType === 'any' || sourceType === 'any') {
+		// Clean up types
+		const cleanSource = sourceType.trim();
+		const cleanTarget = targetType.trim();
+
+		// 'any' is compatible with everything
+		if (cleanTarget === 'any' || cleanSource === 'any') {
 			return true;
 		}
 
-		// Handle union types in target
-		if (targetType.includes(' | ')) {
-			const targetTypes = targetType.split(' | ').map(t => t.trim());
-			return targetTypes.some(t => this.areTypesCompatible(sourceType, t));
-		}
-
-		// Handle union types in source
-		if (sourceType.includes(' | ')) {
-			const sourceTypes = sourceType.split(' | ').map(t => t.trim());
-			// All source types must be compatible with target
-			return sourceTypes.every(t => this.areTypesCompatible(t, targetType));
-		}
-
 		// Direct match
-		return sourceType === targetType;
+		if (cleanSource === cleanTarget) {
+			return true;
+		}
+
+		// Handle union types in target - source must be compatible with at least one target type
+		if (cleanTarget.includes(' | ')) {
+			const targetTypes = this.parseUnionTypes(cleanTarget);
+			return targetTypes.some(t => this.areTypesCompatible(cleanSource, t));
+		}
+
+		// Handle union types in source - all source types must be compatible with target
+		if (cleanSource.includes(' | ')) {
+			const sourceTypes = this.parseUnionTypes(cleanSource);
+			return sourceTypes.every(t => this.areTypesCompatible(t, cleanTarget));
+		}
+
+		// Handle array types - check element type compatibility
+		const sourceArrayMatch = cleanSource.match(/^(.+)\[\]$|^Array<(.+)>$/);
+		const targetArrayMatch = cleanTarget.match(/^(.+)\[\]$|^Array<(.+)>$/);
+		
+		if (sourceArrayMatch && targetArrayMatch) {
+			const sourceElementType = (sourceArrayMatch[1] || sourceArrayMatch[2]).trim();
+			const targetElementType = (targetArrayMatch[1] || targetArrayMatch[2]).trim();
+			return this.areTypesCompatible(sourceElementType, targetElementType);
+		}
+
+		// If target is array but source is not, they're incompatible
+		if (targetArrayMatch && !sourceArrayMatch) {
+			return false;
+		}
+
+		// Handle 'array' as generic array type (backwards compatibility)
+		if (cleanTarget === 'array' && sourceArrayMatch) {
+			return true;
+		}
+		if (cleanSource === 'array' && targetArrayMatch) {
+			return true;
+		}
+
+		// Handle object types - check structural compatibility
+		// TODO: Implement proper structural type checking for object literal types
+		// This is a simplification - should parse and compare property signatures
+		if (cleanSource.startsWith('{') && cleanTarget.startsWith('{')) {
+			// Accept if both are object types (permissive for now)
+			// Full implementation would compare property names and types
+			return true;
+		}
+
+		// Handle 'object' keyword type
+		if (cleanTarget === 'object' && (cleanSource.startsWith('{') || cleanSource.startsWith('Record<'))) {
+			return true;
+		}
+
+		// Handle Record types
+		// TODO: Parse and validate key/value type compatibility
+		// Currently: Record<string, number> and Record<number, string> would both pass
+		if (cleanSource.startsWith('Record<') && cleanTarget.startsWith('Record<')) {
+			// Accept matching Record types (permissive for now)
+			// Full implementation would extract and compare K and V types
+			return true;
+		}
+
+		// No match
+		return false;
+	}
+
+	/**
+	 * Parse union types, handling parentheses
+	 */
+	private parseUnionTypes(unionType: string): string[] {
+		const trimmed = unionType.trim();
+		
+		// Handle parenthesized union types like "(number | string)[]"
+		if (trimmed.startsWith('(') && trimmed.includes(')')) {
+			const parenEnd = trimmed.indexOf(')');
+			const innerUnion = trimmed.slice(1, parenEnd);
+			return innerUnion.split('|').map(t => t.trim());
+		}
+		
+		// Handle regular union types
+		const types: string[] = [];
+		let current = '';
+		let depth = 0;
+		
+		for (let i = 0; i < trimmed.length; i++) {
+			const char = trimmed[i];
+			
+			if (char === '<' || char === '(' || char === '{') {
+				depth++;
+				current += char;
+			} else if (char === '>' || char === ')' || char === '}') {
+				depth--;
+				current += char;
+			} else if (char === '|' && depth === 0) {
+				if (current.trim().length > 0) {
+					types.push(current.trim());
+				}
+				current = '';
+			} else {
+				current += char;
+			}
+		}
+		
+		if (current.trim().length > 0) {
+			types.push(current.trim());
+		}
+		
+		return types;
 	}
 
 	/**
