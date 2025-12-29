@@ -8,7 +8,7 @@ import type {
 	NodeRegistry,
 	InferredTypeInfo
 } from './types';
-import { TSTypeChecker, type TSTypeCheckResult } from './ts-type-checker';
+import type { TSTypeChecker, TSTypeCheckResult } from './ts-type-checker';
 
 /**
  * Graph evaluator - executes the dataflow graph with type inference
@@ -17,13 +17,14 @@ export class GraphEvaluator {
 	private nodeValues: Map<string, Map<string, any>> = new Map();
 	private inferredTypes: Map<string, InferredTypeInfo> = new Map();
 	private executedNodes: Set<string> = new Set();
-	private tsTypeChecker: TSTypeChecker;
+	private tsTypeChecker: TSTypeChecker | null = null;
 
 	constructor(
 		private graph: Graph,
 		private registry: NodeRegistry
 	) {
-		this.tsTypeChecker = new TSTypeChecker(registry);
+		// TSTypeChecker is not initialized by default to avoid importing
+		// the TypeScript compiler in the browser
 	}
 
 	/**
@@ -116,14 +117,18 @@ export class GraphEvaluator {
 				errors.push(`Graph contains cycles: ${cycleCheck.cycleDescription}`);
 			}
 
-			// 5. Use TypeScript-based type checking for powerful type inference
-			const tsCheckResult: TSTypeCheckResult = await this.tsTypeChecker.checkGraph(this.graph);
-			
-			// Merge TypeScript errors and warnings
-			errors.push(...tsCheckResult.errors);
-			warnings.push(...tsCheckResult.warnings);
+			// 5. Use TypeScript-based type checking for powerful type inference (if available)
+			// Note: TSTypeChecker is only available server-side to avoid bundling TypeScript compiler in browser
+			let tsCheckResult: TSTypeCheckResult | null = null;
+			if (this.tsTypeChecker) {
+				tsCheckResult = await this.tsTypeChecker.checkGraph(this.graph);
+				
+				// Merge TypeScript errors and warnings
+				errors.push(...tsCheckResult.errors);
+				warnings.push(...tsCheckResult.warnings);
+			}
 
-			// 6. Infer types for Value nodes using TS inference
+			// 6. Infer types for Value nodes using TS inference (if available)
 			for (const node of this.graph.nodes) {
 				const definition = this.registry.get(node.type);
 				if (!definition) continue;
@@ -131,20 +136,28 @@ export class GraphEvaluator {
 				// For Value nodes, get the inferred TypeScript type
 				if (node.type === 'Value' && node.data.value !== undefined) {
 					const key = `${node.id}.out`;
-					const tsTypeInfo = tsCheckResult.inferredTypes[key];
+					const tsTypeInfo = tsCheckResult?.inferredTypes[key];
 					const outputPort = definition.outputs?.[0];
 					
 					if (tsTypeInfo) {
 						inferredTypes[key] = {
 							type: tsTypeInfo.type,
 							declaredType: outputPort?.type,
-							isCompatible: outputPort ? this.tsTypeChecker.areTypesCompatible(tsTypeInfo.type, outputPort.type) : true
+							isCompatible: outputPort ? (this.tsTypeChecker?.areTypesCompatible(tsTypeInfo.type, outputPort.type) ?? true) : true
+						};
+					} else if (outputPort) {
+						// Fallback: use simple type inference when TS checker is not available
+						const simpleType = this.inferSimpleTypeFromValue(node.data.value);
+						inferredTypes[key] = {
+							type: simpleType,
+							declaredType: outputPort.type,
+							isCompatible: this.areSimpleTypesCompatible(simpleType, outputPort.type)
 						};
 					}
 				}
 			}
 
-			// 7. Type check edges based on TypeScript inference
+			// 7. Type check edges based on TypeScript inference (if available) or simple type checking
 			for (const edge of this.graph.edges) {
 				const sourceNode = nodeMap.get(edge.from.node);
 				const targetNode = nodeMap.get(edge.to.node);
@@ -162,11 +175,13 @@ export class GraphEvaluator {
 
 				// Get TypeScript types from inference
 				const sourceKey = `${edge.from.node}.${edge.from.port}`;
-				const sourceTsType = tsCheckResult.inferredTypes[sourceKey]?.type || sourcePort?.type || 'any';
+				const sourceTsType = tsCheckResult?.inferredTypes[sourceKey]?.type || sourcePort?.type || 'any';
 				const targetTsType = targetPort?.type || 'any';
 
-				// Check type compatibility using TS types
-				const compatible = this.tsTypeChecker.areTypesCompatible(sourceTsType, targetTsType);
+				// Check type compatibility using TS types (if available) or simple type checking
+				const compatible = this.tsTypeChecker 
+					? this.tsTypeChecker.areTypesCompatible(sourceTsType, targetTsType)
+					: this.areSimpleTypesCompatible(sourceTsType, targetTsType);
 
 				if (!compatible) {
 					errors.push(
@@ -394,7 +409,9 @@ export class GraphEvaluator {
 		this.inferredTypes.set(key, {
 			type: inferredType,
 			declaredType,
-			isCompatible: declaredType ? this.tsTypeChecker.areTypesCompatible(inferredType, declaredType) : true
+			isCompatible: declaredType 
+				? (this.tsTypeChecker?.areTypesCompatible(inferredType, declaredType) ?? this.areSimpleTypesCompatible(inferredType, declaredType))
+				: true
 		});
 	}
 
@@ -451,7 +468,10 @@ export class GraphEvaluator {
 				const outputPort = definition.outputs.find(p => p.name === edge.from.port);
 				if (outputPort && value !== undefined) {
 					const actualType = this.inferTSTypeFromValue(value);
-					if (!this.tsTypeChecker.areTypesCompatible(actualType, outputPort.type)) {
+					const compatible = this.tsTypeChecker
+						? this.tsTypeChecker.areTypesCompatible(actualType, outputPort.type)
+						: this.areSimpleTypesCompatible(actualType, outputPort.type);
+					if (!compatible) {
 						throw new Error(
 							`Type mismatch at node '${node.id}' output port '${edge.from.port}': ` +
 							`expected '${outputPort.type}' but got '${actualType}'`
@@ -468,7 +488,10 @@ export class GraphEvaluator {
 					const inputPort = targetDefinition.inputs.find(p => p.name === edge.to.port);
 					if (inputPort && value !== undefined) {
 						const actualType = this.inferTSTypeFromValue(value);
-						if (!this.tsTypeChecker.areTypesCompatible(actualType, inputPort.type)) {
+						const compatible = this.tsTypeChecker
+							? this.tsTypeChecker.areTypesCompatible(actualType, inputPort.type)
+							: this.areSimpleTypesCompatible(actualType, inputPort.type);
+						if (!compatible) {
 							throw new Error(
 								`Type mismatch: cannot connect '${node.type}.${edge.from.port}' (${actualType}) ` +
 								`to '${targetNode.type}.${edge.to.port}' (expected ${inputPort.type})`
@@ -493,5 +516,52 @@ export class GraphEvaluator {
 				await this.executeNode(targetNode);
 			}
 		}
+	}
+
+	/**
+	 * Simple type inference from runtime value (fallback when TS checker not available)
+	 */
+	private inferSimpleTypeFromValue(value: any): string {
+		if (value === null || value === undefined) {
+			return 'any';
+		}
+		if (value instanceof Date) {
+			return 'Date';
+		}
+		if (Array.isArray(value)) {
+			return 'any[]'; // Simplified, don't infer element type
+		}
+		if (typeof value === 'object') {
+			return 'object';
+		}
+		return typeof value; // 'number', 'string', 'boolean', etc.
+	}
+
+	/**
+	 * Simple type compatibility check (fallback when TS checker not available)
+	 */
+	private areSimpleTypesCompatible(sourceType: string, targetType: string): boolean {
+		// 'any' is compatible with everything
+		if (targetType === 'any' || sourceType === 'any') {
+			return true;
+		}
+
+		// Direct match
+		if (sourceType === targetType) {
+			return true;
+		}
+
+		// Handle basic array types
+		if (targetType.endsWith('[]') && sourceType.endsWith('[]')) {
+			return true; // Simplified: don't check element types
+		}
+
+		// Handle union types in target (simplified)
+		if (targetType.includes(' | ')) {
+			const targetTypes = targetType.split(' | ').map(t => t.trim());
+			return targetTypes.some(t => this.areSimpleTypesCompatible(sourceType, t));
+		}
+
+		return false;
 	}
 }
