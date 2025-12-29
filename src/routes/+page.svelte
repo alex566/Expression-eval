@@ -543,8 +543,23 @@
 		display: flex;
 		flex-direction: column;
 		background: var(--vscode-bg);
-		/* Ensure proper height on iOS */
-		min-height: -webkit-fill-available;
+	}
+	
+	/* Desktop: fixed height for split view */
+	@media (min-width: 768px) {
+		.container {
+			/* Ensure proper height on iOS */
+			min-height: 100vh;
+			min-height: -webkit-fill-available;
+		}
+	}
+	
+	/* Mobile: allow container to grow beyond viewport */
+	@media (max-width: 767px) {
+		.container {
+			height: auto;
+			min-height: 100vh;
+		}
 	}
 
 	.toolbar {
@@ -612,50 +627,56 @@
 	.main-content {
 		display: flex;
 		flex: 1;
-		overflow: hidden;
 		min-height: 0;
 		flex-direction: column;
-		/* Prevent rubber-band scrolling from interfering */
-		overscroll-behavior: none;
+		/* Mobile: allow scrolling, no overflow hidden */
+		overflow: visible;
+	}
+	
+	/* Desktop: prevent overflow */
+	@media (min-width: 768px) {
+		.main-content {
+			overflow: hidden;
+			flex-direction: row;
+		}
 	}
 
 	/* Mobile-first: Single column layout */
 	.graph-panel {
-		flex: 1;
+		flex: 0 0 auto;
 		display: flex;
 		flex-direction: column;
-		min-height: 300px;
+		height: 400px;
 		background: var(--vscode-editor-bg);
 		border-bottom: 1px solid var(--vscode-border);
-		/* Prevent scroll chaining on iOS */
-		overscroll-behavior: contain;
+		/* Allow touch interactions on iOS */
+		touch-action: manipulation;
 	}
-
-	.data-panel {
-		flex: 1;
-		background: var(--vscode-sidebar-bg);
-		overflow-y: auto;
-		/* Prevent scroll chaining on iOS */
-		overscroll-behavior: contain;
-		/* Note: -webkit-overflow-scrolling: touch removed - deprecated in iOS 13+, momentum scrolling is now automatic */
-	}
-
-	/* Desktop layout: 50/50 split */
+	
+	/* Desktop: full height */
 	@media (min-width: 768px) {
-		.main-content {
-			flex-direction: row;
-		}
-
 		.graph-panel {
-			width: 50%;
 			flex: 0 0 50%;
+			height: auto;
 			min-height: 0;
 			border-bottom: none;
 			border-right: 1px solid var(--vscode-border);
 		}
+	}
 
+	.data-panel {
+		flex: 1 1 auto;
+		background: var(--vscode-sidebar-bg);
+		/* Mobile: no internal scroll, part of page scroll */
+		overflow: visible;
+		/* Prevent scroll chaining on iOS */
+		overscroll-behavior: contain;
+	}
+	
+	/* Desktop: internal scroll */
+	@media (min-width: 768px) {
 		.data-panel {
-			width: 50%;
+			overflow-y: auto;
 			flex: 0 0 50%;
 		}
 	}
@@ -663,6 +684,8 @@
 	.flow {
 		flex: 1;
 		min-height: 0;
+		/* Ensure SvelteFlow can handle touch properly on iOS */
+		position: relative;
 	}
 
 	/* Collapsible sections in data panel */
