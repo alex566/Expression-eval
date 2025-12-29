@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Expression-eval application now features a powerful TypeScript-based type inference system that provides automatic, real-time type checking and inference for dataflow graphs. This system uses the TypeScript compiler API to analyze graph structure and infer types with the same sophistication as TypeScript itself.
+The Expression-eval application features a powerful TypeScript-based type inference system that provides automatic, real-time type checking and inference for dataflow graphs. This system uses the TypeScript compiler's low-level AST (Abstract Syntax Tree) API to analyze graph structure and infer types with the same sophistication as TypeScript itself.
 
 ## Key Features
 
@@ -11,12 +11,17 @@ The Expression-eval application now features a powerful TypeScript-based type in
 - No manual type annotations required for most cases
 - Works directly while editing the graph in real-time
 
-### 2. **TypeScript Compiler Integration**
+### 2. **Direct AST Construction**
+- Uses TypeScript factory functions to build AST directly
+- No string-based code generation or parsing
+- More efficient and reliable type checking
+
+### 3. **TypeScript Compiler Integration**
 - Uses the official TypeScript compiler API (`typescript` npm package)
-- Converts graph structure to TypeScript AST for analysis
+- Builds TypeScript AST using factory functions (e.g., `ts.factory.createVariableDeclaration`)
 - Leverages TypeScript's powerful type checker for accurate inference
 
-### 3. **Real-Time Type Checking**
+### 4. **Real-Time Type Checking**
 - Automatic validation when connections are made
 - Type checking triggers when nodes are added
 - Immediate feedback on type mismatches
@@ -35,11 +40,17 @@ The Expression-eval application now features a powerful TypeScript-based type in
 #### 1. **TSTypeChecker** (`src/lib/dataflow/ts-type-checker.ts`)
 The main TypeScript type checking service with the following capabilities:
 
-- **Graph to TypeScript Conversion**: Transforms dataflow graphs into TypeScript code
-- **AST Generation**: Creates TypeScript AST from generated code
-- **Type Inference**: Uses TS compiler's type checker to infer types
+- **Direct AST Construction**: Uses TypeScript factory functions to build AST directly
+- **Graph to AST Conversion**: Transforms dataflow graphs into TypeScript AST nodes
+- **Type Inference**: Uses TS compiler's type checker to infer types from AST
 - **Type Compatibility**: Checks type compatibility using TypeScript semantics
 - **Error Reporting**: Provides detailed type error messages from TS compiler
+
+The refactored implementation:
+- No longer generates code as strings
+- Uses `ts.factory.createVariableDeclaration`, `ts.factory.createIdentifier`, etc.
+- Eliminates string parsing overhead
+- More reliable and maintainable
 
 #### 2. **Enhanced Type System** (`src/lib/dataflow/types.ts`)
 Extended type definitions to support TypeScript types:
@@ -81,57 +92,59 @@ The GraphEvaluator now:
 
 ### How It Works
 
-#### Step 1: Graph to TypeScript Code Generation
+#### Step 1: Graph to TypeScript AST Construction
 
-When a graph is validated, the system converts it to TypeScript code:
+When a graph is validated, the system converts it directly to TypeScript AST using factory functions:
 
 ```typescript
-// Example graph with two Value nodes connected to an Add node
-namespace DataflowGraph {
-  let node_123_out: number;
-  node_123_out = 5 as number;
-  
-  let node_456_out: number;
-  node_456_out = 3 as number;
-  
-  let add_789_out: number;
-  
-  let add_789_input_in0 = node_123_out;
-  let add_789_input_in1 = node_456_out;
-}
+// Example: Building AST for a Value node with value 5
+const factory = ts.factory;
+
+// Create variable declaration: let node_123_out: number;
+const declaration = factory.createVariableDeclaration(
+  factory.createIdentifier('node_123_out'),
+  undefined,
+  factory.createKeywordTypeNode(ts.SyntaxKind.NumberKeyword),
+  undefined
+);
+
+// Create assignment: node_123_out = 5 as number;
+const asExpression = factory.createAsExpression(
+  factory.createNumericLiteral(5),
+  factory.createKeywordTypeNode(ts.SyntaxKind.NumberKeyword)
+);
 ```
 
-#### Step 2: TypeScript Compilation
+This approach eliminates the need to:
+- Generate TypeScript code as strings
+- Parse those strings with `ts.createSourceFile`
+- Handle string escaping and formatting issues
 
-The generated code is passed to TypeScript's compiler:
+#### Step 2: TypeScript Type Checking
+
+The AST is passed directly to TypeScript's type checker:
 
 ```typescript
-const sourceFile = ts.createSourceFile('graph.ts', tsCode, ...);
+const sourceFile = ts.factory.createSourceFile(statements, ...);
 const program = ts.createProgram({ rootNames: ['graph.ts'], ... });
 const checker = program.getTypeChecker();
 ```
 
 #### Step 3: Type Extraction
 
-TypeScript infers types for all variables:
+TypeScript infers types for all AST nodes:
 
 ```typescript
-// TS infers: node_123_out: number (from literal 5)
-// TS infers: add_789_input_in0: number (from node_123_out)
-// Type compatibility is checked automatically by TS
+// Visit AST nodes and extract types
+if (ts.isVariableDeclaration(node)) {
+  const type = checker.getTypeAtLocation(node);
+  const typeString = checker.typeToString(type);
+}
 ```
 
 #### Step 4: Error Detection
 
-TypeScript detects type mismatches:
-
-```typescript
-// Example: Connecting string to number input
-let value_out: string;
-value_out = "hello" as string;
-
-let add_input_in0 = value_out; // ERROR: Type 'string' is not assignable to type 'number'
-```
+TypeScript detects type mismatches directly from the AST.
 
 ## Usage Examples
 
