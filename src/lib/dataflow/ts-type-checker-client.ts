@@ -94,6 +94,17 @@ export class TSTypeCheckerClient {
 		if (targetType === 'any' || sourceType === 'any') {
 			return true;
 		}
+		
+		// Handle 'array' as a generic array type - compatible with any TypeScript array type
+		if (targetType === 'array') {
+			// Source is compatible if it's any array type: T[], Array<T>, number[], etc.
+			return sourceType.endsWith('[]') || sourceType.startsWith('Array<') || sourceType === 'array';
+		}
+		if (sourceType === 'array') {
+			// Source 'array' is compatible with any array type
+			return targetType.endsWith('[]') || targetType.startsWith('Array<') || targetType === 'array';
+		}
+		
 		if (targetType.includes(' | ')) {
 			const targetTypes = targetType.split(' | ').map(t => t.trim());
 			return targetTypes.some(t => this.areTypesCompatible(sourceType, t));
