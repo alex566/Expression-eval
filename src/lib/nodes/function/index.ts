@@ -116,16 +116,17 @@ export const FunctionInputNode: NodeDefinition = {
 };
 
 /**
- * FunctionValue node - outputs a function name as a string value
+ * FunctionValue node - outputs a function reference
  * This can be connected to Map/Filter/Reduce function input pins
+ * The type is inferred from the referenced function's signature
  */
 export const FunctionValueNode: NodeDefinition = {
 	type: 'FunctionValue',
 	category: 'function',
-	description: 'Provides a function name as a value that can be connected to function pins',
+	description: 'Provides a function reference that can be connected to function pins',
 	inputs: [],
 	outputs: [
-		{ name: 'out', type: 'string' }
+		{ name: 'out', type: '(input: any) => any' } // Function type - will be inferred based on referenced function
 	],
 	execute(context) {
 		const functionName = context.getNodeData().functionName as string | undefined;

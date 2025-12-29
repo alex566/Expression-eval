@@ -216,14 +216,72 @@ export class TSTypeChecker {
 				continue; // Skip the general output handling for Value nodes
 			}
 
+			// For FunctionValue nodes, create a variable with the function type
+			if (node.type === 'FunctionValue' && node.data.functionName) {
+				const functionName = node.data.functionName as string;
+				const varName = this.getIdentifierForPort(node.id, 'out');
+				
+				// Find the function definition to get its type
+				let funcType: ts.TypeNode = factory.createKeywordTypeNode(ts.SyntaxKind.AnyKeyword);
+				
+				if (graph.functions) {
+					const functionDef = graph.functions.find(f => f.name === functionName);
+					if (functionDef) {
+						// Use the inferred function signature
+						funcType = this.inferFunctionSignature(functionDef);
+					}
+				}
+				
+				// Create: let varName: FunctionType;
+				const declaration = factory.createVariableDeclaration(
+					factory.createIdentifier(varName),
+					undefined,
+					funcType,
+					undefined
+				);
+
+				const varStatement = factory.createVariableStatement(
+					undefined,
+					factory.createVariableDeclarationList(
+						[declaration],
+						ts.NodeFlags.Let
+					)
+				);
+
+				moduleStatements.push(varStatement);
+				continue; // Skip the general output handling for FunctionValue nodes
+			}
+
 			// Generate variable declarations for node outputs
 			if (definition.outputs && definition.outputs.length > 0) {
 				for (const output of definition.outputs) {
 					const varName = this.getIdentifierForPort(node.id, output.name);
 					let tsType: ts.TypeNode;
 					
+					// Special handling for FunctionRef nodes to infer proper types
+					if (node.type === 'FunctionRef' && node.data.functionName) {
+						const functionName = node.data.functionName as string;
+						
+						if (graph.functions) {
+							const functionDef = graph.functions.find(f => f.name === functionName);
+							if (functionDef) {
+								const funcSignature = this.inferFunctionSignature(functionDef);
+								
+								// Extract return type from function signature
+								if (ts.isFunctionTypeNode(funcSignature)) {
+									tsType = funcSignature.type;
+								} else {
+									tsType = this.parseTypeString(output.type);
+								}
+							} else {
+								tsType = this.parseTypeString(output.type);
+							}
+						} else {
+							tsType = this.parseTypeString(output.type);
+						}
+					}
 					// Special handling for array operation nodes to infer proper generic types
-					if (node.type === 'Map' && output.name === 'out') {
+					else if (node.type === 'Map' && output.name === 'out') {
 						// Map output type should be inferred from input array and function
 						tsType = this.inferMapOutputType(node, graph) || this.parseTypeString(output.type);
 					} else if (node.type === 'Filter' && output.name === 'out') {
@@ -296,8 +354,7 @@ export class TSTypeChecker {
 
 	/**
 	 * Infer function signature from a function's graph structure
-	 * TODO: Currently returns generic (input: any) => any signature.
-	 * Future enhancement: Analyze FunctionInput and Output nodes to infer precise types.
+	 * Analyzes FunctionInput and Output nodes to infer precise types.
 	 */
 	private inferFunctionSignature(func: FunctionDefinition): ts.TypeNode {
 		const factory = ts.factory;
@@ -308,13 +365,82 @@ export class TSTypeChecker {
 		// Find Output node to determine return type
 		const outputNode = func.graph.nodes.find(n => n.type === 'Output');
 		
-		// TODO: Extract actual input type from FunctionInput node's data or connected edges
-		// This would require analyzing the function's graph structure
+		// Extract actual input type from FunctionInput node
 		let inputType: ts.TypeNode = factory.createKeywordTypeNode(ts.SyntaxKind.AnyKeyword);
 		
-		// TODO: Extract actual return type from Output node's inputs
-		// This would require tracing back through the graph to find the output value type
+		if (inputNode) {
+			// Check if FunctionInput has a value in its data (for testing/preview)
+			if (inputNode.data && inputNode.data.value !== undefined) {
+				const inferredInputType = this.inferTSTypeFromValue(inputNode.data.value);
+				inputType = this.parseTypeString(inferredInputType);
+			} else {
+				// Analyze outgoing edges from FunctionInput to infer input object structure
+				const inputEdges = func.graph.edges.filter(e => e.from.node === inputNode.id);
+				
+				if (inputEdges.length > 0) {
+					// Build an object type from the output ports being used
+					const properties: ts.TypeElement[] = [];
+					const portNames = new Set<string>();
+					
+					for (const edge of inputEdges) {
+						const portName = edge.from.port;
+						// Skip 'out' port as it represents the whole object
+						if (portName !== 'out' && !portNames.has(portName)) {
+							portNames.add(portName);
+							
+							// Try to infer the property type from where it's used
+							const targetNode = func.graph.nodes.find(n => n.id === edge.to.node);
+							const targetDef = targetNode ? this.registry.get(targetNode.type) : undefined;
+							const targetInput = targetDef?.inputs?.find(inp => inp.name === edge.to.port);
+							
+							const propType = targetInput?.type || 'any';
+							
+							properties.push(
+								factory.createPropertySignature(
+									undefined,
+									factory.createIdentifier(portName),
+									undefined,
+									this.parseTypeString(propType)
+								)
+							);
+						}
+					}
+					
+					if (properties.length > 0) {
+						inputType = factory.createTypeLiteralNode(properties);
+					}
+				}
+			}
+		}
+		
+		// Extract actual return type from Output node's inputs
 		let returnType: ts.TypeNode = factory.createKeywordTypeNode(ts.SyntaxKind.AnyKeyword);
+		
+		if (outputNode) {
+			// Find the edge connected to the Output node
+			const outputEdge = func.graph.edges.find(e => e.to.node === outputNode.id);
+			
+			if (outputEdge) {
+				// Find the source node that provides the output value
+				const sourceNode = func.graph.nodes.find(n => n.id === outputEdge.from.node);
+				
+				if (sourceNode) {
+					const sourceDef = this.registry.get(sourceNode.type);
+					
+					// Special case for Value nodes - infer from the actual value
+					if (sourceNode.type === 'Value' && sourceNode.data.value !== undefined) {
+						const inferredType = this.inferTSTypeFromValue(sourceNode.data.value);
+						returnType = this.parseTypeString(inferredType);
+					} else if (sourceDef && sourceDef.outputs) {
+						// Use the declared output type from the source node
+						const sourceOutput = sourceDef.outputs.find(o => o.name === outputEdge.from.port);
+						if (sourceOutput) {
+							returnType = this.parseTypeString(sourceOutput.type);
+						}
+					}
+				}
+			}
+		}
 		
 		// Create a function type: (input: InputType) => ReturnType
 		return factory.createFunctionTypeNode(
@@ -484,6 +610,116 @@ export class TSTypeChecker {
 	}
 
 	/**
+	 * Parse a function type string like "(param: Type) => ReturnType"
+	 */
+	private parseFunctionTypeString(typeStr: string): ts.TypeNode {
+		const factory = ts.factory;
+		const trimmed = typeStr.trim();
+		
+		try {
+			// Match pattern: (params) => returnType
+			const arrowIndex = trimmed.lastIndexOf('=>');
+			if (arrowIndex === -1) {
+				return factory.createKeywordTypeNode(ts.SyntaxKind.AnyKeyword);
+			}
+			
+			const paramsStr = trimmed.substring(0, arrowIndex).trim();
+			const returnTypeStr = trimmed.substring(arrowIndex + 2).trim();
+			
+			// Parse return type
+			const returnType = this.parseTypeString(returnTypeStr);
+			
+			// Parse parameters from "(param1: type1, param2: type2)" format
+			if (!paramsStr.startsWith('(') || !paramsStr.endsWith(')')) {
+				return factory.createKeywordTypeNode(ts.SyntaxKind.AnyKeyword);
+			}
+			
+			const paramsContent = paramsStr.slice(1, -1).trim();
+			const parameters: ts.ParameterDeclaration[] = [];
+			
+			if (paramsContent.length > 0) {
+				// Split parameters by comma, respecting nested types
+				const paramParts = this.splitFunctionParameters(paramsContent);
+				
+				for (const paramPart of paramParts) {
+					const colonIndex = paramPart.indexOf(':');
+					if (colonIndex > 0) {
+						const paramName = paramPart.slice(0, colonIndex).trim();
+						const paramTypeStr = paramPart.slice(colonIndex + 1).trim();
+						const paramType = this.parseTypeString(paramTypeStr);
+						
+						parameters.push(
+							factory.createParameterDeclaration(
+								undefined,
+								undefined,
+								factory.createIdentifier(paramName),
+								undefined,
+								paramType,
+								undefined
+							)
+						);
+					} else {
+						// Parameter without type annotation, use any
+						parameters.push(
+							factory.createParameterDeclaration(
+								undefined,
+								undefined,
+								factory.createIdentifier(paramPart.trim()),
+								undefined,
+								factory.createKeywordTypeNode(ts.SyntaxKind.AnyKeyword),
+								undefined
+							)
+						);
+					}
+				}
+			}
+			
+			return factory.createFunctionTypeNode(
+				undefined,
+				parameters,
+				returnType
+			);
+		} catch (error) {
+			// If parsing fails, return any
+			return factory.createKeywordTypeNode(ts.SyntaxKind.AnyKeyword);
+		}
+	}
+
+	/**
+	 * Split function parameters, handling nested types
+	 */
+	private splitFunctionParameters(paramsStr: string): string[] {
+		const params: string[] = [];
+		let current = '';
+		let depth = 0;
+		
+		for (let i = 0; i < paramsStr.length; i++) {
+			const char = paramsStr[i];
+			
+			if (char === '(' || char === '{' || char === '<') {
+				depth++;
+				current += char;
+			} else if (char === ')' || char === '}' || char === '>') {
+				depth--;
+				current += char;
+			} else if (char === ',' && depth === 0) {
+				if (current.trim().length > 0) {
+					params.push(current.trim());
+				}
+				current = '';
+			} else {
+				current += char;
+			}
+		}
+		
+		if (current.trim().length > 0) {
+			params.push(current.trim());
+		}
+		
+		return params;
+	}
+
+	/**
 	 * Parse a type string into a TypeScript type node
 	 * Enhanced to handle union types, object types, and complex generics
 	 */
@@ -592,13 +828,9 @@ export class TSTypeChecker {
 			);
 		}
 
-		// Handle function types like "(element: T) => U"
-		// TODO: Implement full function type parsing for better type safety
-		// This would require parsing parameter types and return types separately
+		// Handle function types like "(element: T) => U" or "(input: any) => any"
 		if (trimmed.includes('=>')) {
-			// For now, treat function types as 'any' to avoid complexity
-			// Full implementation would parse: (param: Type) => ReturnType
-			return factory.createKeywordTypeNode(ts.SyntaxKind.AnyKeyword);
+			return this.parseFunctionTypeString(trimmed);
 		}
 
 		// Handle type parameters (T, U, etc.) as identifiers
