@@ -3,8 +3,7 @@
 	import { CELGraphEvaluator } from '$lib/dataflow/cel-evaluator';
 	import { onMount } from 'svelte';
 	
-	export let graph: Graph;
-	export let inputData: any = {};
+	let { graph, inputData = {} }: { graph: Graph; inputData?: any } = $props();
 	
 	let celExpression = '';
 	let evaluationResult: any = null;
@@ -74,9 +73,11 @@
 	}
 	
 	// Auto-compile when graph changes
-	$: if (graph) {
-		compileToCEL();
-	}
+	$effect(() => {
+		if (graph) {
+			compileToCEL();
+		}
+	});
 	
 	function formatJSON(value: any): string {
 		try {
