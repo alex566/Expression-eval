@@ -72,25 +72,53 @@ function compileNodeToCEL(
 			// Input node provides access to the input data
 			return 'input';
 			
-		case 'Expression':
-			// Expression node contains a CEL expression string
-			// Get the expression from node data and return it directly
-			return node.data.expression || 'null';
+		case 'Expression': {
+			// Expression node contains a CEL expression string with dynamic inputs
+			// Replace references to inputs (in0, in1, etc.) with actual values
+			let expression = node.data.expression || 'null';
 			
-		case 'Add':
-			return `(${getInputExpression('in0')} + ${getInputExpression('in1')})`;
+			// Find all edges targeting this node
+			const inputEdges = graph.edges.filter(e => e.to.node === node.id);
 			
-		case 'Subtract':
-			return `(${getInputExpression('in0')} - ${getInputExpression('in1')})`;
+			// Build a map of input port names to their expressions
+			const inputMap = new Map<string, string>();
+			for (const edge of inputEdges) {
+				const sourceExpression = nodeOutputs.get(edge.from.node) || 'null';
+				const sourceNode = graph.nodes.find(n => n.id === edge.from.node);
+				
+				// Special handling for Input node with property access
+				if (sourceNode && sourceNode.type === 'Input' && edge.from.port !== 'out') {
+					inputMap.set(edge.to.port, `input.${edge.from.port}`);
+				} else {
+					inputMap.set(edge.to.port, sourceExpression);
+				}
+			}
 			
-		case 'Multiply':
-			return `(${getInputExpression('in0')} * ${getInputExpression('in1')})`;
+			// Replace input references in the expression
+			// Sort by key length descending to avoid partial replacements (e.g., in10 before in1)
+			const sortedInputs = Array.from(inputMap.entries()).sort((a, b) => b[0].length - a[0].length);
+			for (const [inputName, inputExpr] of sortedInputs) {
+				// Use word boundary regex to ensure we replace whole identifiers
+				const regex = new RegExp(`\\b${inputName}\\b`, 'g');
+				expression = expression.replace(regex, `(${inputExpr})`);
+			}
 			
-		case 'Divide':
-			return `(${getInputExpression('in0')} / ${getInputExpression('in1')})`;
+			return expression;
+		}
 			
-		case 'Modulo':
-			return `(${getInputExpression('in0')} % ${getInputExpression('in1')})`;
+		case 'CreateObject': {
+			// CreateObject node creates an object from dynamic inputs
+			const inputEdges = graph.edges.filter(e => e.to.node === node.id);
+			const properties: string[] = [];
+			
+			for (const edge of inputEdges) {
+				const sourceExpression = nodeOutputs.get(edge.from.node) || 'null';
+				const propertyName = edge.to.port;
+				properties.push(`"${propertyName}": ${sourceExpression}`);
+			}
+			
+			return `{${properties.join(', ')}}`;
+		}
 			
 		case 'Compare': {
 			const operator = node.data.operator || '==';

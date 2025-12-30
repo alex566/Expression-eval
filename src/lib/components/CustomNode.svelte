@@ -18,6 +18,8 @@
 	$: onNodeDoubleClick = (data.onNodeDoubleClick as ((nodeId: string) => void) | undefined);
 	$: nodeValue = data.value !== undefined ? data.value : null;
 	$: nodeType = (data.nodeType as string) || '';
+	$: nodeExpression = data.expression !== undefined ? data.expression : null;
+	$: nodeExpressionBody = data.expressionBody !== undefined ? data.expressionBody : null;
 	
 	// Calculate dynamic height based on number of ports
 	$: maxPorts = Math.max(inputs.length, outputs.length);
@@ -77,6 +79,16 @@
 				{typeof nodeValue === 'string' ? `"${nodeValue}"` : 
 				 typeof nodeValue === 'object' ? JSON.stringify(nodeValue).substring(0, 20) + '...' :
 				 String(nodeValue)}
+			</div>
+		{/if}
+		{#if nodeType === 'Expression' && nodeExpression !== null}
+			<div class="node-expression-preview" title={`Expression: ${nodeExpression}`}>
+				{nodeExpression.length > 30 ? nodeExpression.substring(0, 30) + '...' : nodeExpression}
+			</div>
+		{/if}
+		{#if (nodeType === 'Map' || nodeType === 'Filter' || nodeType === 'Reduce') && nodeExpressionBody !== null}
+			<div class="node-expression-preview" title={`Expression: ${nodeExpressionBody}`}>
+				{nodeExpressionBody.length > 30 ? nodeExpressionBody.substring(0, 30) + '...' : nodeExpressionBody}
 			</div>
 		{/if}
 	</div>
@@ -158,6 +170,20 @@
 		margin-top: 4px;
 		font-family: 'Courier New', monospace;
 		background: rgba(78, 201, 176, 0.1);
+		padding: 2px 6px;
+		border-radius: 3px;
+		max-width: 120px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.node-expression-preview {
+		font-size: 11px;
+		color: #c586c0;
+		margin-top: 4px;
+		font-family: 'Courier New', monospace;
+		background: rgba(197, 134, 192, 0.1);
 		padding: 2px 6px;
 		border-radius: 3px;
 		max-width: 120px;

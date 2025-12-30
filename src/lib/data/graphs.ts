@@ -17,9 +17,11 @@ export const SAMPLE_GRAPH: Graph = {
 			}
 		},
 		{
-			id: "add",
-			type: "Add",
-			data: {}
+			id: "expr",
+			type: "Expression",
+			data: {
+				expression: "in0 + in1"
+			}
 		},
 		{
 			id: "output",
@@ -36,7 +38,7 @@ export const SAMPLE_GRAPH: Graph = {
 				port: "out"
 			},
 			to: {
-				node: "add",
+				node: "expr",
 				port: "in0"
 			}
 		},
@@ -46,13 +48,13 @@ export const SAMPLE_GRAPH: Graph = {
 				port: "out"
 			},
 			to: {
-				node: "add",
+				node: "expr",
 				port: "in1"
 			}
 		},
 		{
 			from: {
-				node: "add",
+				node: "expr",
 				port: "out"
 			},
 			to: {
@@ -108,19 +110,25 @@ export const COMPLEX_GRAPH: Graph = {
 			}
 		},
 		{
-			id: "add1",
-			type: "Add",
-			data: {}
+			id: "expr1",
+			type: "Expression",
+			data: {
+				expression: "in0 + in1"
+			}
 		},
 		{
-			id: "multiply",
-			type: "Multiply",
-			data: {}
+			id: "expr2",
+			type: "Expression",
+			data: {
+				expression: "in0 * in1"
+			}
 		},
 		{
-			id: "subtract",
-			type: "Subtract",
-			data: {}
+			id: "expr3",
+			type: "Expression",
+			data: {
+				expression: "in0 - in1"
+			}
 		},
 		{
 			id: "output",
@@ -137,7 +145,7 @@ export const COMPLEX_GRAPH: Graph = {
 				port: "out"
 			},
 			to: {
-				node: "add1",
+				node: "expr1",
 				port: "in0"
 			}
 		},
@@ -147,13 +155,13 @@ export const COMPLEX_GRAPH: Graph = {
 				port: "out"
 			},
 			to: {
-				node: "add1",
+				node: "expr1",
 				port: "in1"
 			}
 		},
 		{
 			from: {
-				node: "add1",
+				node: "expr1",
 				port: "out"
 			},
 			to: {
@@ -167,7 +175,7 @@ export const COMPLEX_GRAPH: Graph = {
 				port: "out"
 			},
 			to: {
-				node: "multiply",
+				node: "expr2",
 				port: "in0"
 			}
 		},
@@ -177,13 +185,13 @@ export const COMPLEX_GRAPH: Graph = {
 				port: "out"
 			},
 			to: {
-				node: "multiply",
+				node: "expr2",
 				port: "in1"
 			}
 		},
 		{
 			from: {
-				node: "multiply",
+				node: "expr2",
 				port: "out"
 			},
 			to: {
@@ -197,7 +205,7 @@ export const COMPLEX_GRAPH: Graph = {
 				port: "out"
 			},
 			to: {
-				node: "subtract",
+				node: "expr3",
 				port: "in0"
 			}
 		},
@@ -207,13 +215,13 @@ export const COMPLEX_GRAPH: Graph = {
 				port: "out"
 			},
 			to: {
-				node: "subtract",
+				node: "expr3",
 				port: "in1"
 			}
 		},
 		{
 			from: {
-				node: "subtract",
+				node: "expr3",
 				port: "out"
 			},
 			to: {
@@ -525,10 +533,219 @@ export const CEL_SAMPLE_GRAPH: Graph = {
 	]
 };
 
+/**
+ * Expression-based math operations sample
+ * Demonstrates using Expression node for inline calculations like "(in0 + 1) * 2"
+ */
+export const EXPRESSION_MATH_GRAPH: Graph = {
+	nodes: [
+		{
+			id: "value1",
+			type: "Value",
+			data: {
+				value: 5
+			}
+		},
+		{
+			id: "expr1",
+			type: "Expression",
+			data: {
+				expression: "(in0 + 1) * 2"
+			}
+		},
+		{
+			id: "output",
+			type: "Output",
+			data: {
+				outputs: ["result"]
+			}
+		}
+	],
+	edges: [
+		{
+			from: { node: "value1", port: "out" },
+			to: { node: "expr1", port: "in0" }
+		},
+		{
+			from: { node: "expr1", port: "out" },
+			to: { node: "output", port: "result" }
+		}
+	]
+};
+
+/**
+ * CreateObject node sample
+ * Demonstrates creating objects from input pins
+ */
+export const CREATE_OBJECT_GRAPH: Graph = {
+	nodes: [
+		{
+			id: "value_name",
+			type: "Value",
+			data: {
+				value: "John Doe"
+			}
+		},
+		{
+			id: "value_age",
+			type: "Value",
+			data: {
+				value: 30
+			}
+		},
+		{
+			id: "createObj",
+			type: "CreateObject",
+			data: {
+				pinNames: ["name", "age"]
+			}
+		},
+		{
+			id: "output",
+			type: "Output",
+			data: {
+				outputs: ["person"]
+			}
+		}
+	],
+	edges: [
+		{
+			from: { node: "value_name", port: "out" },
+			to: { node: "createObj", port: "name" }
+		},
+		{
+			from: { node: "value_age", port: "out" },
+			to: { node: "createObj", port: "age" }
+		},
+		{
+			from: { node: "createObj", port: "out" },
+			to: { node: "output", port: "person" }
+		}
+	]
+};
+
+/**
+ * Property access with CEL syntax sample
+ * Demonstrates accessing object properties like "in0.date"
+ */
+export const PROPERTY_ACCESS_GRAPH: Graph = {
+	nodes: [
+		{
+			id: "input",
+			type: "Input",
+			data: {
+				inputSchema: {
+					user: { name: "string", age: "number" },
+					timestamp: "string"
+				}
+			}
+		},
+		{
+			id: "expr1",
+			type: "Expression",
+			data: {
+				expression: "in0.name + ' is ' + string(in0.age) + ' years old'"
+			}
+		},
+		{
+			id: "output",
+			type: "Output",
+			data: {
+				outputs: ["message"]
+			}
+		}
+	],
+	edges: [
+		{
+			from: { node: "input", port: "user" },
+			to: { node: "expr1", port: "in0" }
+		},
+		{
+			from: { node: "expr1", port: "out" },
+			to: { node: "output", port: "message" }
+		}
+	]
+};
+
+/**
+ * Array operations with Expression bodies sample
+ * Demonstrates Map, Filter with expression bodies shown in preview
+ */
+export const ARRAY_OPERATIONS_GRAPH: Graph = {
+	nodes: [
+		{
+			id: "input",
+			type: "Input",
+			data: {
+				inputSchema: {
+					numbers: "array"
+				}
+			}
+		},
+		{
+			id: "filterExpr",
+			type: "Expression",
+			data: {
+				expression: "element > 5"
+			}
+		},
+		{
+			id: "filter",
+			type: "Filter",
+			data: {}
+		},
+		{
+			id: "mapExpr",
+			type: "Expression",
+			data: {
+				expression: "element * 2"
+			}
+		},
+		{
+			id: "map",
+			type: "Map",
+			data: {}
+		},
+		{
+			id: "output",
+			type: "Output",
+			data: {
+				outputs: ["result"]
+			}
+		}
+	],
+	edges: [
+		{
+			from: { node: "input", port: "numbers" },
+			to: { node: "filter", port: "array" }
+		},
+		{
+			from: { node: "filterExpr", port: "out" },
+			to: { node: "filter", port: "expression" }
+		},
+		{
+			from: { node: "filter", port: "out" },
+			to: { node: "map", port: "array" }
+		},
+		{
+			from: { node: "mapExpr", port: "out" },
+			to: { node: "map", port: "expression" }
+		},
+		{
+			from: { node: "map", port: "out" },
+			to: { node: "output", port: "result" }
+		}
+	]
+};
+
 export const GRAPHS: Record<string, Graph> = {
 	'sample': SAMPLE_GRAPH,
 	'complex': COMPLEX_GRAPH,
 	'dates': DATE_SAMPLE_GRAPH,
 	'input-example': INPUT_SAMPLE_GRAPH,
-	'cel': CEL_SAMPLE_GRAPH
+	'cel': CEL_SAMPLE_GRAPH,
+	'expression-math': EXPRESSION_MATH_GRAPH,
+	'create-object': CREATE_OBJECT_GRAPH,
+	'property-access': PROPERTY_ACCESS_GRAPH,
+	'array-operations': ARRAY_OPERATIONS_GRAPH
 };
