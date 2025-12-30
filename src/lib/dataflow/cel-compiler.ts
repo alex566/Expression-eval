@@ -50,7 +50,16 @@ function compileNodeToCEL(
 	const getInputExpression = (portName: string): string => {
 		const edge = graph.edges.find(e => e.to.node === node.id && e.to.port === portName);
 		if (edge) {
-			return nodeOutputs.get(edge.from.node) || 'null';
+			const sourceNode = graph.nodes.find(n => n.id === edge.from.node);
+			const sourceExpression = nodeOutputs.get(edge.from.node) || 'null';
+			
+			// Special handling for Input node with property access
+			if (sourceNode && sourceNode.type === 'Input' && edge.from.port !== 'out') {
+				// If accessing a specific property from Input node, append property access
+				return `input.${edge.from.port}`;
+			}
+			
+			return sourceExpression;
 		}
 		return 'null';
 	};
@@ -123,6 +132,36 @@ function compileNodeToCEL(
 			// This will fail at runtime - needs custom implementation
 			return `reduce(${array}, ${initial}, ${exprInput})`;
 		}
+		
+		case 'CreateDate': {
+			// Convert CreateDate node to createDate() CEL function call
+			const value = getInputExpression('value');
+			return `createDate(${value})`;
+		}
+		
+		case 'AddDate': {
+			// Convert AddDate node to addDays()/addHours() CEL function calls
+			const date = getInputExpression('date');
+			const days = getInputExpression('days');
+			const hours = getInputExpression('hours');
+			
+			// Apply transformations in sequence
+			let result = date;
+			if (days !== 'null') {
+				result = `addDays(${result}, ${days})`;
+			}
+			if (hours !== 'null') {
+				result = `addHours(${result}, ${hours})`;
+			}
+			return result;
+		}
+		
+		case 'FormatDate': {
+			// Convert FormatDate node to formatDate() CEL function call
+			const date = getInputExpression('date');
+			const format = getInputExpression('format');
+			return `formatDate(${date}, ${format})`;
+		}
 			
 		case 'Output':
 			// Output node just passes through its input
@@ -139,6 +178,7 @@ function compileNodeToCEL(
 
 /**
  * Topological sort of nodes to determine evaluation order
+ * Returns nodes in dependency order (inputs before outputs)
  */
 function topologicalSort(graph: Graph): GraphNode[] {
 	const sorted: GraphNode[] = [];
@@ -184,5 +224,9 @@ function topologicalSort(graph: Graph): GraphNode[] {
 		visit(node.id);
 	}
 	
-	return sorted;
+	// Reverse the sorted array to get correct dependency order
+	// DFS post-order visits nodes after their dependencies, adding them to the array
+	// This creates a reverse topological order, so we reverse it to get dependency-first order
+	// (inputs are processed before outputs)
+	return sorted.reverse();
 }

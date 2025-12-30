@@ -19,20 +19,21 @@ export const ValueNode: NodeDefinition = {
 };
 
 /**
- * Input node - DEPRECATED: Use FunctionInput instead
- * This node is kept for backward compatibility with old graphs
- * In function-based architecture, use FunctionInput which provides direct property access
+ * Input node - Provides access to input data
+ * In CEL mode, this compiles to 'input' which provides access to the entire input object
+ * Dynamic output pins can be defined based on the input data structure
  */
 export const InputNode: NodeDefinition = {
 	type: 'Input',
 	category: 'special',
-	description: 'DEPRECATED: Use FunctionInput instead. Kept for backward compatibility.',
+	description: 'Provides access to input data passed to the graph',
 	inputs: [],
 	outputs: [
 		{ name: 'out', type: 'any' }
 	],
 	execute(context) {
-		// For backward compatibility, behaves like a Value node
+		// In CEL mode, this returns the input data reference
+		// The actual input will be provided at evaluation time
 		const value = context.getNodeData().value;
 		context.setOutputValue('out', value);
 	}

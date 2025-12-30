@@ -8,11 +8,10 @@
 
 	const graphs = [
 		{ key: 'sample', name: 'Sample Graph', description: 'Basic addition example' },
+		{ key: 'input-example', name: 'Input Example', description: 'Using input data with dynamic pins' },
 		{ key: 'complex', name: 'Complex Graph', description: 'Multiple operations and nodes' },
-		{ key: 'dates', name: 'Date Operations', description: 'Working with dates and times' },
-		{ key: 'arrays', name: 'Array Operations', description: 'Array manipulation and transformations' },
-		{ key: 'mapfilterreduce', name: 'Map/Filter/Reduce', description: 'Functional array operations' },
-		{ key: 'functions', name: 'Function-Based', description: 'Custom function definitions' }
+		{ key: 'dates', name: 'Date Operations', description: 'Working with dates and times (uses custom CEL functions)' },
+		{ key: 'cel', name: 'CEL Expression', description: 'CEL expression with conditionals' }
 	];
 
 	function toggleExpanded() {
