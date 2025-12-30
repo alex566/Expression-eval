@@ -169,6 +169,27 @@
 	function handleConnect(connection: Connection) {
 		if (!graph) return;
 
+		// Find the target node to check if it has dynamic inputs
+		const targetNode = graph.nodes.find(n => n.id === connection.target);
+		if (!targetNode) return;
+
+		// Get the node definition to check if it has dynamic inputs
+		const nodeDefinition = nodeRegistry.get(targetNode.type);
+		// Dynamic nodes have an empty inputs array explicitly defined
+		const hasDynamicInputs = nodeDefinition?.inputs !== undefined && nodeDefinition.inputs.length === 0;
+
+		// Determine the target port name
+		// For dynamic input nodes, use the source output port name
+		// For static input nodes, use the target handle (predefined input name)
+		let targetPort: string;
+		if (hasDynamicInputs) {
+			// Use source output port name for dynamic inputs
+			targetPort = connection.sourceHandle ?? 'out';
+		} else {
+			// Use existing target handle for static inputs
+			targetPort = connection.targetHandle ?? 'in';
+		}
+
 		// Create new edge
 		const newEdge: GraphEdge = {
 			from: {
@@ -177,7 +198,7 @@
 			},
 			to: {
 				node: connection.target,
-				port: connection.targetHandle ?? 'in'
+				port: targetPort
 			}
 		};
 
