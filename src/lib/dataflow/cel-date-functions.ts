@@ -16,11 +16,12 @@ export function createDateFunctions(): CelFunc[] {
 		// Creates a timestamp from an ISO date string
 		celFunc('createDate', [
 			celOverload(['string'], 'int', (dateStr: string): bigint => {
-				const date = new Date(dateStr);
-				if (isNaN(date.getTime())) {
+				// Validate date string first using Date.parse
+				const timestamp = Date.parse(dateStr);
+				if (isNaN(timestamp)) {
 					throw new Error(`Invalid date string: ${dateStr}`);
 				}
-				return BigInt(date.getTime());
+				return BigInt(timestamp);
 			})
 		]),
 		

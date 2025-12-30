@@ -225,6 +225,8 @@ function topologicalSort(graph: Graph): GraphNode[] {
 	}
 	
 	// Reverse the sorted array to get correct dependency order
-	// DFS post-order gives reverse topological order
+	// DFS post-order visits nodes after their dependencies, adding them to the array
+	// This creates a reverse topological order, so we reverse it to get dependency-first order
+	// (inputs are processed before outputs)
 	return sorted.reverse();
 }

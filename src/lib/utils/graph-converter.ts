@@ -17,6 +17,19 @@ interface DagreNode {
 }
 
 /**
+ * Helper function to determine the type string for a schema value
+ */
+function getSchemaType(value: any): string {
+	if (typeof value === 'object' && Array.isArray(value)) {
+		return 'array';
+	}
+	if (typeof value === 'object') {
+		return 'object';
+	}
+	return typeof value;
+}
+
+/**
  * Determine input and output ports for a node based on its type
  * Returns PortSpec arrays from the node definition, or creates fallback PortSpec objects
  * Special handling for Value, Output nodes and dynamic nodes to create ports based on data/edges
@@ -41,11 +54,7 @@ function getNodePorts(
 			const keys = Object.keys(inputSchema);
 			outputs = keys.map(key => ({ 
 				name: key, 
-				type: typeof inputSchema[key] === 'object' && Array.isArray(inputSchema[key]) 
-					? 'array' 
-					: typeof inputSchema[key] === 'object' 
-					? 'object' 
-					: typeof inputSchema[key] 
+				type: getSchemaType(inputSchema[key])
 			}));
 		}
 		// Always add a generic 'out' port for the whole input object

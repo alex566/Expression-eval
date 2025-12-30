@@ -13,15 +13,20 @@
 	let inputDataStr = JSON.stringify(inputData, null, 2);
 	
 	// Load sample input data on mount
+	let loadError = $state('');
+	
 	onMount(async () => {
 		try {
 			const response = await fetch('/sample-input.json');
-			if (response.ok) {
-				const sampleData = await response.json();
-				inputDataStr = JSON.stringify(sampleData, null, 2);
+			if (!response.ok) {
+				throw new Error(`Failed to load sample data: ${response.statusText}`);
 			}
+			const sampleData = await response.json();
+			inputDataStr = JSON.stringify(sampleData, null, 2);
+			loadError = '';
 		} catch (err) {
-			// Silently fail, keep default input data
+			// Store error but don't block the UI - user can still enter custom input
+			loadError = err instanceof Error ? err.message : 'Failed to load sample input data';
 			console.warn('Could not load sample input data:', err);
 		}
 	});
