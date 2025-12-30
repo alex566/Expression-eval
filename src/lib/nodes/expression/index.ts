@@ -1,4 +1,4 @@
-import type { NodeDefinition } from '../../dataflow/types';
+import type { NodeDefinition, TypeInferenceContext } from '../../dataflow/types';
 
 /**
  * Expression node - contains a CEL expression string with dynamic inputs
@@ -23,5 +23,36 @@ export const ExpressionNode: NodeDefinition = {
 		// They don't execute in the traditional sense
 		const expression = context.getNodeData().expression || '';
 		context.setOutputValue('out', expression);
+	},
+	inferOutputTypes(context: TypeInferenceContext): Record<string, string> {
+		// For CEL expressions, we could parse the expression to infer the type
+		// For now, we return 'dyn' since CEL expressions can produce any type
+		// A more sophisticated implementation would use CEL's type checker
+		const expression = context.getNodeData().expression || '';
+		
+		// Simple heuristic-based type inference
+		if (expression.includes('>') || expression.includes('<') || 
+		    expression.includes('==') || expression.includes('!=') || 
+		    expression.includes('&&') || expression.includes('||')) {
+			// Likely a boolean expression
+			return { out: 'bool' };
+		}
+		
+		if (expression.includes('+') || expression.includes('-') || 
+		    expression.includes('*') || expression.includes('/')) {
+			// Check if inputs are numeric
+			const in0Type = context.getInputType('in0');
+			if (in0Type === 'int' || in0Type === 'double') {
+				return { out: in0Type };
+			}
+			return { out: 'dyn' };
+		}
+		
+		if (expression.includes('.map(') || expression.includes('.filter(')) {
+			return { out: 'list(dyn)' };
+		}
+		
+		// Default to dynamic type
+		return { out: 'dyn' };
 	}
 };

@@ -1,4 +1,4 @@
-import type { NodeDefinition } from '../../dataflow/types';
+import type { NodeDefinition, TypeInferenceContext } from '../../dataflow/types';
 
 /**
  * CreateObject node - creates an object from dynamic input pins
@@ -42,6 +42,22 @@ export const CreateObjectNode: NodeDefinition = {
 		}
 		
 		context.setOutputValue('out', result);
+	},
+	inferOutputTypes(context: TypeInferenceContext): Record<string, string> {
+		// Infer object type from input types
+		// Build a map type with known properties
+		const data = context.getNodeData();
+		const pinNames = data.pinNames || [];
+		
+		if (pinNames.length === 0) {
+			// Generic object type if no pins defined
+			return { out: 'map(string, dyn)' };
+		}
+		
+		// Build structured object type
+		// Note: CEL doesn't have TypeScript-style object types, so we use map
+		// In a more sophisticated implementation, we could track property types
+		return { out: 'map(string, dyn)' };
 	}
 };
 

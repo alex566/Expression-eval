@@ -5,6 +5,7 @@ A Svelte-based dataflow graph visualization and evaluation tool with **CEL (Comm
 ## Key Features
 
 - ✅ **CEL Expression Language** - Graphs compile to CEL expressions for evaluation
+- ✅ **Type Inference System** - Automatic type checking and inference for all nodes
 - ✅ **Expression Nodes** - Add CEL expressions as nodes with dynamic inputs for inline processing
 - ✅ **JSON Input/Output** - Provide JSON data as input and get JSON results
 - ✅ **Real-Time Compilation** - See the compiled CEL expression as you build your graph
@@ -24,6 +25,7 @@ Expression-eval uses the **@bufbuild/cel** package to provide CEL (Common Expres
 - Expression nodes for custom CEL expressions with dynamic inputs
 - Map, Filter, and Reduce operations with expression support
 - Property access using CEL syntax (e.g., `in0.date`, `user.name`)
+- **Automatic type inference and validation** - See [TYPE_INFERENCE.md](TYPE_INFERENCE.md) for details
 
 ## Architecture Overview
 
@@ -34,6 +36,69 @@ Expression-eval uses a **CEL-based architecture** where:
 - **Expression Nodes** - Primary node for inline processing with CEL expressions
 - **Input Data** - Provided as JSON for evaluation
 - **Output** - Results returned as JSON
+- **Type Inference** - Automatic type checking validates graph correctness
+
+## Type Inference System
+
+Expression-eval includes a powerful **type inference system** that automatically validates your graphs:
+
+### Features
+- ✅ **Automatic type inference** - Types propagate from inputs to outputs
+- ✅ **Type compatibility checking** - Validates connections between nodes
+- ✅ **Per-node type information** - Each node reports inferred input/output types
+- ✅ **Detailed error messages** - Clear explanations of type mismatches
+- ✅ **CEL type system integration** - Maps JavaScript types to CEL types
+
+### How It Works
+
+The type inference engine:
+1. Processes nodes in **topological order** (leaves to trunk)
+2. Infers types based on node logic and input types
+3. Validates type compatibility at all connections
+4. Reports errors and warnings with detailed messages
+
+### Example: If Node Type Inference
+
+```typescript
+// If node unifies types from true and false branches
+const graph = {
+  nodes: [
+    { id: 'true_val', type: 'Expression', data: { expression: '100' } },  // int
+    { id: 'false_val', type: 'Expression', data: { expression: '0' } },   // int
+    { id: 'if1', type: 'If', data: {} }
+  ],
+  edges: [
+    { from: { node: 'true_val', port: 'out' }, to: { node: 'if1', port: 'true' } },
+    { from: { node: 'false_val', port: 'out' }, to: { node: 'if1', port: 'false' } }
+  ]
+};
+
+// Type inference result:
+// if1.out = unify(int, int) = int
+```
+
+### Usage
+
+```typescript
+import { CELGraphEvaluator } from './dataflow/cel-evaluator';
+
+const evaluator = new CELGraphEvaluator(graph);
+
+// Run type checking
+const typeCheck = evaluator.typeCheck();
+
+if (!typeCheck.valid) {
+  console.error('Type errors:', typeCheck.errors);
+  console.warn('Type warnings:', typeCheck.warnings);
+}
+
+// Get type information for nodes
+typeCheck.nodeTypes.forEach((info, nodeId) => {
+  console.log(`${nodeId}: inputs=${JSON.stringify(info.inputTypes)}, outputs=${JSON.stringify(info.outputTypes)}`);
+});
+```
+
+**For complete documentation**, see [TYPE_INFERENCE.md](TYPE_INFERENCE.md).
 
 ## Node Types
 

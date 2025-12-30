@@ -1,4 +1,5 @@
-import type { NodeDefinition } from '../../dataflow/types';
+import type { NodeDefinition, TypeInferenceContext } from '../../dataflow/types';
+import { parseTypeString } from '../../dataflow/type-inference';
 
 /**
  * Map node - applies a transformation to each element of an array
@@ -33,6 +34,23 @@ export const MapNode: NodeDefinition = {
 		// In CEL mode, mapping happens during CEL evaluation
 		// This fallback just passes through the array unchanged
 		context.setOutputValue('out', inputArray);
+	},
+	inferOutputTypes(context: TypeInferenceContext): Record<string, string> {
+		// Map preserves list type structure
+		const arrayType = context.getInputType('array');
+		
+		if (!arrayType) {
+			return { out: 'list(dyn)' };
+		}
+		
+		// Parse array type to preserve element type
+		const parsed = parseTypeString(arrayType);
+		if (parsed.base === 'list' || parsed.base === 'array') {
+			// Element type is preserved through map (simplified - could be more sophisticated)
+			return { out: arrayType };
+		}
+		
+		return { out: 'list(dyn)' };
 	}
 };
 
@@ -69,6 +87,17 @@ export const FilterNode: NodeDefinition = {
 		// In CEL mode, filtering happens during CEL evaluation
 		// This fallback just passes through the array unchanged
 		context.setOutputValue('out', inputArray);
+	},
+	inferOutputTypes(context: TypeInferenceContext): Record<string, string> {
+		// Filter preserves the exact array type
+		const arrayType = context.getInputType('array');
+		
+		if (!arrayType) {
+			return { out: 'list(dyn)' };
+		}
+		
+		// Filter doesn't change the type, just filters elements
+		return { out: arrayType };
 	}
 };
 

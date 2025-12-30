@@ -3,9 +3,10 @@
  */
 
 import { celEnv, parse, plan } from '@bufbuild/cel';
-import type { Graph, EvaluationResult } from './types';
+import type { Graph, EvaluationResult, TypeCheckResult } from './types';
 import { compileGraphToCEL } from './cel-compiler';
 import { createDateFunctions } from './cel-date-functions';
+import { inferGraphTypes } from './type-inference';
 
 /**
  * CEL-based graph evaluator
@@ -18,6 +19,14 @@ export class CELGraphEvaluator {
 	 */
 	compile(): string {
 		return compileGraphToCEL(this.graph);
+	}
+	
+	/**
+	 * Perform type checking on the graph
+	 * Returns type information for all nodes and any errors/warnings
+	 */
+	typeCheck(): TypeCheckResult {
+		return inferGraphTypes(this.graph);
 	}
 	
 	/**
