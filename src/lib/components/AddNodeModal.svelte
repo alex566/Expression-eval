@@ -137,10 +137,10 @@
 <svelte:window on:keydown={handleKeydown} />
 
 {#if isOpen}
-	<div class="modal-backdrop" on:click={handleBackdropClick} role="presentation">
+	<div class="modal-backdrop" onclick={handleBackdropClick} role="presentation">
 		<div 
 			class="modal" 
-			on:click={(e) => e.stopPropagation()} 
+			onclick={(e) => e.stopPropagation()} 
 			role="dialog" 
 			aria-modal="true"
 			aria-labelledby="modal-title"
@@ -148,7 +148,7 @@
 		>
 			<div class="modal-header">
 				<h2 id="modal-title">Add New Node</h2>
-				<button class="close-btn" on:click={resetModal} aria-label="Close">&times;</button>
+				<button class="close-btn" onclick={resetModal} aria-label="Close">&times;</button>
 			</div>
 
 			<div class="modal-content">
@@ -168,8 +168,8 @@
 						{#each filteredNodes as node}
 							<div 
 								class="node-item" 
-								on:click={() => selectNode(node)}
-								on:keydown={(e) => e.key === 'Enter' && selectNode(node)} 
+								onclick={() => selectNode(node)}
+								onkeydown={(e) => e.key === 'Enter' && selectNode(node)} 
 								role="button" 
 								tabindex="0"
 							>
@@ -302,8 +302,8 @@
 						</div>
 
 						<div class="config-actions">
-							<button class="btn-secondary" on:click={() => (selectedNode = null)}>Back</button>
-							<button class="btn-primary" on:click={handleAddNode}>Add Node</button>
+							<button class="btn-secondary" onclick={() => (selectedNode = null)}>Back</button>
+							<button class="btn-primary" onclick={handleAddNode}>Add Node</button>
 						</div>
 					</div>
 				{/if}
