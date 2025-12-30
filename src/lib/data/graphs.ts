@@ -791,6 +791,68 @@ export const AUTO_INFERRED_OUTPUT_GRAPH: Graph = {
 	]
 };
 
+/**
+ * Demonstrates output-to-input name propagation
+ * When connecting outputs to dynamic input nodes (Expression, CreateObject),
+ * the output port name becomes the input port name
+ */
+export const NAME_PROPAGATION_GRAPH: Graph = {
+	nodes: [
+		{
+			id: "price",
+			type: "Expression",
+			data: {
+				expression: "100"
+			}
+		},
+		{
+			id: "quantity",
+			type: "Expression",
+			data: {
+				expression: "5"
+			}
+		},
+		{
+			id: "taxRate",
+			type: "Expression",
+			data: {
+				expression: "0.08"
+			}
+		},
+		{
+			id: "calculate",
+			type: "Expression",
+			data: {
+				// Using named inputs instead of in0, in1, in2
+				expression: "(price * quantity) * (1.0 + taxRate)"
+			}
+		},
+		{
+			id: "output",
+			type: "Output",
+			data: {}
+		}
+	],
+	edges: [
+		{
+			from: { node: "price", port: "out" },
+			to: { node: "calculate", port: "price" }  // 'out' becomes 'price' input
+		},
+		{
+			from: { node: "quantity", port: "out" },
+			to: { node: "calculate", port: "quantity" }  // 'out' becomes 'quantity' input
+		},
+		{
+			from: { node: "taxRate", port: "out" },
+			to: { node: "calculate", port: "taxRate" }  // 'out' becomes 'taxRate' input
+		},
+		{
+			from: { node: "calculate", port: "out" },
+			to: { node: "output", port: "total" }  // 'out' becomes 'total' input
+		}
+	]
+};
+
 export const GRAPHS: Record<string, Graph> = {
 	'sample': SAMPLE_GRAPH,
 	'complex': COMPLEX_GRAPH,
@@ -801,5 +863,6 @@ export const GRAPHS: Record<string, Graph> = {
 	'create-object': CREATE_OBJECT_GRAPH,
 	'property-access': PROPERTY_ACCESS_GRAPH,
 	'array-operations': ARRAY_OPERATIONS_GRAPH,
-	'auto-inferred-output': AUTO_INFERRED_OUTPUT_GRAPH
+	'auto-inferred-output': AUTO_INFERRED_OUTPUT_GRAPH,
+	'name-propagation': NAME_PROPAGATION_GRAPH
 };
