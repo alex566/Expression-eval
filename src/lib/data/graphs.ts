@@ -17,9 +17,11 @@ export const SAMPLE_GRAPH: Graph = {
 			}
 		},
 		{
-			id: "add",
-			type: "Add",
-			data: {}
+			id: "expr",
+			type: "Expression",
+			data: {
+				expression: "in0 + in1"
+			}
 		},
 		{
 			id: "output",
@@ -36,7 +38,7 @@ export const SAMPLE_GRAPH: Graph = {
 				port: "out"
 			},
 			to: {
-				node: "add",
+				node: "expr",
 				port: "in0"
 			}
 		},
@@ -46,13 +48,13 @@ export const SAMPLE_GRAPH: Graph = {
 				port: "out"
 			},
 			to: {
-				node: "add",
+				node: "expr",
 				port: "in1"
 			}
 		},
 		{
 			from: {
-				node: "add",
+				node: "expr",
 				port: "out"
 			},
 			to: {
@@ -108,19 +110,25 @@ export const COMPLEX_GRAPH: Graph = {
 			}
 		},
 		{
-			id: "add1",
-			type: "Add",
-			data: {}
+			id: "expr1",
+			type: "Expression",
+			data: {
+				expression: "in0 + in1"
+			}
 		},
 		{
-			id: "multiply",
-			type: "Multiply",
-			data: {}
+			id: "expr2",
+			type: "Expression",
+			data: {
+				expression: "in0 * in1"
+			}
 		},
 		{
-			id: "subtract",
-			type: "Subtract",
-			data: {}
+			id: "expr3",
+			type: "Expression",
+			data: {
+				expression: "in0 - in1"
+			}
 		},
 		{
 			id: "output",
@@ -137,7 +145,7 @@ export const COMPLEX_GRAPH: Graph = {
 				port: "out"
 			},
 			to: {
-				node: "add1",
+				node: "expr1",
 				port: "in0"
 			}
 		},
@@ -147,13 +155,13 @@ export const COMPLEX_GRAPH: Graph = {
 				port: "out"
 			},
 			to: {
-				node: "add1",
+				node: "expr1",
 				port: "in1"
 			}
 		},
 		{
 			from: {
-				node: "add1",
+				node: "expr1",
 				port: "out"
 			},
 			to: {
@@ -167,7 +175,7 @@ export const COMPLEX_GRAPH: Graph = {
 				port: "out"
 			},
 			to: {
-				node: "multiply",
+				node: "expr2",
 				port: "in0"
 			}
 		},
@@ -177,13 +185,13 @@ export const COMPLEX_GRAPH: Graph = {
 				port: "out"
 			},
 			to: {
-				node: "multiply",
+				node: "expr2",
 				port: "in1"
 			}
 		},
 		{
 			from: {
-				node: "multiply",
+				node: "expr2",
 				port: "out"
 			},
 			to: {
@@ -197,7 +205,7 @@ export const COMPLEX_GRAPH: Graph = {
 				port: "out"
 			},
 			to: {
-				node: "subtract",
+				node: "expr3",
 				port: "in0"
 			}
 		},
@@ -207,13 +215,13 @@ export const COMPLEX_GRAPH: Graph = {
 				port: "out"
 			},
 			to: {
-				node: "subtract",
+				node: "expr3",
 				port: "in1"
 			}
 		},
 		{
 			from: {
-				node: "subtract",
+				node: "expr3",
 				port: "out"
 			},
 			to: {

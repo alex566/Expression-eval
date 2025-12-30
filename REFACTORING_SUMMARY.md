@@ -86,20 +86,24 @@ Compiles to: {"name": "John", "age": 30}
 - `src/lib/components/CustomNode.svelte` - Added expression body preview
 - `src/lib/utils/graph-converter.ts` - Extract expression from connected nodes
 
-### 5. Legacy Math Nodes ✅
+### 5. Math Operations Removed ✅
 
-**Deprecation:**
-- Marked Add, Subtract, Multiply, Divide, Modulo as `[LEGACY]`
-- Updated descriptions to recommend Expression node
-- Added JSDoc `@deprecated` tags
-- Kept for backward compatibility
+**Removal:**
+- Completely removed Add, Subtract, Multiply, Divide, Modulo nodes
+- All math operations now use Expression node
+- Sample graphs updated to use Expression nodes
 
-**Migration Guide:**
-- Old: `Add node` → New: `Expression("in0 + in1")`
-- Old: `Multiply node` → New: `Expression("in0 * in1")`
+**Usage:**
+- Addition: `Expression("in0 + in1")`
+- Multiplication: `Expression("in0 * in1")`
+- Subtraction: `Expression("in0 - in1")`
+- Division: `Expression("in0 / in1")`
+- Modulo: `Expression("in0 % in1")`
 
 **Code Changes:**
-- `src/lib/nodes/math/index.ts` - Added deprecation notices
+- `src/lib/nodes/math/` - Folder removed
+- `src/lib/nodes/index.ts` - Math node imports removed
+- `src/lib/dataflow/cel-compiler.ts` - Math node compilation removed
 
 ### 6. Sample Graphs ✅
 
@@ -191,14 +195,6 @@ Value(arr) → Filter → Map → Output
          ("elem > 5") ("elem * 2")
 ```
 
-## Backward Compatibility
-
-All changes are backward compatible:
-- Legacy math nodes still work
-- Existing graphs unchanged
-- Old patterns still supported
-- New patterns recommended
-
 ## What Was NOT Changed
 
 As requested, the following remain as dedicated nodes:
@@ -249,7 +245,7 @@ As requested, the following remain as dedicated nodes:
 - Lines added: ~800
 - Lines modified: ~150
 - New nodes: 1 (CreateObject)
-- Deprecated nodes: 5 (Add, Subtract, Multiply, Divide, Modulo)
+- Removed nodes: 5 (Add, Subtract, Multiply, Divide, Modulo)
 - New samples: 4
 - Build status: ✅ Passing
 
@@ -266,7 +262,7 @@ Potential improvements not included in this refactoring:
 
 ## Conclusion
 
-The refactoring successfully transforms the node hierarchy to use Expression nodes as the primary general-purpose processing nodes. Math operations now use inline expressions, array operations show expression previews, and comprehensive documentation guides users on pattern selection.
+The refactoring successfully transforms the node hierarchy to use Expression nodes as the primary general-purpose processing nodes. Math operations now use inline expressions with the Expression node, array operations show expression previews, and comprehensive documentation guides users on pattern selection.
 
 All requirements from the problem statement have been met:
 - ✅ Expression node is general-purpose with dynamic inputs
@@ -278,7 +274,7 @@ All requirements from the problem statement have been met:
 - ✅ CreateObject node added
 - ✅ DateTime nodes remain separate
 - ✅ Patterns documented comprehensively
-- ✅ Backward compatible
+- ✅ Math nodes completely removed (no backward compatibility)
 - ✅ Builds successfully
 
 The implementation is production-ready and fully documented.

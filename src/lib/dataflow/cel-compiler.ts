@@ -120,21 +120,6 @@ function compileNodeToCEL(
 			return `{${properties.join(', ')}}`;
 		}
 			
-		case 'Add':
-			return `(${getInputExpression('in0')} + ${getInputExpression('in1')})`;
-			
-		case 'Subtract':
-			return `(${getInputExpression('in0')} - ${getInputExpression('in1')})`;
-			
-		case 'Multiply':
-			return `(${getInputExpression('in0')} * ${getInputExpression('in1')})`;
-			
-		case 'Divide':
-			return `(${getInputExpression('in0')} / ${getInputExpression('in1')})`;
-			
-		case 'Modulo':
-			return `(${getInputExpression('in0')} % ${getInputExpression('in1')})`;
-			
 		case 'Compare': {
 			const operator = node.data.operator || '==';
 			const a = getInputExpression('a');

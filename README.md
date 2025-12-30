@@ -42,8 +42,9 @@ Expression-eval uses a **CEL-based architecture** where:
 - **Value** - Static values (numbers, strings, arrays, objects)
 - **Input** - Access to input data with schema-based dynamic pins
 - **Output** - Final output node with dynamic pins
-- **Expression** - **[RECOMMENDED]** Custom CEL expressions with dynamic inputs
+- **Expression** - Custom CEL expressions with dynamic inputs
   - Use for inline processing: `"(in0 + 1) * 2"`
+  - Supports arithmetic: `"in0 + in1"`, `"in0 * in1"`, `"in0 - in1"`
   - Supports property access: `"in0.name"`, `"in0.date"`
   - Shows expression preview in node
   
@@ -69,30 +70,19 @@ Expression-eval uses a **CEL-based architecture** where:
 - **AddDate** - Add time intervals to dates
 - **FormatDate** - Format dates to strings
 
-### Legacy Math Nodes (Deprecated)
-
-The following nodes are deprecated in favor of using **Expression** nodes:
-- ~~Add~~ → Use Expression: `"(in0 + in1)"`
-- ~~Subtract~~ → Use Expression: `"(in0 - in1)"`
-- ~~Multiply~~ → Use Expression: `"(in0 * in1)"`
-- ~~Divide~~ → Use Expression: `"(in0 / in1)"`
-- ~~Modulo~~ → Use Expression: `"(in0 % in1)"`
-
-**Note:** Legacy math nodes remain available for backward compatibility but are marked as `[LEGACY]`.
-
 ## Usage Patterns
 
 ### Simple Math Operations
 
-**Old Pattern (Legacy):**
-```
-Value(5) → Add → Output
-Value(3) ↗
-```
-
-**New Pattern (Recommended):**
+**Example:**
 ```
 Value(5) → Expression("(in0 + 1) * 2") → Output
+```
+
+Multiple operations:
+```
+Value(5) → Expression("in0 + in1") → Output
+Value(3) ↗
 ```
 
 ### Property Access

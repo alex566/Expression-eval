@@ -330,38 +330,6 @@ Available CEL functions:
 Example: "size(in0) > 0 && in0.startsWith('PREFIX')"
 ```
 
-## Migration from Legacy Nodes
-
-### Math Operations
-```
-Before (Legacy):
-Value(5) → Add → Output
-Value(3) ↗
-
-After (Recommended):
-Value(5) → Expression("in0 + 3") → Output
-```
-
-### Chained Math Operations
-```
-Before (Legacy):
-Value(x) → Add(y) → Multiply(z) → Output
-
-After (Recommended):
-Value(x) → Expression("(in0 + y) * z") → Output
-   OR
-Value(x) → Expression("in0 + y") → Expression("in0 * z") → Output
-```
-
-### Complex Calculations
-```
-Before (Legacy):
-Multiple Add/Multiply/Divide nodes chained together
-
-After (Recommended):
-Break into logical Expression nodes with clear intermediate values
-```
-
 ## Example Workflows
 
 ### Example 1: E-commerce Price Calculation
