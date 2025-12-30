@@ -857,10 +857,72 @@ export const FUNCTION_BASED_GRAPH: Graph = {
 	]
 };
 
+export const CEL_SAMPLE_GRAPH: Graph = {
+	nodes: [
+		{
+			id: "input",
+			type: "Input",
+			data: {}
+		},
+		{
+			id: "expr1",
+			type: "Expression",
+			data: {
+				expression: "element > 18"
+			}
+		},
+		{
+			id: "value1",
+			type: "Value",
+			data: {
+				value: "Adult"
+			}
+		},
+		{
+			id: "value2",
+			type: "Value",
+			data: {
+				value: "Minor"
+			}
+		},
+		{
+			id: "if",
+			type: "If",
+			data: {}
+		},
+		{
+			id: "output",
+			type: "Output",
+			data: {
+				outputs: ["result"]
+			}
+		}
+	],
+	edges: [
+		{
+			from: { node: "expr1", port: "out" },
+			to: { node: "if", port: "condition" }
+		},
+		{
+			from: { node: "value1", port: "out" },
+			to: { node: "if", port: "true" }
+		},
+		{
+			from: { node: "value2", port: "out" },
+			to: { node: "if", port: "false" }
+		},
+		{
+			from: { node: "if", port: "out" },
+			to: { node: "output", port: "result" }
+		}
+	]
+};
+
 export const GRAPHS: Record<string, Graph> = {
 	'sample': SAMPLE_GRAPH,
 	'complex': COMPLEX_GRAPH,
 	'dates': DATE_SAMPLE_GRAPH,
 	'mapfilterreduce': MAP_FILTER_REDUCE_GRAPH,
-	'functions': FUNCTION_BASED_GRAPH
+	'functions': FUNCTION_BASED_GRAPH,
+	'cel': CEL_SAMPLE_GRAPH
 };

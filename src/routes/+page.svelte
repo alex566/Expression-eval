@@ -9,6 +9,7 @@
 	import { graphToSvelteFlow, updateFlowWithPreservedPositions } from '$lib/utils/graph-converter';
 	import CustomNode from '$lib/components/CustomNode.svelte';
 	import EvaluationReport from '$lib/components/EvaluationReport.svelte';
+	import CELConsole from '$lib/components/CELConsole.svelte';
 	import AddNodeModal from '$lib/components/AddNodeModal.svelte';
 	import Breadcrumbs from '$lib/components/Breadcrumbs.svelte';
 	import NodeListPanel from '$lib/components/NodeListPanel.svelte';
@@ -481,6 +482,16 @@
 						<div class="section-header">Evaluation Result</div>
 						<div class="section-content">
 							<EvaluationReport result={evaluationResult} {graph} />
+						</div>
+					</div>
+				{/if}
+
+				<!-- CEL Console -->
+				{#if currentGraph}
+					<div class="collapsible-section">
+						<div class="section-header">CEL Console</div>
+						<div class="section-content">
+							<CELConsole graph={currentGraph} inputData={{}} />
 						</div>
 					</div>
 				{/if}

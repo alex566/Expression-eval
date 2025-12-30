@@ -2,7 +2,7 @@
  * CEL Evaluator - Evaluates CEL expressions using @bufbuild/cel
  */
 
-import { celEnv, parse, plan, run } from '@bufbuild/cel';
+import { celEnv, parse, plan } from '@bufbuild/cel';
 import type { Graph, EvaluationResult } from './types';
 import { compileGraphToCEL } from './cel-compiler';
 
@@ -33,31 +33,22 @@ export class CELGraphEvaluator {
 			const env = celEnv({});
 			
 			// Parse the expression
-			const parseResult = parse(env, celExpression);
-			
-			if (parseResult.issues && parseResult.issues.length > 0) {
-				const errors = parseResult.issues.map((issue: any) => issue.message).join(', ');
-				return {
-					success: false,
-					outputs: {},
-					error: `CEL parse errors: ${errors}`
-				};
-			}
+			const parsedExpr = parse(celExpression);
 			
 			// Plan the execution
-			const planResult = plan(env, parseResult.ast);
+			const evaluationFn = plan(env, parsedExpr);
 			
-			if (planResult.issues && planResult.issues.length > 0) {
-				const errors = planResult.issues.map((issue: any) => issue.message).join(', ');
+			// Execute with input data
+			const result = evaluationFn({ input: inputData });
+			
+			// Check if result is an error
+			if (result && typeof result === 'object' && 'error' in result) {
 				return {
 					success: false,
 					outputs: {},
-					error: `CEL plan errors: ${errors}`
+					error: `CEL evaluation error: ${(result as any).error}`
 				};
 			}
-			
-			// Execute with input data
-			const result = run(env, planResult.program, { input: inputData });
 			
 			return {
 				success: true,
