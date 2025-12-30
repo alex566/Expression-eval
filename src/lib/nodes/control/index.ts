@@ -44,60 +44,6 @@ export const IfNode: NodeDefinition = {
 };
 
 /**
- * Compare node - compares two values
- * Outputs a single boolean result
- * For array comparison operations, use Map node with a comparison function
- */
-export const CompareNode: NodeDefinition = {
-	type: 'Compare',
-	category: 'control',
-	description: 'Compares two values using a specified operator. For array comparisons, use Map node.',
-	inputs: [
-		{ name: 'a', type: 'number | string' },
-		{ name: 'b', type: 'number | string' }
-	],
-	outputs: [
-		{ name: 'out', type: 'boolean' }
-	],
-	execute(context) {
-		const a = context.getInputValue('a');
-		const b = context.getInputValue('b');
-		const operator = context.getNodeData().operator || '==';
-
-		if (Array.isArray(a) || Array.isArray(b)) {
-			throw new Error('Compare node does not support array inputs. Use Map node with a comparison function for array comparisons.');
-		}
-
-		const compare = (val1: any, val2: any): boolean => {
-			switch (operator) {
-				case '==':
-					return val1 == val2;
-				case '===':
-					return val1 === val2;
-				case '!=':
-					return val1 != val2;
-				case '!==':
-					return val1 !== val2;
-				case '>':
-					return val1 > val2;
-				case '>=':
-					return val1 >= val2;
-				case '<':
-					return val1 < val2;
-				case '<=':
-					return val1 <= val2;
-				default:
-					throw new Error(`Unknown operator: ${operator}`);
-			}
-		};
-
-		// Single value comparison
-		const result = compare(a, b);
-		context.setOutputValue('out', result);
-	}
-};
-
-/**
  * Switch node - multi-case branching based on a value
  * Routes input to different outputs based on the value matching a case
  */

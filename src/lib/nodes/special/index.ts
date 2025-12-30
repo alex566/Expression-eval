@@ -1,24 +1,6 @@
 import type { NodeDefinition } from '../../dataflow/types';
 
 /**
- * Value node - provides a constant value
- * This node outputs a hardcoded value specified in its data
- */
-export const ValueNode: NodeDefinition = {
-	type: 'Value',
-	category: 'special',
-	description: 'Provides a constant value',
-	inputs: [],
-	outputs: [
-		{ name: 'out', type: 'any' }
-	],
-	execute(context) {
-		const value = context.getNodeData().value;
-		context.setOutputValue('out', value);
-	}
-};
-
-/**
  * CreateObject node - creates an object from dynamic input pins
  * Each input pin becomes a property in the output object
  * Supports custom property names via pin configuration
