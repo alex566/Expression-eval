@@ -175,7 +175,8 @@
 
 		// Get the node definition to check if it has dynamic inputs
 		const nodeDefinition = nodeRegistry.get(targetNode.type);
-		const hasDynamicInputs = nodeDefinition && nodeDefinition.inputs && nodeDefinition.inputs.length === 0;
+		// Dynamic nodes have an empty inputs array explicitly defined
+		const hasDynamicInputs = nodeDefinition?.inputs !== undefined && nodeDefinition.inputs.length === 0;
 
 		// Determine the target port name
 		// For dynamic input nodes, use the source output port name
