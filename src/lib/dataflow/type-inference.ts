@@ -35,10 +35,22 @@ export const CELTypes = {
 	TIMESTAMP: 'google.protobuf.Timestamp',
 	DURATION: 'google.protobuf.Duration',
 	
+	// Custom types (aliases for better readability)
+	DATE: 'Date',  // User-friendly alias for timestamp/date operations
+	
 	// Special
 	ANY: 'any',
 	DYN: 'dyn',
 } as const;
+
+/**
+ * Type aliases - maps user-friendly type names to CEL types
+ * This allows nodes to use "Date" which is more intuitive than "google.protobuf.Timestamp"
+ * or "int" (for timestamp integers)
+ */
+export const TYPE_ALIASES: Record<string, string> = {
+	'Date': 'int',  // Date represented as timestamp integer in CEL
+};
 
 /**
  * Infer CEL type from a JavaScript value
@@ -76,6 +88,15 @@ export function inferTypeFromValue(value: any): string {
 }
 
 /**
+ * Resolve a type alias to its actual CEL type
+ * If the type is an alias (like "Date"), return the underlying CEL type
+ * Otherwise, return the type as-is
+ */
+export function resolveTypeAlias(typeStr: string): string {
+	return TYPE_ALIASES[typeStr] || typeStr;
+}
+
+/**
  * Parse a type string to extract base type and generic parameters
  */
 export function parseTypeString(typeStr: string): { 
@@ -98,23 +119,27 @@ export function parseTypeString(typeStr: string): {
  * Check if two types are compatible
  */
 export function areTypesCompatible(sourceType: string, targetType: string): boolean {
+	// Resolve type aliases first
+	const resolvedSource = resolveTypeAlias(sourceType);
+	const resolvedTarget = resolveTypeAlias(targetType);
+	
 	// Exact match
-	if (sourceType === targetType) {
+	if (resolvedSource === resolvedTarget) {
 		return true;
 	}
 	
 	// Any type is compatible with everything
-	if (targetType === CELTypes.ANY || targetType === CELTypes.DYN) {
+	if (resolvedTarget === CELTypes.ANY || resolvedTarget === CELTypes.DYN) {
 		return true;
 	}
 	
-	if (sourceType === CELTypes.ANY || sourceType === CELTypes.DYN) {
+	if (resolvedSource === CELTypes.ANY || resolvedSource === CELTypes.DYN) {
 		return true;
 	}
 	
 	// Parse generic types
-	const source = parseTypeString(sourceType);
-	const target = parseTypeString(targetType);
+	const source = parseTypeString(resolvedSource);
+	const target = parseTypeString(resolvedTarget);
 	
 	// Base types must match for generic types
 	if (source.base !== target.base) {
@@ -149,32 +174,37 @@ export function areTypesCompatible(sourceType: string, targetType: string): bool
  * Unify two types - find the most specific common type
  */
 export function unifyTypes(type1: string, type2: string): string {
-	if (type1 === type2) {
+	// Resolve aliases first
+	const resolved1 = resolveTypeAlias(type1);
+	const resolved2 = resolveTypeAlias(type2);
+	
+	if (resolved1 === resolved2) {
+		// If the resolved types are the same, return the original type1 to preserve aliases
 		return type1;
 	}
 	
 	// If either is any/dyn, return the other
-	if (type1 === CELTypes.ANY || type1 === CELTypes.DYN) {
+	if (resolved1 === CELTypes.ANY || resolved1 === CELTypes.DYN) {
 		return type2;
 	}
-	if (type2 === CELTypes.ANY || type2 === CELTypes.DYN) {
+	if (resolved2 === CELTypes.ANY || resolved2 === CELTypes.DYN) {
 		return type1;
 	}
 	
 	// Numeric type unification
-	if ((type1 === CELTypes.INT || type1 === CELTypes.UINT) && 
-	    (type2 === CELTypes.INT || type2 === CELTypes.UINT)) {
+	if ((resolved1 === CELTypes.INT || resolved1 === CELTypes.UINT) && 
+	    (resolved2 === CELTypes.INT || resolved2 === CELTypes.UINT)) {
 		return CELTypes.INT;
 	}
 	
-	if ((type1 === CELTypes.INT || type1 === CELTypes.UINT || type1 === CELTypes.DOUBLE) && 
-	    (type2 === CELTypes.INT || type2 === CELTypes.UINT || type2 === CELTypes.DOUBLE)) {
+	if ((resolved1 === CELTypes.INT || resolved1 === CELTypes.UINT || resolved1 === CELTypes.DOUBLE) && 
+	    (resolved2 === CELTypes.INT || resolved2 === CELTypes.UINT || resolved2 === CELTypes.DOUBLE)) {
 		return CELTypes.DOUBLE;
 	}
 	
 	// For list types, unify element types
-	const parsed1 = parseTypeString(type1);
-	const parsed2 = parseTypeString(type2);
+	const parsed1 = parseTypeString(resolved1);
+	const parsed2 = parseTypeString(resolved2);
 	
 	if (parsed1.base === 'list' && parsed2.base === 'list' && 
 	    parsed1.params.length > 0 && parsed2.params.length > 0) {

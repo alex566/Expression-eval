@@ -115,7 +115,37 @@ function getNodePorts(
 					inputPorts.add(edge.to.port);
 				}
 			});
-			inputs = Array.from(inputPorts).sort().map(name => ({ name, type: 'any' as const }));
+			
+			// For Expression nodes, try to infer better input names from connected output names
+			if (nodeType === 'Expression') {
+				// Build a map of input port names to their display names (inferred from source)
+				const portDisplayNames = new Map<string, string>();
+				
+				edges.forEach(edge => {
+					if (edge.to.node === nodeId) {
+						// Use the source port name as the display name
+						// This makes the pin show the name of the connected output
+						const sourcePortName = edge.from.port;
+						const targetPortName = edge.to.port;
+						
+						// Only use the source name if it's meaningful (not just "out")
+						// Otherwise fall back to the target port name
+						if (sourcePortName !== 'out' && sourcePortName) {
+							portDisplayNames.set(targetPortName, sourcePortName);
+						}
+					}
+				});
+				
+				// Create inputs with inferred display names
+				inputs = Array.from(inputPorts).sort().map(name => ({
+					name,
+					type: 'any' as const,
+					// Add display name if we inferred one
+					...(portDisplayNames.has(name) ? { displayName: portDisplayNames.get(name) } : {})
+				}));
+			} else {
+				inputs = Array.from(inputPorts).sort().map(name => ({ name, type: 'any' as const }));
+			}
 			
 			// For nodes with dynamic inputs (defined with empty inputs array),
 			// always add one extra connector for new connections
