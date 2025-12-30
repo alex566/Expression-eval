@@ -11,7 +11,8 @@
 		{ key: 'input-example', name: 'Input Example', description: 'Using input data with dynamic pins' },
 		{ key: 'complex', name: 'Complex Graph', description: 'Multiple operations and nodes' },
 		{ key: 'dates', name: 'Date Operations', description: 'Working with dates and times (uses custom CEL functions)' },
-		{ key: 'cel', name: 'CEL Expression', description: 'CEL expression with conditionals' }
+		{ key: 'cel', name: 'CEL Expression', description: 'CEL expression with conditionals' },
+		{ key: 'name-propagation', name: 'Name Propagation', description: 'Output names propagate to dynamic input names' }
 	];
 
 	function toggleExpanded() {
