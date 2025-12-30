@@ -50,8 +50,7 @@ export class CELGraphEvaluator {
 			
 			return {
 				success: true,
-				outputs: { result },
-				inferredTypes: undefined
+				outputs: { result }
 			};
 		} catch (error) {
 			return {

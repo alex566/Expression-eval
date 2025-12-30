@@ -1,5 +1,5 @@
 import type { Node, Edge } from '@xyflow/svelte';
-import type { Graph, PortSpec, InferredTypeInfo } from '../dataflow/types';
+import type { Graph, PortSpec } from '../dataflow/types';
 import { nodeRegistry } from '../dataflow/registry';
 import dagre from 'dagre';
 
@@ -19,15 +19,13 @@ interface DagreNode {
 /**
  * Determine input and output ports for a node based on its type
  * Returns PortSpec arrays from the node definition, or creates fallback PortSpec objects
- * If inferredTypes are provided, updates the port types with inferred runtime types
  * Special handling for Value, Output nodes and dynamic nodes to create ports based on data/edges
  */
 function getNodePorts(
 	nodeType: string, 
 	nodeId: string,
 	nodeData: Record<string, any>,
-	edges: Array<{ from: { node: string; port: string }; to: { node: string; port: string } }>,
-	inferredTypes?: Record<string, InferredTypeInfo>
+	edges: Array<{ from: { node: string; port: string }; to: { node: string; port: string } }>
 ): { inputs: PortSpec[]; outputs: PortSpec[] } {
 	// Get ports from the node definition in the registry
 	const definition = nodeRegistry.get(nodeType);
@@ -86,38 +84,15 @@ function getNodePorts(
 		outputs = config.outputs.map(name => ({ name, type: 'any' as const }));
 	}
 
-	// Override with inferred types if available
-	if (inferredTypes) {
-		inputs = inputs.map(port => {
-			const key = `${nodeId}.input.${port.name}`;
-			const inferred = inferredTypes[key];
-			return {
-				name: port.name,
-				type: inferred?.type || port.type
-			};
-		});
-
-		outputs = outputs.map(port => {
-			const key = `${nodeId}.${port.name}`;
-			const inferred = inferredTypes[key];
-			return {
-				name: port.name,
-				type: inferred?.type || port.type
-			};
-		});
-	}
-
 	return { inputs, outputs };
 }
 
 /**
  * Convert dataflow graph to SvelteFlow format with dagre horizontal layout
- * Optionally accepts inferred types to display runtime type information
  * Optionally accepts a callback for handling node double-clicks
  */
 export function graphToSvelteFlow(
 	graph: Graph, 
-	inferredTypes?: Record<string, InferredTypeInfo>,
 	onNodeDoubleClick?: (nodeId: string) => void
 ): { nodes: Node[]; edges: Edge[] } {
 	const nodes: Node[] = [];
@@ -139,7 +114,7 @@ export function graphToSvelteFlow(
 
 	// First pass: Create nodes with their data and add to dagre graph
 	graph.nodes.forEach((node) => {
-		const ports = getNodePorts(node.type, node.id, node.data, graph.edges, inferredTypes);
+		const ports = getNodePorts(node.type, node.id, node.data, graph.edges);
 		
 		// Add node to dagre graph with dimensions
 		// Approximate node size based on content
@@ -220,7 +195,6 @@ export function graphToSvelteFlow(
 export function updateFlowWithPreservedPositions(
 	graph: Graph,
 	existingNodes: Node[],
-	inferredTypes?: Record<string, InferredTypeInfo>,
 	onNodeDoubleClick?: (nodeId: string) => void
 ): { nodes: Node[]; edges: Edge[] } {
 	const nodes: Node[] = [];
@@ -242,7 +216,7 @@ export function updateFlowWithPreservedPositions(
 
 	// Create nodes with preserved positions
 	graph.nodes.forEach((node) => {
-		const ports = getNodePorts(node.type, node.id, node.data, graph.edges, inferredTypes);
+		const ports = getNodePorts(node.type, node.id, node.data, graph.edges);
 		const existingPosition = positionMap.get(node.id);
 
 		// Check if this node is a FunctionValue node
