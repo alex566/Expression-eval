@@ -397,13 +397,6 @@ export const INPUT_SAMPLE_GRAPH: Graph = {
 			}
 		},
 		{
-			id: "ageExpr",
-			type: "Expression",
-			data: {
-				expression: "input.age"
-			}
-		},
-		{
 			id: "threshold",
 			type: "Expression",
 			data: {
@@ -446,12 +439,12 @@ export const INPUT_SAMPLE_GRAPH: Graph = {
 	],
 	edges: [
 		{
-			from: { node: "ageExpr", port: "out" },
-			to: { node: "compare", port: "a" }
+			from: { node: "input", port: "age" },
+			to: { node: "compare", port: "in0" }
 		},
 		{
 			from: { node: "threshold", port: "out" },
-			to: { node: "compare", port: "b" }
+			to: { node: "compare", port: "in1" }
 		},
 		{
 			from: { node: "compare", port: "out" },
@@ -477,13 +470,17 @@ export const CEL_SAMPLE_GRAPH: Graph = {
 		{
 			id: "input",
 			type: "Input",
-			data: {}
+			data: {
+				inputSchema: {
+					age: "number"
+				}
+			}
 		},
 		{
-			id: "expr1",
+			id: "compare",
 			type: "Expression",
 			data: {
-				expression: "element > 18"
+				expression: "in0 > 18"
 			}
 		},
 		{
@@ -515,7 +512,11 @@ export const CEL_SAMPLE_GRAPH: Graph = {
 	],
 	edges: [
 		{
-			from: { node: "expr1", port: "out" },
+			from: { node: "input", port: "age" },
+			to: { node: "compare", port: "in0" }
+		},
+		{
+			from: { node: "compare", port: "out" },
 			to: { node: "if", port: "condition" }
 		},
 		{
