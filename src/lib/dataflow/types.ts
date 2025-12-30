@@ -54,6 +54,14 @@ export interface NodeContext {
 }
 
 /**
+ * Type inference context - provides input types for inference
+ */
+export interface TypeInferenceContext {
+	getInputType(port: string): string | undefined;
+	getNodeData(): Record<string, any>;
+}
+
+/**
  * Node definition interface - defines how a node type behaves
  */
 export interface NodeDefinition {
@@ -63,6 +71,11 @@ export interface NodeDefinition {
 	inputs?: PortSpec[];
 	outputs?: PortSpec[];
 	execute(context: NodeContext): void | Promise<void>;
+	/**
+	 * Optional function to infer output types based on input types
+	 * Used for dynamic type checking in the graph
+	 */
+	inferOutputTypes?(context: TypeInferenceContext): Record<string, string>;
 }
 
 /**
@@ -82,4 +95,25 @@ export interface EvaluationResult {
 	success: boolean;
 	outputs: Record<string, any>;
 	error?: string;
+}
+
+/**
+ * Type inference result for a node
+ */
+export interface NodeTypeInfo {
+	nodeId: string;
+	nodeType: string;
+	inputTypes: Record<string, string>;
+	outputTypes: Record<string, string>;
+	errors: string[];
+}
+
+/**
+ * Type check result for the entire graph
+ */
+export interface TypeCheckResult {
+	valid: boolean;
+	nodeTypes: Map<string, NodeTypeInfo>;
+	errors: string[];
+	warnings: string[];
 }

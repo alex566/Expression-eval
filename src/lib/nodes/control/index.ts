@@ -1,4 +1,5 @@
-import type { NodeDefinition } from '../../dataflow/types';
+import type { NodeDefinition, TypeInferenceContext } from '../../dataflow/types';
+import { unifyTypes } from '../../dataflow/type-inference';
 
 /**
  * If node - conditional branching
@@ -40,6 +41,27 @@ export const IfNode: NodeDefinition = {
 			// In CEL mode, the ternary operator would be used instead
 			context.setOutputValue('out', condition ? trueValue : falseValue);
 		}
+	},
+	inferOutputTypes(context: TypeInferenceContext): Record<string, string> {
+		// Output type is the unification of true and false branch types
+		const trueType = context.getInputType('true');
+		const falseType = context.getInputType('false');
+		
+		if (!trueType && !falseType) {
+			return { out: 'any' };
+		}
+		
+		if (!trueType) {
+			return { out: falseType || 'any' };
+		}
+		
+		if (!falseType) {
+			return { out: trueType };
+		}
+		
+		// Both branches have types - they should match or be unified
+		const unifiedType = unifyTypes(trueType, falseType);
+		return { out: unifiedType };
 	}
 };
 
