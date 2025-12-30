@@ -18,8 +18,8 @@
 	$: onNodeDoubleClick = (data.onNodeDoubleClick as ((nodeId: string) => void) | undefined);
 	$: nodeValue = data.value !== undefined ? data.value : null;
 	$: nodeType = (data.nodeType as string) || '';
-	$: nodeExpression = data.expression !== undefined ? data.expression : null;
-	$: nodeExpressionBody = data.expressionBody !== undefined ? data.expressionBody : null;
+	$: nodeExpression = (typeof data.expression === 'string' ? data.expression : null);
+	$: nodeExpressionBody = (typeof data.expressionBody === 'string' ? data.expressionBody : null);
 	
 	// Calculate dynamic height based on number of ports
 	$: maxPorts = Math.max(inputs.length, outputs.length);
