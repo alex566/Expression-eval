@@ -659,6 +659,77 @@ export const PROPERTY_ACCESS_GRAPH: Graph = {
 	]
 };
 
+/**
+ * Array operations with Expression bodies sample
+ * Demonstrates Map, Filter with expression bodies shown in preview
+ */
+export const ARRAY_OPERATIONS_GRAPH: Graph = {
+	nodes: [
+		{
+			id: "input",
+			type: "Input",
+			data: {
+				inputSchema: {
+					numbers: "array"
+				}
+			}
+		},
+		{
+			id: "filterExpr",
+			type: "Expression",
+			data: {
+				expression: "element > 5"
+			}
+		},
+		{
+			id: "filter",
+			type: "Filter",
+			data: {}
+		},
+		{
+			id: "mapExpr",
+			type: "Expression",
+			data: {
+				expression: "element * 2"
+			}
+		},
+		{
+			id: "map",
+			type: "Map",
+			data: {}
+		},
+		{
+			id: "output",
+			type: "Output",
+			data: {
+				outputs: ["result"]
+			}
+		}
+	],
+	edges: [
+		{
+			from: { node: "input", port: "numbers" },
+			to: { node: "filter", port: "array" }
+		},
+		{
+			from: { node: "filterExpr", port: "out" },
+			to: { node: "filter", port: "expression" }
+		},
+		{
+			from: { node: "filter", port: "out" },
+			to: { node: "map", port: "array" }
+		},
+		{
+			from: { node: "mapExpr", port: "out" },
+			to: { node: "map", port: "expression" }
+		},
+		{
+			from: { node: "map", port: "out" },
+			to: { node: "output", port: "result" }
+		}
+	]
+};
+
 export const GRAPHS: Record<string, Graph> = {
 	'sample': SAMPLE_GRAPH,
 	'complex': COMPLEX_GRAPH,
@@ -667,5 +738,6 @@ export const GRAPHS: Record<string, Graph> = {
 	'cel': CEL_SAMPLE_GRAPH,
 	'expression-math': EXPRESSION_MATH_GRAPH,
 	'create-object': CREATE_OBJECT_GRAPH,
-	'property-access': PROPERTY_ACCESS_GRAPH
+	'property-access': PROPERTY_ACCESS_GRAPH,
+	'array-operations': ARRAY_OPERATIONS_GRAPH
 };

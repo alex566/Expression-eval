@@ -19,6 +19,7 @@
 	$: nodeValue = data.value !== undefined ? data.value : null;
 	$: nodeType = (data.nodeType as string) || '';
 	$: nodeExpression = data.expression !== undefined ? data.expression : null;
+	$: nodeExpressionBody = data.expressionBody !== undefined ? data.expressionBody : null;
 	
 	// Calculate dynamic height based on number of ports
 	$: maxPorts = Math.max(inputs.length, outputs.length);
@@ -83,6 +84,11 @@
 		{#if nodeType === 'Expression' && nodeExpression !== null}
 			<div class="node-expression-preview" title={`Expression: ${nodeExpression}`}>
 				{nodeExpression.length > 30 ? nodeExpression.substring(0, 30) + '...' : nodeExpression}
+			</div>
+		{/if}
+		{#if (nodeType === 'Map' || nodeType === 'Filter' || nodeType === 'Reduce') && nodeExpressionBody !== null}
+			<div class="node-expression-preview" title={`Expression: ${nodeExpressionBody}`}>
+				{nodeExpressionBody.length > 30 ? nodeExpressionBody.substring(0, 30) + '...' : nodeExpressionBody}
 			</div>
 		{/if}
 	</div>

@@ -178,6 +178,18 @@ export function graphToSvelteFlow(
 		// Check if this node is a FunctionValue node
 		const isFunctionValue = node.type === 'FunctionValue';
 
+		// For Map/Filter/Reduce nodes, find connected Expression node and extract expression body
+		let expressionBody: string | null = null;
+		if (node.type === 'Map' || node.type === 'Filter' || node.type === 'Reduce') {
+			const expressionEdge = graph.edges.find(e => e.to.node === node.id && e.to.port === 'expression');
+			if (expressionEdge) {
+				const expressionNode = graph.nodes.find(n => n.id === expressionEdge.from.node);
+				if (expressionNode && expressionNode.type === 'Expression') {
+					expressionBody = expressionNode.data.expression || null;
+				}
+			}
+		}
+
 		nodes.push({
 			id: node.id,
 			type: 'custom', // Use custom node type
@@ -189,6 +201,7 @@ export function graphToSvelteFlow(
 				outputs: ports.outputs,
 				hasSubgraph: isFunctionValue,
 				onNodeDoubleClick,
+				expressionBody, // Add expression body for array operation nodes
 				...node.data // Include original node data (like value)
 			},
 			position: {
@@ -252,6 +265,18 @@ export function updateFlowWithPreservedPositions(
 		// Check if this node is a FunctionValue node
 		const isFunctionValue = node.type === 'FunctionValue';
 
+		// For Map/Filter/Reduce nodes, find connected Expression node and extract expression body
+		let expressionBody: string | null = null;
+		if (node.type === 'Map' || node.type === 'Filter' || node.type === 'Reduce') {
+			const expressionEdge = graph.edges.find(e => e.to.node === node.id && e.to.port === 'expression');
+			if (expressionEdge) {
+				const expressionNode = graph.nodes.find(n => n.id === expressionEdge.from.node);
+				if (expressionNode && expressionNode.type === 'Expression') {
+					expressionBody = expressionNode.data.expression || null;
+				}
+			}
+		}
+
 		nodes.push({
 			id: node.id,
 			type: 'custom',
@@ -263,6 +288,7 @@ export function updateFlowWithPreservedPositions(
 				outputs: ports.outputs,
 				hasSubgraph: isFunctionValue,
 				onNodeDoubleClick: nodeCallback,
+				expressionBody, // Add expression body for array operation nodes
 				...node.data // Include original node data
 			},
 			position: existingPosition || { x: 0, y: 0 } // Use existing position or default
