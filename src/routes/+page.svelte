@@ -2,13 +2,12 @@
 	import { onMount } from 'svelte';
 	import { SvelteFlow, Controls, Background, type Node, type Edge, type Connection } from '@xyflow/svelte';
 	import '@xyflow/svelte/dist/style.css';
-	import type { Graph, EvaluationResult, ValidationResult, GraphNode, GraphEdge } from '$lib/dataflow/types';
-	import { GraphEvaluator } from '$lib/dataflow/evaluator';
+	import type { Graph, GraphNode, GraphEdge } from '$lib/dataflow/types';
 	import { nodeRegistry } from '$lib/dataflow/registry';
 	import { registerAllNodes } from '$lib/nodes';
 	import { graphToSvelteFlow, updateFlowWithPreservedPositions } from '$lib/utils/graph-converter';
 	import CustomNode from '$lib/components/CustomNode.svelte';
-	import EvaluationReport from '$lib/components/EvaluationReport.svelte';
+	import CELConsole from '$lib/components/CELConsole.svelte';
 	import AddNodeModal from '$lib/components/AddNodeModal.svelte';
 	import Breadcrumbs from '$lib/components/Breadcrumbs.svelte';
 	import NodeListPanel from '$lib/components/NodeListPanel.svelte';
@@ -18,13 +17,10 @@
 	let nodes = $state.raw<Node[]>([]);
 	let edges = $state.raw<Edge[]>([]);
 	let graph: Graph | null = $state(null);
-	let validationResult: ValidationResult | null = $state(null);
-	let evaluationResult: EvaluationResult | null = $state(null);
 	let isLoading = $state(true);
 	let error = $state('');
 	let selectedGraph = $state('sample');
 	let showAddNodeModal = $state(false);
-	let autoTypeCheck = $state(true); // Enable automatic type checking
 
 	// Breadcrumb navigation state
 	interface BreadcrumbItem {
@@ -67,21 +63,12 @@
 			breadcrumbs = [{ label: 'Main Graph', graph }];
 			currentGraph = graph;
 
-			// Reset results when loading new graph
-			validationResult = null;
-			evaluationResult = null;
-
 			// Convert to SvelteFlow format with double-click handler
-			const flow = graphToSvelteFlow(graph, undefined, handleNodeDoubleClick);
+			const flow = graphToSvelteFlow(graph, handleNodeDoubleClick);
 			nodes = flow.nodes;
 			edges = flow.edges;
 
 			error = '';
-
-			// Automatically validate the graph after loading
-			if (autoTypeCheck) {
-				setTimeout(() => validateGraph(), 100);
-			}
 		} catch (err) {
 			error = err instanceof Error ? err.message : String(err);
 		}
@@ -99,39 +86,7 @@
 		const clickedNode = currentGraph.nodes.find(n => n.id === nodeId);
 		if (!clickedNode) return;
 
-		// Check if this is a FunctionValue node
-		if (clickedNode.type === 'FunctionValue') {
-			const functionName = clickedNode.data.functionName as string | undefined;
-			if (!functionName) return;
-
-			// Find the function definition in the graph
-			const functionDef = currentGraph.functions?.find(f => f.name === functionName);
-			if (!functionDef) {
-				error = `Function '${functionName}' not found`;
-				return;
-			}
-
-			// Navigate into the function
-			breadcrumbs = [...breadcrumbs, {
-				label: `Function: ${functionName}`,
-				nodeId,
-				graph: functionDef.graph
-			}];
-			currentGraph = functionDef.graph;
-
-			// Update visualization
-			const flow = graphToSvelteFlow(functionDef.graph, undefined, handleNodeDoubleClick);
-			nodes = flow.nodes;
-			edges = flow.edges;
-
-			// Reset validation/evaluation when navigating
-			validationResult = null;
-			evaluationResult = null;
-			return;
-		}
-
-		// FunctionValue nodes no longer support legacy subgraph navigation
-		// All function definitions are in graph.functions, not in node.subgraph
+		// Navigation into subgraphs is no longer supported in CEL mode
 	}
 
 	function handleBreadcrumbNavigate(index: number) {
@@ -142,7 +97,7 @@
 		currentGraph = breadcrumbs[index].graph;
 
 		// Update visualization
-		const flow = graphToSvelteFlow(currentGraph, undefined, handleNodeDoubleClick);
+		const flow = graphToSvelteFlow(currentGraph, handleNodeDoubleClick);
 		nodes = flow.nodes;
 		edges = flow.edges;
 
@@ -150,10 +105,6 @@
 		if (index === 0) {
 			graph = currentGraph;
 		}
-
-		// Reset validation/evaluation when navigating
-		validationResult = null;
-		evaluationResult = null;
 	}
 
 	function handleGraphChange(event: Event) {
@@ -165,52 +116,6 @@
 	function handleGraphChangeFromPanel(graphKey: string) {
 		selectedGraph = graphKey;
 		loadGraph(selectedGraph);
-	}
-
-	async function validateGraph() {
-		if (!currentGraph) {
-			error = 'No graph loaded';
-			return;
-		}
-
-		try {
-			const evaluator = new GraphEvaluator(currentGraph, nodeRegistry);
-			validationResult = await evaluator.validate();
-			error = '';
-
-			// Update nodes with inferred types for visualization
-			// Preserve existing positions - only update node data, not layout
-			if (validationResult.success && validationResult.inferredTypes && currentGraph) {
-				const flow = updateFlowWithPreservedPositions(currentGraph, nodes, validationResult.inferredTypes);
-				nodes = flow.nodes;
-				edges = flow.edges;
-			}
-		} catch (err) {
-			error = err instanceof Error ? err.message : String(err);
-		}
-	}
-
-	async function evaluateGraph() {
-		if (!currentGraph) {
-			error = 'No graph loaded';
-			return;
-		}
-
-		try {
-			const evaluator = new GraphEvaluator(currentGraph, nodeRegistry);
-			evaluationResult = await evaluator.evaluate();
-			error = '';
-
-			// Update nodes with inferred types for visualization
-			// Preserve existing positions - only update node data, not layout
-			if (evaluationResult.success && evaluationResult.inferredTypes && currentGraph) {
-				const flow = updateFlowWithPreservedPositions(currentGraph, nodes, evaluationResult.inferredTypes);
-				nodes = flow.nodes;
-				edges = flow.edges;
-			}
-		} catch (err) {
-			error = err instanceof Error ? err.message : String(err);
-		}
 	}
 
 	function handlePaneClick() {
@@ -254,18 +159,11 @@
 
 		// Update visualization - use full layout since we're adding a new node
 		// New nodes need to be positioned, so we recalculate layout
-		const flow = graphToSvelteFlow(graph, undefined, handleNodeDoubleClick);
+		const flow = graphToSvelteFlow(graph, handleNodeDoubleClick);
 		nodes = flow.nodes;
 		edges = flow.edges;
 		
-		validationResult = null;
-		evaluationResult = null;
 		showAddNodeModal = false;
-		
-		// Automatically run type checking on graph change
-		if (autoTypeCheck) {
-			setTimeout(() => validateGraph(), 100);
-		}
 	}
 
 	function handleConnect(connection: Connection) {
@@ -301,11 +199,6 @@
 
 			// Update visualization while preserving positions
 			updateVisualizationPreservingPositions();
-			
-			// Automatically run type checking on graph change
-			if (autoTypeCheck) {
-				setTimeout(() => validateGraph(), 100);
-			}
 		}
 	}
 
@@ -353,14 +246,7 @@
 		}
 
 		if (graphModified) {
-			// Reset validation and evaluation results when graph changes
-			validationResult = null;
-			evaluationResult = null;
-
-			// Automatically run type checking on graph change
-			if (autoTypeCheck) {
-				setTimeout(() => validateGraph(), 100);
-			}
+			// Do nothing - graph is already updated
 		}
 	}
 
@@ -370,10 +256,6 @@
 	 */
 	function updateVisualizationPreservingPositions() {
 		if (!graph) return;
-
-		// Reset validation and evaluation results when graph changes
-		validationResult = null;
-		evaluationResult = null;
 
 		// Update flow while preserving existing node positions
 		const flow = updateFlowWithPreservedPositions(graph, nodes);
@@ -391,17 +273,7 @@
 	{:else}
 		<!-- Toolbar -->
 		<div class="toolbar">
-			<div class="toolbar-title">Expression Graph Evaluator</div>
-			<div class="toolbar-actions">
-				<button class="toolbar-btn" onclick={validateGraph}>
-					<span class="btn-icon">✓</span>
-					Validate
-				</button>
-				<button class="toolbar-btn" onclick={evaluateGraph}>
-					<span class="btn-icon">▶</span>
-					Evaluate
-				</button>
-			</div>
+			<div class="toolbar-title">CEL Expression Graph</div>
 		</div>
 
 		<!-- Breadcrumb navigation -->
@@ -438,49 +310,12 @@
 				<!-- Node List -->
 				<NodeListPanel />
 
-				<!-- Validation Results -->
-				{#if validationResult}
+				<!-- CEL Console -->
+				{#if currentGraph}
 					<div class="collapsible-section">
-						<div class="section-header">Validation Result</div>
+						<div class="section-header">CEL Console</div>
 						<div class="section-content">
-							<div class="result-status" class:success={validationResult.success} class:failure={!validationResult.success}>
-								{validationResult.success ? '✓ Valid' : '✗ Invalid'}
-							</div>
-
-							{#if validationResult.errors.length > 0}
-								<div class="error-list">
-									<h4>Errors:</h4>
-									{#each validationResult.errors as err}
-										<div class="error-item">{err}</div>
-									{/each}
-								</div>
-							{/if}
-
-							{#if validationResult.warnings.length > 0}
-								<div class="warning-list">
-									<h4>Warnings:</h4>
-									{#each validationResult.warnings as warn}
-										<div class="warning-item">{warn}</div>
-									{/each}
-								</div>
-							{/if}
-
-							{#if validationResult.success && validationResult.inferredTypes && Object.keys(validationResult.inferredTypes).length > 0}
-								<div class="inferred-types">
-									<h4>Inferred Types:</h4>
-									<pre class="json-display">{JSON.stringify(validationResult.inferredTypes, null, 2)}</pre>
-								</div>
-							{/if}
-						</div>
-					</div>
-				{/if}
-
-				<!-- Evaluation Results -->
-				{#if evaluationResult && graph}
-					<div class="collapsible-section">
-						<div class="section-header">Evaluation Result</div>
-						<div class="section-content">
-							<EvaluationReport result={evaluationResult} {graph} />
+							<CELConsole graph={currentGraph} inputData={{}} />
 						</div>
 					</div>
 				{/if}

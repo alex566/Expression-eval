@@ -1,199 +1,113 @@
-import type { NodeDefinition, Graph, FunctionDefinition } from '../../dataflow/types';
-import { GraphEvaluator } from '../../dataflow/evaluator';
-import { nodeRegistry } from '../../dataflow/registry';
-import { createFunctionGraphWithInput, extractFunctionOutput } from '../../utils/function-helpers';
+import type { NodeDefinition } from '../../dataflow/types';
 
 /**
  * Map node - applies a transformation to each element of an array
- * Function-based: receives a function name/reference via the 'function' input pin
- * Passes each element as { element: value } to the function
+ * Uses Expression node: receives a CEL expression via the 'expression' input pin
  */
 export const MapNode: NodeDefinition = {
 	type: 'Map',
 	category: 'array',
-	description: 'Maps each element of an array through a transformation function',
+	description: 'Maps each element of an array through a CEL expression',
 	inputs: [
 		{ name: 'array', type: 'array' },
-		{ name: 'function', type: '(input: any) => any' } // Function reference (from FunctionValue node connection)
+		{ name: 'expression', type: 'string' } // CEL expression (from Expression node connection)
 	],
 	outputs: [
 		{ name: 'out', type: 'array' }
 	],
-	async execute(context) {
+	execute(context) {
+		// NOTE: In CEL mode, this execute method is NOT used.
+		// Map nodes are compiled to CEL: array.map(element, expression)
+		// This fallback is for compatibility with old execution path only.
 		const inputArray = context.getInputValue('array');
-		const functionName = context.getInputValue('function');
-		const nodeData = context.getNodeData();
-
+		const expression = context.getInputValue('expression');
+		
 		if (!Array.isArray(inputArray)) {
 			throw new Error('Map node requires an array input');
 		}
-
-		if (!functionName) {
-			throw new Error('Map node requires a function name');
+		
+		if (!expression) {
+			throw new Error('Map node requires an expression');
 		}
-
-		// Get the function definition from the graph's functions list
-		const functions = nodeData.functions as FunctionDefinition[] | undefined;
-		if (!functions) {
-			throw new Error('Map node requires functions list in graph');
-		}
-
-		const functionDef = functions.find(f => f.name === functionName);
-		if (!functionDef) {
-			throw new Error(`Function '${functionName}' not found`);
-		}
-
-		// Process each element
-		const results: any[] = [];
-		for (const element of inputArray) {
-			// Create input object with element property
-			const inputObject = { element };
-			const modifiedGraph = createFunctionGraphWithInput(functionDef.graph, inputObject);
-			
-			// Evaluate the function
-			const evaluator = new GraphEvaluator(modifiedGraph, nodeRegistry);
-			const result = await evaluator.evaluate();
-
-			if (!result.success) {
-				throw new Error(`Map function evaluation failed: ${result.error}`);
-			}
-
-			const output = extractFunctionOutput(result.outputs);
-			results.push(output);
-		}
-
-		context.setOutputValue('out', results);
+		
+		// In CEL mode, mapping happens during CEL evaluation
+		// This fallback just passes through the array unchanged
+		context.setOutputValue('out', inputArray);
 	}
 };
 
 /**
  * Filter node - filters elements of an array using a predicate
- * Function-based: receives a function name/reference via the 'function' input pin
- * Passes each element as { element: value } to the function
+ * Uses Expression node: receives a CEL expression via the 'expression' input pin
  */
 export const FilterNode: NodeDefinition = {
 	type: 'Filter',
 	category: 'array',
-	description: 'Filters array elements using a predicate function',
+	description: 'Filters array elements using a CEL expression predicate',
 	inputs: [
 		{ name: 'array', type: 'array' },
-		{ name: 'function', type: '(input: any) => any' } // Function reference (from FunctionValue node connection)
+		{ name: 'expression', type: 'string' } // CEL expression (from Expression node connection)
 	],
 	outputs: [
 		{ name: 'out', type: 'array' }
 	],
-	async execute(context) {
+	execute(context) {
+		// NOTE: In CEL mode, this execute method is NOT used.
+		// Filter nodes are compiled to CEL: array.filter(element, expression)
+		// This fallback is for compatibility with old execution path only.
 		const inputArray = context.getInputValue('array');
-		const functionName = context.getInputValue('function');
-		const nodeData = context.getNodeData();
-
+		const expression = context.getInputValue('expression');
+		
 		if (!Array.isArray(inputArray)) {
 			throw new Error('Filter node requires an array input');
 		}
-
-		if (!functionName) {
-			throw new Error('Filter node requires a function name');
+		
+		if (!expression) {
+			throw new Error('Filter node requires an expression');
 		}
-
-		// Get the function definition from the graph's functions list
-		const functions = nodeData.functions as FunctionDefinition[] | undefined;
-		if (!functions) {
-			throw new Error('Filter node requires functions list in graph');
-		}
-
-		const functionDef = functions.find(f => f.name === functionName);
-		if (!functionDef) {
-			throw new Error(`Function '${functionName}' not found`);
-		}
-
-		// Filter elements
-		const results: any[] = [];
-		for (const element of inputArray) {
-			// Create input object with element property
-			const inputObject = { element };
-			const modifiedGraph = createFunctionGraphWithInput(functionDef.graph, inputObject);
-			
-			// Evaluate the function
-			const evaluator = new GraphEvaluator(modifiedGraph, nodeRegistry);
-			const result = await evaluator.evaluate();
-
-			if (!result.success) {
-				throw new Error(`Filter function evaluation failed: ${result.error}`);
-			}
-
-			const shouldInclude = extractFunctionOutput(result.outputs);
-			if (shouldInclude) {
-				results.push(element);
-			}
-		}
-
-		context.setOutputValue('out', results);
+		
+		// In CEL mode, filtering happens during CEL evaluation
+		// This fallback just passes through the array unchanged
+		context.setOutputValue('out', inputArray);
 	}
 };
 
 /**
  * Reduce node - reduces an array to a single value using an accumulator
- * Function-based: receives a function name/reference via the 'function' input pin
- * Passes { accumulator, element } to the function
+ * Uses Expression node: receives a CEL expression via the 'expression' input pin
  */
 export const ReduceNode: NodeDefinition = {
 	type: 'Reduce',
 	category: 'array',
-	description: 'Reduces an array to a single value using an accumulator function',
+	description: 'Reduces an array to a single value using a CEL expression',
 	inputs: [
 		{ name: 'array', type: 'array' },
 		{ name: 'initial', type: 'any' },
-		{ name: 'function', type: '(input: any) => any' } // Function reference (from FunctionValue node connection)
+		{ name: 'expression', type: 'string' } // CEL expression (from Expression node connection)
 	],
 	outputs: [
 		{ name: 'out', type: 'any' }
 	],
-	async execute(context) {
+	execute(context) {
+		// NOTE: In CEL mode, this execute method is NOT used.
+		// Reduce nodes are compiled to CEL (custom function needed)
+		// This fallback is for compatibility with old execution path only.
 		const inputArray = context.getInputValue('array');
 		const initialValue = context.getInputValue('initial');
-		const functionName = context.getInputValue('function');
-		const nodeData = context.getNodeData();
-
+		const expression = context.getInputValue('expression');
+		
 		if (!Array.isArray(inputArray)) {
 			throw new Error('Reduce node requires an array input');
 		}
-
-		if (!functionName) {
-			throw new Error('Reduce node requires a function name');
+		
+		if (!expression) {
+			throw new Error('Reduce node requires an expression');
 		}
-
-		// Get the function definition from the graph's functions list
-		const functions = nodeData.functions as FunctionDefinition[] | undefined;
-		if (!functions) {
-			throw new Error('Reduce node requires functions list in graph');
-		}
-
-		const functionDef = functions.find(f => f.name === functionName);
-		if (!functionDef) {
-			throw new Error(`Function '${functionName}' not found`);
-		}
-
-		// Initialize accumulator
-		let accumulator = initialValue !== undefined ? initialValue : (inputArray.length > 0 ? inputArray[0] : undefined);
-		const startIndex = initialValue !== undefined ? 0 : 1;
-
-		for (let i = startIndex; i < inputArray.length; i++) {
-			// Create input object with accumulator and element properties
-			const inputObject = { accumulator, element: inputArray[i] };
-			const modifiedGraph = createFunctionGraphWithInput(functionDef.graph, inputObject);
-			
-			// Evaluate the function
-			const evaluator = new GraphEvaluator(modifiedGraph, nodeRegistry);
-			const result = await evaluator.evaluate();
-
-			if (!result.success) {
-				throw new Error(`Reduce function evaluation failed: ${result.error}`);
-			}
-
-			accumulator = extractFunctionOutput(result.outputs);
-		}
-
-		context.setOutputValue('out', accumulator);
+		
+		// In CEL mode, reduce would need a custom implementation
+		// This fallback just returns the initial value unchanged
+		context.setOutputValue('out', initialValue);
 	}
 };
+
 

@@ -3,14 +3,14 @@ import type { NodeDefinition } from '../../dataflow/types';
 /**
  * If node - conditional branching
  * Outputs either the true or false value based on condition
- * For array filtering operations, use Filter node
+ * Can accept either a boolean value or a CEL expression that returns boolean
  */
 export const IfNode: NodeDefinition = {
 	type: 'If',
 	category: 'control',
-	description: 'Conditional execution based on a condition. For array filtering, use Filter node.',
+	description: 'Conditional execution based on a condition. Can accept boolean or expression.',
 	inputs: [
-		{ name: 'condition', type: 'boolean' },
+		{ name: 'condition', type: 'boolean | string' }, // boolean or CEL expression
 		{ name: 'true', type: 'any' },
 		{ name: 'false', type: 'any' }
 	],
@@ -23,14 +23,22 @@ export const IfNode: NodeDefinition = {
 		const falseValue = context.getInputValue('false');
 
 		if (Array.isArray(condition)) {
-			throw new Error('If node does not support array conditions. Use Filter node for array filtering operations.');
+			throw new Error('If node does not support array conditions.');
 		}
 
-		// Single condition - standard behavior
-		if (condition) {
-			context.setOutputValue('out', trueValue);
+		// NOTE: In CEL mode, this execute method may not be used
+		// If condition is a string (CEL expression), it will be compiled at graph level
+		// This fallback evaluates based on the condition value
+		if (typeof condition === 'boolean') {
+			if (condition) {
+				context.setOutputValue('out', trueValue);
+			} else {
+				context.setOutputValue('out', falseValue);
+			}
 		} else {
-			context.setOutputValue('out', falseValue);
+			// For string conditions in old execution path, treat as truthy
+			// In CEL mode, the ternary operator would be used instead
+			context.setOutputValue('out', condition ? trueValue : falseValue);
 		}
 	}
 };
