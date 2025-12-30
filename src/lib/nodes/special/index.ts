@@ -114,13 +114,14 @@ export const InputNode: NodeDefinition = {
 
 /**
  * Output node - marks final output values
- * Dynamically creates input ports based on the configuration
+ * Dynamically creates input ports based on connected edges
+ * Input pin names are inferred from the source output port names
  */
 export const OutputNode: NodeDefinition = {
 	type: 'Output',
 	category: 'special',
-	description: 'Marks values as final outputs of the graph',
-	inputs: [], // Will be dynamically determined from data
+	description: 'Marks values as final outputs of the graph. Input pins are automatically inferred from connections.',
+	inputs: [], // Will be dynamically determined from edges
 	outputs: [],
 	execute(context) {
 		const data = context.getNodeData();
@@ -133,5 +134,9 @@ export const OutputNode: NodeDefinition = {
 				context.setOutputValue(name, value);
 			}
 		}
+	},
+	inferOutputTypes(context: TypeInferenceContext): Record<string, string> {
+		// Output node is a terminal node with no output ports
+		return {};
 	}
 };

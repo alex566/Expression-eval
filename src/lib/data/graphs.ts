@@ -739,6 +739,58 @@ export const ARRAY_OPERATIONS_GRAPH: Graph = {
 	]
 };
 
+/**
+ * Demonstrates automatic input pin name inference for Output node
+ * The Output node automatically infers input pin names from connected edges
+ * No need to pre-configure the 'outputs' array
+ */
+export const AUTO_INFERRED_OUTPUT_GRAPH: Graph = {
+	nodes: [
+		{
+			id: "temperature",
+			type: "Expression",
+			data: {
+				expression: "25"
+			}
+		},
+		{
+			id: "humidity",
+			type: "Expression",
+			data: {
+				expression: "60"
+			}
+		},
+		{
+			id: "status",
+			type: "Expression",
+			data: {
+				expression: '"optimal"'
+			}
+		},
+		{
+			id: "output",
+			type: "Output",
+			data: {
+				// No 'outputs' array needed - pins are automatically inferred from edges
+			}
+		}
+	],
+	edges: [
+		{
+			from: { node: "temperature", port: "out" },
+			to: { node: "output", port: "temperature" }  // Creates 'temperature' input pin
+		},
+		{
+			from: { node: "humidity", port: "out" },
+			to: { node: "output", port: "humidity" }  // Creates 'humidity' input pin
+		},
+		{
+			from: { node: "status", port: "out" },
+			to: { node: "output", port: "status" }  // Creates 'status' input pin
+		}
+	]
+};
+
 export const GRAPHS: Record<string, Graph> = {
 	'sample': SAMPLE_GRAPH,
 	'complex': COMPLEX_GRAPH,
@@ -748,5 +800,6 @@ export const GRAPHS: Record<string, Graph> = {
 	'expression-math': EXPRESSION_MATH_GRAPH,
 	'create-object': CREATE_OBJECT_GRAPH,
 	'property-access': PROPERTY_ACCESS_GRAPH,
-	'array-operations': ARRAY_OPERATIONS_GRAPH
+	'array-operations': ARRAY_OPERATIONS_GRAPH,
+	'auto-inferred-output': AUTO_INFERRED_OUTPUT_GRAPH
 };

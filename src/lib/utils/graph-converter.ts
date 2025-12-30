@@ -70,14 +70,29 @@ function getNodePorts(
 	else if (nodeType === 'Value') {
 		outputs = [{ name: 'out', type: 'any' as const }];
 	}
-	// Special handling for Output node - create inputs based on configuration
+	// Special handling for Output node - create inputs based on configuration or infer from edges
 	else if (nodeType === 'Output') {
-		const outputNames = nodeData.outputs || ['output'];
-		inputs = outputNames.map((name: string) => ({ name, type: 'any' as const }));
+		// First, try to infer input pins from connected edges (like dynamic nodes)
+		const inputPorts = new Set<string>();
+		edges.forEach(edge => {
+			if (edge.to.node === nodeId) {
+				// Infer input pin name from the edge's target port name
+				inputPorts.add(edge.to.port);
+			}
+		});
+		
+		// If we have inferred ports from edges, use them
+		if (inputPorts.size > 0) {
+			inputs = Array.from(inputPorts).sort().map(name => ({ name, type: 'any' as const }));
+		} else {
+			// Fallback to configured outputs for backward compatibility
+			const outputNames = nodeData.outputs || ['output'];
+			inputs = outputNames.map((name: string) => ({ name, type: 'any' as const }));
+		}
 		
 		// Add one extra input pin to allow adding more outputs dynamically
 		// This enables the "auto-add" functionality when a pin is attached
-		const usedNames = new Set(outputNames);
+		const usedNames = new Set(inputs.map(i => i.name));
 		let nextIndex = 0;
 		let nextName = `out${nextIndex}`;
 		while (usedNames.has(nextName)) {
