@@ -26,8 +26,9 @@ export const IfNode: NodeDefinition = {
 			throw new Error('If node does not support array conditions.');
 		}
 
-		// If condition is a string, it's a CEL expression - will be compiled
-		// If it's a boolean, use it directly
+		// NOTE: In CEL mode, this execute method may not be used
+		// If condition is a string (CEL expression), it will be compiled at graph level
+		// This fallback evaluates based on the condition value
 		if (typeof condition === 'boolean') {
 			if (condition) {
 				context.setOutputValue('out', trueValue);
@@ -35,9 +36,9 @@ export const IfNode: NodeDefinition = {
 				context.setOutputValue('out', falseValue);
 			}
 		} else {
-			// In CEL mode, this will be compiled to: condition ? true : false
-			// For now, just output the true value as fallback
-			context.setOutputValue('out', trueValue);
+			// For string conditions in old execution path, treat as truthy
+			// In CEL mode, the ternary operator would be used instead
+			context.setOutputValue('out', condition ? trueValue : falseValue);
 		}
 	}
 };

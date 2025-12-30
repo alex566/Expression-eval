@@ -65,10 +65,8 @@ function compileNodeToCEL(
 			
 		case 'Expression':
 			// Expression node contains a CEL expression string
-			// Replace references to connected inputs
-			let expr = node.data.expression || 'null';
-			// Simple placeholder replacement (can be enhanced)
-			return expr;
+			// Get the expression from node data and return it directly
+			return node.data.expression || 'null';
 			
 		case 'Add':
 			return `(${getInputExpression('in0')} + ${getInputExpression('in1')})`;
@@ -101,26 +99,29 @@ function compileNodeToCEL(
 			
 		case 'Map': {
 			const array = getInputExpression('array');
-			const exprNode = getInputExpression('expression');
-			// CEL map: array.map(x, <expression>)
-			return `${array}.map(element, ${exprNode})`;
+			const exprInput = getInputExpression('expression');
+			// If expression comes from an Expression node, it will be the expression string
+			// CEL map: array.map(element, <expression>)
+			return `${array}.map(element, ${exprInput})`;
 		}
 			
 		case 'Filter': {
 			const array = getInputExpression('array');
-			const exprNode = getInputExpression('expression');
-			// CEL filter: array.filter(x, <expression>)
-			return `${array}.filter(element, ${exprNode})`;
+			const exprInput = getInputExpression('expression');
+			// If expression comes from an Expression node, it will be the expression string
+			// CEL filter: array.filter(element, <expression>)
+			return `${array}.filter(element, ${exprInput})`;
 		}
 			
 		case 'Reduce': {
-			// CEL doesn't have built-in reduce, we'd need to implement or use fold
-			// For simplicity, compile to a function call
+			// Note: CEL doesn't have built-in reduce
+			// This is a placeholder - proper implementation would need custom CEL functions
+			// or use a different approach like fold operations
 			const array = getInputExpression('array');
 			const initial = getInputExpression('initial');
-			const exprNode = getInputExpression('expression');
-			// This is a simplified version - real implementation would need custom CEL functions
-			return `reduce(${array}, ${initial}, ${exprNode})`;
+			const exprInput = getInputExpression('expression');
+			// This will fail at runtime - needs custom implementation
+			return `reduce(${array}, ${initial}, ${exprInput})`;
 		}
 			
 		case 'Output':
@@ -128,8 +129,10 @@ function compileNodeToCEL(
 			return getInputExpression('result') || getInputExpression('in');
 			
 		default:
-			// Unknown node type
-			console.warn(`Unknown node type: ${node.type}`);
+			// Unknown node type - log warning for debugging
+			if (typeof console !== 'undefined' && console.warn) {
+				console.warn(`Unknown node type during CEL compilation: ${node.type}`);
+			}
 			return 'null';
 	}
 }

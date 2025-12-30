@@ -16,8 +16,9 @@ export const MapNode: NodeDefinition = {
 		{ name: 'out', type: 'array' }
 	],
 	execute(context) {
-		// Map nodes are compiled to CEL at graph compilation time
-		// This execute method is for compatibility but won't be used in CEL mode
+		// NOTE: In CEL mode, this execute method is NOT used.
+		// Map nodes are compiled to CEL: array.map(element, expression)
+		// This fallback is for compatibility with old execution path only.
 		const inputArray = context.getInputValue('array');
 		const expression = context.getInputValue('expression');
 		
@@ -29,8 +30,8 @@ export const MapNode: NodeDefinition = {
 			throw new Error('Map node requires an expression');
 		}
 		
-		// In CEL mode, this would be compiled to: array.map(element, expression)
-		// For now, just pass through the array
+		// In CEL mode, mapping happens during CEL evaluation
+		// This fallback just passes through the array unchanged
 		context.setOutputValue('out', inputArray);
 	}
 };
@@ -51,7 +52,9 @@ export const FilterNode: NodeDefinition = {
 		{ name: 'out', type: 'array' }
 	],
 	execute(context) {
-		// Filter nodes are compiled to CEL at graph compilation time
+		// NOTE: In CEL mode, this execute method is NOT used.
+		// Filter nodes are compiled to CEL: array.filter(element, expression)
+		// This fallback is for compatibility with old execution path only.
 		const inputArray = context.getInputValue('array');
 		const expression = context.getInputValue('expression');
 		
@@ -63,8 +66,8 @@ export const FilterNode: NodeDefinition = {
 			throw new Error('Filter node requires an expression');
 		}
 		
-		// In CEL mode, this would be compiled to: array.filter(element, expression)
-		// For now, just pass through the array
+		// In CEL mode, filtering happens during CEL evaluation
+		// This fallback just passes through the array unchanged
 		context.setOutputValue('out', inputArray);
 	}
 };
@@ -86,7 +89,9 @@ export const ReduceNode: NodeDefinition = {
 		{ name: 'out', type: 'any' }
 	],
 	execute(context) {
-		// Reduce nodes are compiled to CEL at graph compilation time
+		// NOTE: In CEL mode, this execute method is NOT used.
+		// Reduce nodes are compiled to CEL (custom function needed)
+		// This fallback is for compatibility with old execution path only.
 		const inputArray = context.getInputValue('array');
 		const initialValue = context.getInputValue('initial');
 		const expression = context.getInputValue('expression');
@@ -99,8 +104,8 @@ export const ReduceNode: NodeDefinition = {
 			throw new Error('Reduce node requires an expression');
 		}
 		
-		// In CEL mode, this would be compiled to a custom reduce function
-		// For now, just return the initial value
+		// In CEL mode, reduce would need a custom implementation
+		// This fallback just returns the initial value unchanged
 		context.setOutputValue('out', initialValue);
 	}
 };

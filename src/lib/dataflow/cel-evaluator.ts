@@ -27,8 +27,6 @@ export class CELGraphEvaluator {
 			// Compile graph to CEL expression
 			const celExpression = this.compile();
 			
-			console.log('CEL Expression:', celExpression);
-			
 			// Create CEL environment
 			const env = celEnv({});
 			
