@@ -802,14 +802,14 @@ export const NAME_PROPAGATION_GRAPH: Graph = {
 			id: "price",
 			type: "Expression",
 			data: {
-				expression: "100"
+				expression: "100.0"
 			}
 		},
 		{
 			id: "quantity",
 			type: "Expression",
 			data: {
-				expression: "5"
+				expression: "5.0"
 			}
 		},
 		{
