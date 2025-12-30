@@ -70,6 +70,17 @@ function getNodePorts(
 	else if (nodeType === 'Output') {
 		const outputNames = nodeData.outputs || ['output'];
 		inputs = outputNames.map((name: string) => ({ name, type: 'any' as const }));
+		
+		// Add one extra input pin to allow adding more outputs dynamically
+		// This enables the "auto-add" functionality when a pin is attached
+		const usedNames = new Set(outputNames);
+		let nextIndex = 0;
+		let nextName = `out${nextIndex}`;
+		while (usedNames.has(nextName)) {
+			nextIndex++;
+			nextName = `out${nextIndex}`;
+		}
+		inputs.push({ name: nextName, type: 'any' as const });
 	}
 	// Standard node - use definition
 	else if (definition?.inputs && definition?.outputs) {
