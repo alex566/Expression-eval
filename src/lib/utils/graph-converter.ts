@@ -1,6 +1,7 @@
 import type { Node, Edge } from '@xyflow/svelte';
 import type { Graph, PortSpec } from '../dataflow/types';
 import { nodeRegistry } from '../dataflow/registry';
+import { inferGraphTypes } from '../dataflow/type-inference';
 import dagre from 'dagre';
 
 /**
@@ -33,12 +34,15 @@ function getSchemaType(value: any): string {
  * Determine input and output ports for a node based on its type
  * Returns PortSpec arrays from the node definition, or creates fallback PortSpec objects
  * Special handling for Value, Output nodes and dynamic nodes to create ports based on data/edges
+ * Optionally accepts inferred types to override default 'any' types
  */
 function getNodePorts(
 	nodeType: string, 
 	nodeId: string,
 	nodeData: Record<string, any>,
-	edges: Array<{ from: { node: string; port: string }; to: { node: string; port: string } }>
+	edges: Array<{ from: { node: string; port: string }; to: { node: string; port: string } }>,
+	inferredInputTypes?: Record<string, string>,
+	inferredOutputTypes?: Record<string, string>
 ): { inputs: PortSpec[]; outputs: PortSpec[] } {
 	// Get ports from the node definition in the registry
 	const definition = nodeRegistry.get(nodeType);
@@ -125,6 +129,21 @@ function getNodePorts(
 		outputs = config.outputs.map(name => ({ name, type: 'any' as const }));
 	}
 
+	// Apply inferred types if available
+	if (inferredInputTypes) {
+		inputs = inputs.map(port => ({
+			...port,
+			type: inferredInputTypes[port.name] || port.type
+		}));
+	}
+	
+	if (inferredOutputTypes) {
+		outputs = outputs.map(port => ({
+			...port,
+			type: inferredOutputTypes[port.name] || port.type
+		}));
+	}
+
 	return { inputs, outputs };
 }
 
@@ -138,6 +157,10 @@ export function graphToSvelteFlow(
 ): { nodes: Node[]; edges: Edge[] } {
 	const nodes: Node[] = [];
 	const edges: Edge[] = [];
+
+	// Run type inference to get proper types for all nodes
+	const typeCheckResult = inferGraphTypes(graph);
+	const nodeTypeInfo = typeCheckResult.nodeTypes;
 
 	// Create a new dagre graph with horizontal layout (LR = Left to Right)
 	const dagreGraph = new dagre.graphlib.Graph();
@@ -155,7 +178,15 @@ export function graphToSvelteFlow(
 
 	// First pass: Create nodes with their data and add to dagre graph
 	graph.nodes.forEach((node) => {
-		const ports = getNodePorts(node.type, node.id, node.data, graph.edges);
+		const typeInfo = nodeTypeInfo.get(node.id);
+		const ports = getNodePorts(
+			node.type, 
+			node.id, 
+			node.data, 
+			graph.edges,
+			typeInfo?.inputTypes,
+			typeInfo?.outputTypes
+		);
 		
 		// Add node to dagre graph with dimensions
 		// Approximate node size based on content
@@ -254,6 +285,10 @@ export function updateFlowWithPreservedPositions(
 	const nodes: Node[] = [];
 	const edges: Edge[] = [];
 
+	// Run type inference to get proper types for all nodes
+	const typeCheckResult = inferGraphTypes(graph);
+	const nodeTypeInfo = typeCheckResult.nodeTypes;
+
 	// Create a map of existing positions and extract onNodeDoubleClick from existing nodes
 	const positionMap = new Map<string, { x: number; y: number }>();
 	let callbackFromExisting: ((nodeId: string) => void) | undefined;
@@ -270,7 +305,15 @@ export function updateFlowWithPreservedPositions(
 
 	// Create nodes with preserved positions
 	graph.nodes.forEach((node) => {
-		const ports = getNodePorts(node.type, node.id, node.data, graph.edges);
+		const typeInfo = nodeTypeInfo.get(node.id);
+		const ports = getNodePorts(
+			node.type, 
+			node.id, 
+			node.data, 
+			graph.edges,
+			typeInfo?.inputTypes,
+			typeInfo?.outputTypes
+		);
 		const existingPosition = positionMap.get(node.id);
 
 		// Check if this node is a FunctionValue node

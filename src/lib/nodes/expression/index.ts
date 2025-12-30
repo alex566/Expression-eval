@@ -26,11 +26,44 @@ export const ExpressionNode: NodeDefinition = {
 	},
 	inferOutputTypes(context: TypeInferenceContext): Record<string, string> {
 		// For CEL expressions, we could parse the expression to infer the type
-		// For now, we return 'dyn' since CEL expressions can produce any type
-		// A more sophisticated implementation would use CEL's type checker
+		// For now, we use heuristic-based type inference
 		const expression = context.getNodeData().expression || '';
 		
-		// Simple heuristic-based type inference
+		// Check for literal values first
+		const trimmedExpr = expression.trim();
+		
+		// Integer literal (e.g., "10", "42", "-5")
+		if (/^-?\d+$/.test(trimmedExpr)) {
+			return { out: 'int' };
+		}
+		
+		// Double literal (e.g., "3.14", "-2.5")
+		if (/^-?\d+\.\d+$/.test(trimmedExpr)) {
+			return { out: 'double' };
+		}
+		
+		// String literal (e.g., '"hello"', "'world'")
+		if ((trimmedExpr.startsWith('"') && trimmedExpr.endsWith('"')) ||
+		    (trimmedExpr.startsWith("'") && trimmedExpr.endsWith("'"))) {
+			return { out: 'string' };
+		}
+		
+		// Boolean literal
+		if (trimmedExpr === 'true' || trimmedExpr === 'false') {
+			return { out: 'bool' };
+		}
+		
+		// List literal (e.g., "[1, 2, 3]")
+		if (trimmedExpr.startsWith('[') && trimmedExpr.endsWith(']')) {
+			return { out: 'list(dyn)' };
+		}
+		
+		// Map/Object literal (e.g., "{a: 1, b: 2}")
+		if (trimmedExpr.startsWith('{') && trimmedExpr.endsWith('}')) {
+			return { out: 'map(string, dyn)' };
+		}
+		
+		// Simple heuristic-based type inference for expressions
 		if (expression.includes('>') || expression.includes('<') || 
 		    expression.includes('==') || expression.includes('!=') || 
 		    expression.includes('&&') || expression.includes('||')) {
@@ -42,9 +75,19 @@ export const ExpressionNode: NodeDefinition = {
 		    expression.includes('*') || expression.includes('/')) {
 			// Check if inputs are numeric
 			const in0Type = context.getInputType('in0');
-			if (in0Type === 'int' || in0Type === 'double') {
-				return { out: in0Type };
+			const in1Type = context.getInputType('in1');
+			
+			// If both inputs are integers, result is integer
+			if (in0Type === 'int' && in1Type === 'int') {
+				return { out: 'int' };
 			}
+			
+			// If any input is double or if we have a numeric operation, return double
+			if (in0Type === 'int' || in0Type === 'double' || 
+			    in1Type === 'int' || in1Type === 'double') {
+				return { out: 'double' };
+			}
+			
 			return { out: 'dyn' };
 		}
 		
