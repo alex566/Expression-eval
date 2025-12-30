@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Graph } from '$lib/dataflow/types';
 	import { CELGraphEvaluator } from '$lib/dataflow/cel-evaluator';
+	import { onMount } from 'svelte';
 	
 	export let graph: Graph;
 	export let inputData: any = {};
@@ -10,6 +11,20 @@
 	let error = '';
 	let isEvaluating = false;
 	let inputDataStr = JSON.stringify(inputData, null, 2);
+	
+	// Load sample input data on mount
+	onMount(async () => {
+		try {
+			const response = await fetch('/sample-input.json');
+			if (response.ok) {
+				const sampleData = await response.json();
+				inputDataStr = JSON.stringify(sampleData, null, 2);
+			}
+		} catch (err) {
+			// Silently fail, keep default input data
+			console.warn('Could not load sample input data:', err);
+		}
+	});
 	
 	// Compile to CEL expression
 	function compileToCEL() {

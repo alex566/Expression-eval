@@ -371,6 +371,99 @@ export const DATE_SAMPLE_GRAPH: Graph = {
 	]
 };
 
+export const INPUT_SAMPLE_GRAPH: Graph = {
+	nodes: [
+		{
+			id: "input",
+			type: "Input",
+			data: {
+				// Define the expected input schema for dynamic pin generation
+				inputSchema: {
+					name: "string",
+					age: "number",
+					scores: "array",
+					address: "object",
+					active: "boolean",
+					tags: "array"
+				}
+			}
+		},
+		{
+			id: "ageExpr",
+			type: "Expression",
+			data: {
+				expression: "input.age"
+			}
+		},
+		{
+			id: "threshold",
+			type: "Value",
+			data: {
+				value: 18
+			}
+		},
+		{
+			id: "compare",
+			type: "Compare",
+			data: {
+				operator: ">"
+			}
+		},
+		{
+			id: "adultLabel",
+			type: "Value",
+			data: {
+				value: "Adult"
+			}
+		},
+		{
+			id: "minorLabel",
+			type: "Value",
+			data: {
+				value: "Minor"
+			}
+		},
+		{
+			id: "if",
+			type: "If",
+			data: {}
+		},
+		{
+			id: "output",
+			type: "Output",
+			data: {
+				outputs: ["ageCategory"]
+			}
+		}
+	],
+	edges: [
+		{
+			from: { node: "ageExpr", port: "out" },
+			to: { node: "compare", port: "a" }
+		},
+		{
+			from: { node: "threshold", port: "out" },
+			to: { node: "compare", port: "b" }
+		},
+		{
+			from: { node: "compare", port: "out" },
+			to: { node: "if", port: "condition" }
+		},
+		{
+			from: { node: "adultLabel", port: "out" },
+			to: { node: "if", port: "true" }
+		},
+		{
+			from: { node: "minorLabel", port: "out" },
+			to: { node: "if", port: "false" }
+		},
+		{
+			from: { node: "if", port: "out" },
+			to: { node: "output", port: "ageCategory" }
+		}
+	]
+};
+
 export const CEL_SAMPLE_GRAPH: Graph = {
 	nodes: [
 		{
@@ -436,5 +529,6 @@ export const GRAPHS: Record<string, Graph> = {
 	'sample': SAMPLE_GRAPH,
 	'complex': COMPLEX_GRAPH,
 	'dates': DATE_SAMPLE_GRAPH,
+	'input-example': INPUT_SAMPLE_GRAPH,
 	'cel': CEL_SAMPLE_GRAPH
 };

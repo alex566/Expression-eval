@@ -8,6 +8,7 @@
 
 	const graphs = [
 		{ key: 'sample', name: 'Sample Graph', description: 'Basic addition example' },
+		{ key: 'input-example', name: 'Input Example', description: 'Using input data with dynamic pins' },
 		{ key: 'complex', name: 'Complex Graph', description: 'Multiple operations and nodes' },
 		{ key: 'dates', name: 'Date Operations', description: 'Working with dates and times' },
 		{ key: 'arrays', name: 'Array Operations', description: 'Array manipulation and transformations' },

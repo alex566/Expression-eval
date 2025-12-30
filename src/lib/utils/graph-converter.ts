@@ -32,8 +32,29 @@ function getNodePorts(
 	let inputs: PortSpec[] = [];
 	let outputs: PortSpec[] = [];
 
+	// Special handling for Input node - create outputs based on input data structure if available
+	if (nodeType === 'Input') {
+		// Check if inputSchema is provided in node data
+		const inputSchema = nodeData.inputSchema;
+		if (inputSchema && typeof inputSchema === 'object') {
+			// Create output pins for each top-level property in the input schema
+			const keys = Object.keys(inputSchema);
+			outputs = keys.map(key => ({ 
+				name: key, 
+				type: typeof inputSchema[key] === 'object' && Array.isArray(inputSchema[key]) 
+					? 'array' 
+					: typeof inputSchema[key] === 'object' 
+					? 'object' 
+					: typeof inputSchema[key] 
+			}));
+		}
+		// Always add a generic 'out' port for the whole input object
+		if (outputs.length === 0 || !outputs.some(o => o.name === 'out')) {
+			outputs.push({ name: 'out', type: 'any' as const });
+		}
+	}
 	// Special handling for Value node - single output
-	if (nodeType === 'Value') {
+	else if (nodeType === 'Value') {
 		outputs = [{ name: 'out', type: 'any' as const }];
 	}
 	// Special handling for Output node - create inputs based on configuration

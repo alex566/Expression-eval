@@ -50,7 +50,16 @@ function compileNodeToCEL(
 	const getInputExpression = (portName: string): string => {
 		const edge = graph.edges.find(e => e.to.node === node.id && e.to.port === portName);
 		if (edge) {
-			return nodeOutputs.get(edge.from.node) || 'null';
+			const sourceNode = graph.nodes.find(n => n.id === edge.from.node);
+			const sourceExpression = nodeOutputs.get(edge.from.node) || 'null';
+			
+			// Special handling for Input node with property access
+			if (sourceNode && sourceNode.type === 'Input' && edge.from.port !== 'out') {
+				// If accessing a specific property from Input node, append property access
+				return `input.${edge.from.port}`;
+			}
+			
+			return sourceExpression;
 		}
 		return 'null';
 	};
@@ -139,6 +148,7 @@ function compileNodeToCEL(
 
 /**
  * Topological sort of nodes to determine evaluation order
+ * Returns nodes in dependency order (inputs before outputs)
  */
 function topologicalSort(graph: Graph): GraphNode[] {
 	const sorted: GraphNode[] = [];
@@ -184,5 +194,7 @@ function topologicalSort(graph: Graph): GraphNode[] {
 		visit(node.id);
 	}
 	
-	return sorted;
+	// Reverse the sorted array to get correct dependency order
+	// DFS post-order gives reverse topological order
+	return sorted.reverse();
 }
