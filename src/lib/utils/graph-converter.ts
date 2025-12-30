@@ -128,6 +128,7 @@ function getNodePorts(
 		inputs.push({ 
 			name: nextName, 
 			type: 'any' as const,
+			displayName: 'in +',
 			nameMode: PinMode.Inferred
 		});
 	}
@@ -214,6 +215,7 @@ function getNodePorts(
 			inputs.push({ 
 				name: `in${nextInputIndex}`, 
 				type: 'any' as const,
+				displayName: 'in +',
 				nameMode: PinMode.Inferred,
 				typeMode: PinMode.Inferred
 			});
