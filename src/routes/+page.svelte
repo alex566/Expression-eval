@@ -9,6 +9,7 @@
 	import CustomNode from '$lib/components/CustomNode.svelte';
 	import CELConsole from '$lib/components/CELConsole.svelte';
 	import AddNodeModal from '$lib/components/AddNodeModal.svelte';
+	import NodeEditModal from '$lib/components/NodeEditModal.svelte';
 	import Breadcrumbs from '$lib/components/Breadcrumbs.svelte';
 	import NodeListPanel from '$lib/components/NodeListPanel.svelte';
 	import SampleGraphsPanel from '$lib/components/SampleGraphsPanel.svelte';
@@ -21,6 +22,8 @@
 	let error = $state('');
 	let selectedGraph = $state('sample');
 	let showAddNodeModal = $state(false);
+	let showEditNodeModal = $state(false);
+	let editingNode = $state<GraphNode | null>(null);
 
 	// Breadcrumb navigation state
 	interface BreadcrumbItem {
@@ -63,8 +66,8 @@
 			breadcrumbs = [{ label: 'Main Graph', graph }];
 			currentGraph = graph;
 
-			// Convert to SvelteFlow format with double-click handler
-			const flow = graphToSvelteFlow(graph, handleNodeDoubleClick);
+			// Convert to SvelteFlow format with double-click handlers
+			const flow = graphToSvelteFlow(graph, handleNodeDoubleClick, handleNodeEdit);
 			nodes = flow.nodes;
 			edges = flow.edges;
 
@@ -76,6 +79,62 @@
 
 	function handleNodeDoubleClick(nodeId: string) {
 		handleNodeClick({ detail: { nodeId } } as CustomEvent);
+	}
+
+	function handleNodeEdit(nodeId: string) {
+		if (!currentGraph) return;
+
+		// Find the node to edit
+		const node = currentGraph.nodes.find(n => n.id === nodeId);
+		if (!node) return;
+
+		editingNode = node;
+		showEditNodeModal = true;
+	}
+
+	function handleNodeEditSave(nodeId: string, updates: Record<string, any>) {
+		if (!graph) return;
+
+		// Find and update the node
+		graph = {
+			nodes: graph.nodes.map(n => {
+				if (n.id === nodeId) {
+					return {
+						...n,
+						data: {
+							...n.data,
+							...updates
+						}
+					};
+				}
+				return n;
+			}),
+			edges: [...graph.edges]
+		};
+
+		// Update current graph if different
+		if (currentGraph) {
+			currentGraph = {
+				nodes: currentGraph.nodes.map(n => {
+					if (n.id === nodeId) {
+						return {
+							...n,
+							data: {
+								...n.data,
+								...updates
+							}
+						};
+					}
+					return n;
+				}),
+				edges: [...currentGraph.edges]
+			};
+		}
+
+		// Update visualization
+		updateVisualizationPreservingPositions();
+		showEditNodeModal = false;
+		editingNode = null;
 	}
 
 	function handleNodeClick(event: CustomEvent) {
@@ -97,7 +156,7 @@
 		currentGraph = breadcrumbs[index].graph;
 
 		// Update visualization
-		const flow = graphToSvelteFlow(currentGraph, handleNodeDoubleClick);
+		const flow = graphToSvelteFlow(currentGraph, handleNodeDoubleClick, handleNodeEdit);
 		nodes = flow.nodes;
 		edges = flow.edges;
 
@@ -159,7 +218,7 @@
 
 		// Update visualization - use full layout since we're adding a new node
 		// New nodes need to be positioned, so we recalculate layout
-		const flow = graphToSvelteFlow(graph, handleNodeDoubleClick);
+		const flow = graphToSvelteFlow(graph, handleNodeDoubleClick, handleNodeEdit);
 		nodes = flow.nodes;
 		edges = flow.edges;
 		
@@ -279,7 +338,7 @@
 		if (!graph) return;
 
 		// Update flow while preserving existing node positions
-		const flow = updateFlowWithPreservedPositions(graph, nodes);
+		const flow = updateFlowWithPreservedPositions(graph, nodes, handleNodeDoubleClick, handleNodeEdit);
 		nodes = flow.nodes;
 		edges = flow.edges;
 	}
@@ -359,6 +418,17 @@
 		isOpen={showAddNodeModal} 
 		onClose={() => showAddNodeModal = false}
 		onAddNode={handleAddNode}
+	/>
+
+	<!-- Edit Node Modal -->
+	<NodeEditModal
+		isOpen={showEditNodeModal}
+		node={editingNode}
+		onClose={() => {
+			showEditNodeModal = false;
+			editingNode = null;
+		}}
+		onSave={handleNodeEditSave}
 	/>
 </div>
 

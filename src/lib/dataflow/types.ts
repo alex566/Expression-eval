@@ -1,6 +1,16 @@
 // Core dataflow types and interfaces
 
 /**
+ * Mode for pin name/type - determines if value is static or inferred
+ */
+export enum PinMode {
+	/** Value is statically defined (from schema or user override) */
+	Static = 'static',
+	/** Value is dynamically inferred from connections */
+	Inferred = 'inferred'
+}
+
+/**
  * Port specification with name and type
  */
 export interface PortSpec {
@@ -9,6 +19,10 @@ export interface PortSpec {
 	type: string;
 	/** Optional display name (shown in UI instead of name) */
 	displayName?: string;
+	/** Mode for name - static or inferred */
+	nameMode?: PinMode;
+	/** Mode for type - static or inferred */
+	typeMode?: PinMode;
 }
 
 /**

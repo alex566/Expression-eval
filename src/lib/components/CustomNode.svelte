@@ -2,6 +2,7 @@
 	import { Handle, Position } from '@xyflow/svelte';
 	import type { NodeProps } from '@xyflow/svelte';
 	import type { PortSpec } from '$lib/dataflow/types';
+	import { PinMode } from '$lib/dataflow/types';
 
 	type $$Props = NodeProps;
 
@@ -16,6 +17,7 @@
 	$: nodeId = (data.nodeId as string) || '';
 	$: hasSubgraph = (data.hasSubgraph as boolean) || false;
 	$: onNodeDoubleClick = (data.onNodeDoubleClick as ((nodeId: string) => void) | undefined);
+	$: onNodeEdit = (data.onNodeEdit as ((nodeId: string) => void) | undefined);
 	$: nodeValue = data.value !== undefined ? data.value : null;
 	$: nodeType = (data.nodeType as string) || '';
 	$: nodeExpression = (typeof data.expression === 'string' ? data.expression : null);
@@ -25,10 +27,16 @@
 	$: maxPorts = Math.max(inputs.length, outputs.length);
 	$: minHeight = Math.max(80, 40 + maxPorts * 30); // Base height + spacing per port
 
+	// Check if node is editable (Input, Expression, If, Output)
+	$: isEditable = ['Input', 'Expression', 'If', 'Output'].includes(nodeType);
+
 	function handleDoubleClick(event: MouseEvent) {
+		event.stopPropagation();
+		
 		if (hasSubgraph && onNodeDoubleClick) {
-			event.stopPropagation();
 			onNodeDoubleClick(id);
+		} else if (isEditable && onNodeEdit) {
+			onNodeEdit(id);
 		}
 	}
 
@@ -36,11 +44,13 @@
 
 <div 
 	class="custom-node" 
-	class:has-subgraph={hasSubgraph} 
+	class:has-subgraph={hasSubgraph}
+	class:is-editable={isEditable}
 	style="min-height: {minHeight}px;"
 	role="button"
-	tabindex={hasSubgraph ? 0 : undefined}
+	tabindex={hasSubgraph || isEditable ? 0 : undefined}
 	ondblclick={handleDoubleClick}
+	title={isEditable ? 'Double-click to edit' : hasSubgraph ? 'Double-click to view function' : ''}
 >
 	<!-- Input handles on the left -->
 	{#if inputs.length > 0}
@@ -57,6 +67,11 @@
 						{input.displayName || input.name}: <span class="type-label" title={`TypeScript: ${input.type}`}>
 							{input.type}
 						</span>
+						{#if input.nameMode === PinMode.Static || input.typeMode === PinMode.Static}
+							<span class="mode-indicator static" title="Static (user-defined or schema)">📌</span>
+						{:else if input.nameMode === PinMode.Inferred || input.typeMode === PinMode.Inferred}
+							<span class="mode-indicator inferred" title="Inferred (dynamic)">🔄</span>
+						{/if}
 					</span>
 				</div>
 			{/each}
@@ -108,6 +123,11 @@
 						{output.displayName || output.name}: <span class="type-label" title={`TypeScript: ${output.type}`}>
 							{output.type}
 						</span>
+						{#if output.nameMode === PinMode.Static || output.typeMode === PinMode.Static}
+							<span class="mode-indicator static" title="Static (user-defined or schema)">📌</span>
+						{:else if output.nameMode === PinMode.Inferred || output.typeMode === PinMode.Inferred}
+							<span class="mode-indicator inferred" title="Inferred (dynamic)">🔄</span>
+						{/if}
 					</span>
 				</div>
 			{/each}
@@ -139,6 +159,16 @@
 	.custom-node.has-subgraph:hover {
 		border-color: #7c3aed;
 		box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+	}
+
+	.custom-node.is-editable {
+		border-color: #10b981;
+		cursor: pointer;
+	}
+
+	.custom-node.is-editable:hover {
+		border-color: #059669;
+		box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
 	}
 
 	.subgraph-indicator {
@@ -231,6 +261,20 @@
 	.type-label {
 		color: #3b82f6;
 		font-weight: 600;
+	}
+
+	.mode-indicator {
+		font-size: 0.7rem;
+		margin-left: 0.25rem;
+		opacity: 0.8;
+	}
+
+	.mode-indicator.static {
+		color: #10b981;
+	}
+
+	.mode-indicator.inferred {
+		color: #f59e0b;
 	}
 
 	.handle-label.left {

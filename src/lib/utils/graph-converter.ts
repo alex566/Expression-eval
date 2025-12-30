@@ -1,5 +1,6 @@
 import type { Node, Edge } from '@xyflow/svelte';
 import type { Graph, PortSpec } from '../dataflow/types';
+import { PinMode } from '../dataflow/types';
 import { nodeRegistry } from '../dataflow/registry';
 import { inferGraphTypes } from '../dataflow/type-inference';
 import dagre from 'dagre';
@@ -53,17 +54,30 @@ function getNodePorts(
 	if (nodeType === 'Input') {
 		// Check if inputSchema is provided in node data
 		const inputSchema = nodeData.inputSchema;
+		const inputSchemaTypes = nodeData.inputSchemaTypes; // User-defined types override
+		
 		if (inputSchema && typeof inputSchema === 'object') {
 			// Create output pins for each top-level property in the input schema
 			const keys = Object.keys(inputSchema);
-			outputs = keys.map(key => ({ 
-				name: key, 
-				type: getSchemaType(inputSchema[key])
-			}));
+			outputs = keys.map(key => {
+				// Use user-defined type if available, otherwise infer from schema
+				const type = inputSchemaTypes?.[key] || getSchemaType(inputSchema[key]);
+				return { 
+					name: key, 
+					type,
+					nameMode: PinMode.Static, // Name from schema is static
+					typeMode: inputSchemaTypes?.[key] ? PinMode.Static : PinMode.Inferred
+				};
+			});
 		}
 		// Always add a generic 'out' port for the whole input object
 		if (outputs.length === 0 || !outputs.some(o => o.name === 'out')) {
-			outputs.push({ name: 'out', type: 'any' as const });
+			outputs.push({ 
+				name: 'out', 
+				type: 'any' as const,
+				nameMode: PinMode.Static,
+				typeMode: PinMode.Static
+			});
 		}
 	}
 	// Special handling for Value node - single output
@@ -74,6 +88,8 @@ function getNodePorts(
 	else if (nodeType === 'Output') {
 		// First, try to infer input pins from connected edges (like dynamic nodes)
 		const inputPorts = new Set<string>();
+		const outputNames = nodeData.outputNames || {}; // Map of port to custom name
+		
 		edges.forEach(edge => {
 			if (edge.to.node === nodeId) {
 				// Infer input pin name from the edge's target port name
@@ -83,11 +99,21 @@ function getNodePorts(
 		
 		// If we have inferred ports from edges, use them
 		if (inputPorts.size > 0) {
-			inputs = Array.from(inputPorts).sort().map(name => ({ name, type: 'any' as const }));
+			inputs = Array.from(inputPorts).sort().map(name => ({
+				name,
+				type: 'any' as const,
+				// If there's a custom name for this port, use it as display name
+				...(outputNames[name] ? { displayName: outputNames[name] } : {}),
+				nameMode: outputNames[name] ? PinMode.Static : PinMode.Inferred
+			}));
 		} else {
 			// Fallback to configured outputs for backward compatibility
-			const outputNames = nodeData.outputs || ['output'];
-			inputs = outputNames.map((name: string) => ({ name, type: 'any' as const }));
+			const configuredOutputs = nodeData.outputs || ['output'];
+			inputs = configuredOutputs.map((name: string) => ({ 
+				name, 
+				type: 'any' as const,
+				nameMode: PinMode.Static
+			}));
 		}
 		
 		// Add one extra input pin to allow adding more outputs dynamically
@@ -99,12 +125,39 @@ function getNodePorts(
 			nextIndex++;
 			nextName = `out${nextIndex}`;
 		}
-		inputs.push({ name: nextName, type: 'any' as const });
+		inputs.push({ 
+			name: nextName, 
+			type: 'any' as const,
+			nameMode: PinMode.Inferred
+		});
 	}
 	// Standard node - use definition
 	else if (definition?.inputs && definition?.outputs) {
-		inputs = definition.inputs.map(p => ({ ...p }));
-		outputs = definition.outputs.map(p => ({ ...p }));
+		inputs = definition.inputs.map(p => ({
+			...p,
+			nameMode: p.nameMode || PinMode.Static,
+			typeMode: p.typeMode || (nodeType === 'If' && (p.name === 'true' || p.name === 'false') ? PinMode.Inferred : PinMode.Static)
+		}));
+		outputs = definition.outputs.map(p => ({
+			...p,
+			nameMode: p.nameMode || PinMode.Static,
+			typeMode: p.typeMode || (nodeType === 'If' ? PinMode.Inferred : PinMode.Static)
+		}));
+		
+		// For Expression and If nodes, check if output name is customized
+		if ((nodeType === 'Expression' || nodeType === 'If') && nodeData.outputName) {
+			// Replace default 'out' port with custom name
+			outputs = outputs.map(port => {
+				if (port.name === 'out') {
+					return {
+						...port,
+						name: nodeData.outputName,
+						nameMode: PinMode.Static
+					};
+				}
+				return port;
+			});
+		}
 		
 		// If inputs are empty (dynamic nodes), detect from edges and add extra connector
 		if (inputs.length === 0) {
@@ -141,17 +194,29 @@ function getNodePorts(
 					name,
 					type: 'any' as const,
 					// Add display name if we inferred one
-					...(portDisplayNames.has(name) ? { displayName: portDisplayNames.get(name) } : {})
+					...(portDisplayNames.has(name) ? { displayName: portDisplayNames.get(name) } : {}),
+					nameMode: PinMode.Inferred,
+					typeMode: PinMode.Inferred
 				}));
 			} else {
-				inputs = Array.from(inputPorts).sort().map(name => ({ name, type: 'any' as const }));
+				inputs = Array.from(inputPorts).sort().map(name => ({ 
+					name, 
+					type: 'any' as const,
+					nameMode: PinMode.Inferred,
+					typeMode: PinMode.Inferred
+				}));
 			}
 			
 			// For nodes with dynamic inputs (defined with empty inputs array),
 			// always add one extra connector for new connections
 			// Find the next available input connector index
 			const nextInputIndex = inputs.length;
-			inputs.push({ name: `in${nextInputIndex}`, type: 'any' as const });
+			inputs.push({ 
+				name: `in${nextInputIndex}`, 
+				type: 'any' as const,
+				nameMode: PinMode.Inferred,
+				typeMode: PinMode.Inferred
+			});
 		}
 		
 		if (outputs.length === 0 && nodeType !== 'Output') {
@@ -194,11 +259,12 @@ function getNodePorts(
 
 /**
  * Convert dataflow graph to SvelteFlow format with dagre horizontal layout
- * Optionally accepts a callback for handling node double-clicks
+ * Optionally accepts callbacks for handling node interactions
  */
 export function graphToSvelteFlow(
 	graph: Graph, 
-	onNodeDoubleClick?: (nodeId: string) => void
+	onNodeDoubleClick?: (nodeId: string) => void,
+	onNodeEdit?: (nodeId: string) => void
 ): { nodes: Node[]; edges: Edge[] } {
 	const nodes: Node[] = [];
 	const edges: Edge[] = [];
@@ -288,6 +354,7 @@ export function graphToSvelteFlow(
 				outputs: ports.outputs,
 				hasSubgraph: isFunctionValue,
 				onNodeDoubleClick,
+				onNodeEdit,
 				expressionBody, // Add expression body for array operation nodes
 				...node.data // Include original node data (like value)
 			},
@@ -320,12 +387,13 @@ export function graphToSvelteFlow(
 /**
  * Update nodes and edges while preserving existing node positions
  * This is used when only the node data (like inferred types) changes, not the structure
- * Optionally accepts a callback for handling node double-clicks
+ * Optionally accepts callbacks for handling node interactions
  */
 export function updateFlowWithPreservedPositions(
 	graph: Graph,
 	existingNodes: Node[],
-	onNodeDoubleClick?: (nodeId: string) => void
+	onNodeDoubleClick?: (nodeId: string) => void,
+	onNodeEdit?: (nodeId: string) => void
 ): { nodes: Node[]; edges: Edge[] } {
 	const nodes: Node[] = [];
 	const edges: Edge[] = [];
@@ -334,19 +402,24 @@ export function updateFlowWithPreservedPositions(
 	const typeCheckResult = inferGraphTypes(graph);
 	const nodeTypeInfo = typeCheckResult.nodeTypes;
 
-	// Create a map of existing positions and extract onNodeDoubleClick from existing nodes
+	// Create a map of existing positions and extract callbacks from existing nodes
 	const positionMap = new Map<string, { x: number; y: number }>();
 	let callbackFromExisting: ((nodeId: string) => void) | undefined;
+	let editCallbackFromExisting: ((nodeId: string) => void) | undefined;
 	existingNodes.forEach(node => {
 		positionMap.set(node.id, node.position);
-		// Extract callback from first node that has it
+		// Extract callbacks from first node that has them
 		if (!callbackFromExisting && node.data?.onNodeDoubleClick) {
 			callbackFromExisting = node.data.onNodeDoubleClick as (nodeId: string) => void;
 		}
+		if (!editCallbackFromExisting && node.data?.onNodeEdit) {
+			editCallbackFromExisting = node.data.onNodeEdit as (nodeId: string) => void;
+		}
 	});
 
-	// Use provided callback or fallback to existing callback
+	// Use provided callbacks or fallback to existing callbacks
 	const nodeCallback = onNodeDoubleClick || callbackFromExisting;
+	const editCallback = onNodeEdit || editCallbackFromExisting;
 
 	// Create nodes with preserved positions
 	graph.nodes.forEach((node) => {
@@ -387,6 +460,7 @@ export function updateFlowWithPreservedPositions(
 				outputs: ports.outputs,
 				hasSubgraph: isFunctionValue,
 				onNodeDoubleClick: nodeCallback,
+				onNodeEdit: editCallback,
 				expressionBody, // Add expression body for array operation nodes
 				...node.data // Include original node data
 			},
