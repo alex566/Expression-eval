@@ -23,10 +23,33 @@ export function compileGraphToCEL(graph: Graph): string {
 	// Find the output node and return its expression
 	const outputNode = graph.nodes.find(n => n.type === 'Output');
 	if (outputNode) {
-		// Get the input to the output node
-		const outputEdge = graph.edges.find(e => e.to.node === outputNode.id);
-		if (outputEdge) {
-			return nodeOutputs.get(outputEdge.from.node) || 'null';
+		// Get all edges to the output node
+		const outputEdges = graph.edges.filter(e => e.to.node === outputNode.id);
+		if (outputEdges.length > 0) {
+			// If there are multiple outputs, create an object with named properties
+			if (outputEdges.length > 1) {
+				const properties: string[] = [];
+				for (const edge of outputEdges) {
+					const sourceExpression = nodeOutputs.get(edge.from.node) || 'null';
+					const outputName = edge.to.port;
+					properties.push(`"${outputName}": ${sourceExpression}`);
+				}
+				return `{${properties.join(', ')}}`;
+			} else {
+				// Single output - check if it has a specific name
+				const edge = outputEdges[0];
+				const sourceExpression = nodeOutputs.get(edge.from.node) || 'null';
+				const outputName = edge.to.port;
+				
+				// If the output has a specific name (not just 'result' or 'in'), create an object
+				// This ensures consistent behavior where outputs are always objects with named keys
+				if (outputName && outputName !== 'in') {
+					return `{"${outputName}": ${sourceExpression}}`;
+				}
+				
+				// Legacy behavior for unnamed outputs
+				return sourceExpression;
+			}
 		}
 	}
 	

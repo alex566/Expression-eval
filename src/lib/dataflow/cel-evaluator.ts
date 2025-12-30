@@ -9,6 +9,50 @@ import { createDateFunctions } from './cel-date-functions';
 import { inferGraphTypes } from './type-inference';
 
 /**
+ * Convert CEL Map objects to plain JavaScript objects for JSON serialization
+ */
+function convertCELToJS(value: any): any {
+	// Handle null and undefined
+	if (value === null || value === undefined) {
+		return value;
+	}
+	
+	// Handle BigInt
+	if (typeof value === 'bigint') {
+		return Number(value);
+	}
+	
+	// Handle CEL Map objects (from @bufbuild/cel)
+	if (value && typeof value === 'object' && '_map' in value) {
+		const result: Record<string, any> = {};
+		const map = value._map;
+		if (map && typeof map.forEach === 'function') {
+			map.forEach((v: any, k: any) => {
+				result[String(k)] = convertCELToJS(v);
+			});
+		}
+		return result;
+	}
+	
+	// Handle arrays
+	if (Array.isArray(value)) {
+		return value.map(convertCELToJS);
+	}
+	
+	// Handle plain objects
+	if (typeof value === 'object' && value.constructor === Object) {
+		const result: Record<string, any> = {};
+		for (const [k, v] of Object.entries(value)) {
+			result[k] = convertCELToJS(v);
+		}
+		return result;
+	}
+	
+	// Handle primitives and other types
+	return value;
+}
+
+/**
  * CEL-based graph evaluator
  */
 export class CELGraphEvaluator {
@@ -62,7 +106,7 @@ export class CELGraphEvaluator {
 			
 			return {
 				success: true,
-				outputs: { result }
+				outputs: { result: convertCELToJS(result) }
 			};
 		} catch (error) {
 			return {
