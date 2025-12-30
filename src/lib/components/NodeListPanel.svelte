@@ -73,10 +73,19 @@
 		color: #cccccc;
 		font-size: 0.875rem;
 		font-weight: 600;
+		/* iOS Safari fixes for button interactions */
+		-webkit-tap-highlight-color: rgba(62, 62, 66, 0.3);
+		touch-action: manipulation;
+		-webkit-user-select: none;
+		user-select: none;
 	}
 
 	.panel-header:hover {
 		background: #3e3e42;
+	}
+	
+	.panel-header:active {
+		background: #4e4e52;
 	}
 
 	.header-title {

@@ -45,11 +45,20 @@
 		border-radius: 0.25rem;
 		transition: all 0.2s;
 		white-space: nowrap;
+		/* iOS Safari fixes for button interactions */
+		-webkit-tap-highlight-color: rgba(59, 130, 246, 0.2);
+		touch-action: manipulation;
+		-webkit-user-select: none;
+		user-select: none;
 	}
 
 	.breadcrumb:hover {
 		background: #dbeafe;
 		color: #2563eb;
+	}
+	
+	.breadcrumb:active:not(.active) {
+		background: #bfdbfe;
 	}
 
 	.breadcrumb.active {

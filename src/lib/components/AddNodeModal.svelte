@@ -137,10 +137,10 @@
 <svelte:window on:keydown={handleKeydown} />
 
 {#if isOpen}
-	<div class="modal-backdrop" on:click={handleBackdropClick} role="presentation">
+	<div class="modal-backdrop" onclick={handleBackdropClick} role="presentation">
 		<div 
 			class="modal" 
-			on:click={(e) => e.stopPropagation()} 
+			onclick={(e) => e.stopPropagation()} 
 			role="dialog" 
 			aria-modal="true"
 			aria-labelledby="modal-title"
@@ -148,7 +148,7 @@
 		>
 			<div class="modal-header">
 				<h2 id="modal-title">Add New Node</h2>
-				<button class="close-btn" on:click={resetModal} aria-label="Close">&times;</button>
+				<button class="close-btn" onclick={resetModal} aria-label="Close">&times;</button>
 			</div>
 
 			<div class="modal-content">
@@ -168,8 +168,8 @@
 						{#each filteredNodes as node}
 							<div 
 								class="node-item" 
-								on:click={() => selectNode(node)}
-								on:keydown={(e) => e.key === 'Enter' && selectNode(node)} 
+								onclick={() => selectNode(node)}
+								onkeydown={(e) => e.key === 'Enter' && selectNode(node)} 
 								role="button" 
 								tabindex="0"
 							>
@@ -302,8 +302,8 @@
 						</div>
 
 						<div class="config-actions">
-							<button class="btn-secondary" on:click={() => (selectedNode = null)}>Back</button>
-							<button class="btn-primary" on:click={handleAddNode}>Add Node</button>
+							<button class="btn-secondary" onclick={() => (selectedNode = null)}>Back</button>
+							<button class="btn-primary" onclick={handleAddNode}>Add Node</button>
 						</div>
 					</div>
 				{/if}
@@ -365,11 +365,20 @@
 		justify-content: center;
 		border-radius: 4px;
 		transition: background 0.2s;
+		/* iOS Safari fixes for button interactions */
+		-webkit-tap-highlight-color: rgba(243, 244, 246, 0.5);
+		touch-action: manipulation;
+		-webkit-user-select: none;
+		user-select: none;
 	}
 
 	.close-btn:hover {
 		background: #f3f4f6;
 		color: #1a192b;
+	}
+	
+	.close-btn:active {
+		background: #e5e7eb;
 	}
 
 	.modal-content {
@@ -410,12 +419,21 @@
 		padding: 1rem;
 		cursor: pointer;
 		transition: all 0.2s;
+		/* iOS Safari fixes for button interactions */
+		-webkit-tap-highlight-color: rgba(59, 130, 246, 0.1);
+		touch-action: manipulation;
+		-webkit-user-select: none;
+		user-select: none;
 	}
 
 	.node-item:hover {
 		border-color: #3b82f6;
 		background: #eff6ff;
 		box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+	}
+	
+	.node-item:active {
+		background: #dbeafe;
 	}
 
 	.node-item-header {
@@ -548,6 +566,11 @@
 		font-size: 0.875rem;
 		cursor: pointer;
 		transition: background 0.2s;
+		/* iOS Safari fixes for button interactions */
+		-webkit-tap-highlight-color: rgba(59, 130, 246, 0.3);
+		touch-action: manipulation;
+		-webkit-user-select: none;
+		user-select: none;
 	}
 
 	.btn-primary {
@@ -558,6 +581,10 @@
 	.btn-primary:hover {
 		background: #2563eb;
 	}
+	
+	.btn-primary:active {
+		background: #1d4ed8;
+	}
 
 	.btn-secondary {
 		background: #f3f4f6;
@@ -566,5 +593,9 @@
 
 	.btn-secondary:hover {
 		background: #e5e7eb;
+	}
+	
+	.btn-secondary:active {
+		background: #d1d5db;
 	}
 </style>
