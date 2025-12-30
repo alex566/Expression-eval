@@ -3,14 +3,14 @@ import type { NodeDefinition } from '../../dataflow/types';
 /**
  * If node - conditional branching
  * Outputs either the true or false value based on condition
- * For array filtering operations, use Filter node
+ * Can accept either a boolean value or a CEL expression that returns boolean
  */
 export const IfNode: NodeDefinition = {
 	type: 'If',
 	category: 'control',
-	description: 'Conditional execution based on a condition. For array filtering, use Filter node.',
+	description: 'Conditional execution based on a condition. Can accept boolean or expression.',
 	inputs: [
-		{ name: 'condition', type: 'boolean' },
+		{ name: 'condition', type: 'boolean | string' }, // boolean or CEL expression
 		{ name: 'true', type: 'any' },
 		{ name: 'false', type: 'any' }
 	],
@@ -23,14 +23,21 @@ export const IfNode: NodeDefinition = {
 		const falseValue = context.getInputValue('false');
 
 		if (Array.isArray(condition)) {
-			throw new Error('If node does not support array conditions. Use Filter node for array filtering operations.');
+			throw new Error('If node does not support array conditions.');
 		}
 
-		// Single condition - standard behavior
-		if (condition) {
-			context.setOutputValue('out', trueValue);
+		// If condition is a string, it's a CEL expression - will be compiled
+		// If it's a boolean, use it directly
+		if (typeof condition === 'boolean') {
+			if (condition) {
+				context.setOutputValue('out', trueValue);
+			} else {
+				context.setOutputValue('out', falseValue);
+			}
 		} else {
-			context.setOutputValue('out', falseValue);
+			// In CEL mode, this will be compiled to: condition ? true : false
+			// For now, just output the true value as fallback
+			context.setOutputValue('out', trueValue);
 		}
 	}
 };

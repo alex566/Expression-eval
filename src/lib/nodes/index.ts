@@ -4,7 +4,7 @@ import { IfNode, CompareNode, SwitchNode } from './control';
 import { ValueNode, InputNode, OutputNode } from './special';
 import { CreateDateNode, AddDateNode, FormatDateNode } from './datetime';
 import { MapNode, FilterNode, ReduceNode } from './array';
-import { FunctionRefNode, GetPropertyNode, FunctionInputNode, FunctionValueNode } from './function';
+import { ExpressionNode } from './expression';
 
 /**
  * Register all predefined nodes
@@ -37,11 +37,8 @@ export function registerAllNodes() {
 	nodeRegistry.register(FilterNode);
 	nodeRegistry.register(ReduceNode);
 
-	// Function nodes
-	nodeRegistry.register(FunctionRefNode);
-	nodeRegistry.register(GetPropertyNode);
-	nodeRegistry.register(FunctionInputNode);
-	nodeRegistry.register(FunctionValueNode);
+	// Expression nodes
+	nodeRegistry.register(ExpressionNode);
 }
 
 // Export all node definitions
@@ -50,4 +47,4 @@ export * from './control';
 export * from './special';
 export * from './datetime';
 export * from './array';
-export * from './function';
+export * from './expression';

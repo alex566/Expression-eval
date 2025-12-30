@@ -1,0 +1,12 @@
+{
+	"name": "Sample User",
+	"age": 25,
+	"scores": [85, 90, 78, 92, 88],
+	"address": {
+		"city": "San Francisco",
+		"state": "CA",
+		"zipcode": "94102"
+	},
+	"active": true,
+	"tags": ["developer", "engineer", "javascript"]
+}
