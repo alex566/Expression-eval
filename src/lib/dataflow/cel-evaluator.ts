@@ -5,6 +5,7 @@
 import { celEnv, parse, plan } from '@bufbuild/cel';
 import type { Graph, EvaluationResult } from './types';
 import { compileGraphToCEL } from './cel-compiler';
+import { createDateFunctions } from './cel-date-functions';
 
 /**
  * CEL-based graph evaluator
@@ -27,8 +28,10 @@ export class CELGraphEvaluator {
 			// Compile graph to CEL expression
 			const celExpression = this.compile();
 			
-			// Create CEL environment
-			const env = celEnv({});
+			// Create CEL environment with custom date functions
+			const env = celEnv({
+				funcs: createDateFunctions()
+			});
 			
 			// Parse the expression
 			const parsedExpr = parse(celExpression);

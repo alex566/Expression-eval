@@ -132,6 +132,36 @@ function compileNodeToCEL(
 			// This will fail at runtime - needs custom implementation
 			return `reduce(${array}, ${initial}, ${exprInput})`;
 		}
+		
+		case 'CreateDate': {
+			// Convert CreateDate node to createDate() CEL function call
+			const value = getInputExpression('value');
+			return `createDate(${value})`;
+		}
+		
+		case 'AddDate': {
+			// Convert AddDate node to addDays()/addHours() CEL function calls
+			const date = getInputExpression('date');
+			const days = getInputExpression('days');
+			const hours = getInputExpression('hours');
+			
+			// Apply transformations in sequence
+			let result = date;
+			if (days !== 'null') {
+				result = `addDays(${result}, ${days})`;
+			}
+			if (hours !== 'null') {
+				result = `addHours(${result}, ${hours})`;
+			}
+			return result;
+		}
+		
+		case 'FormatDate': {
+			// Convert FormatDate node to formatDate() CEL function call
+			const date = getInputExpression('date');
+			const format = getInputExpression('format');
+			return `formatDate(${date}, ${format})`;
+		}
 			
 		case 'Output':
 			// Output node just passes through its input
