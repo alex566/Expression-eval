@@ -1,48 +1,46 @@
 # Expression-eval
 
-A Svelte-based dataflow graph visualization and evaluation tool with a **function-based architecture** and **TypeScript-powered type inference**. This application allows you to create, visualize, and evaluate expression graphs using functions as the main execution units, with automatic real-time type checking.
+A Svelte-based dataflow graph visualization and evaluation tool with **CEL (Common Expression Language)** integration. This application allows you to create, visualize, and evaluate expression graphs that compile to CEL expressions and are evaluated using a CEL interpreter.
 
 ## Key Features
 
-- ✅ **TypeScript-Based Type Inference** - Automatic type checking using the TypeScript compiler API
-- ✅ **Real-Time Type Validation** - Types are inferred and validated as you build the graph
-- ✅ **Function-Based Architecture** - Reusable functions with proper type signatures
-- ✅ **Visual Type Information** - See inferred types directly on node ports
-- ✅ **Powerful Type System** - Supports complex types, generics, and union types
-- ✅ **Future-Proof** - Built on industry-standard TypeScript compiler
+- ✅ **CEL Expression Language** - Graphs compile to CEL expressions for evaluation
+- ✅ **Expression Nodes** - Add CEL expressions as nodes that can be connected to other nodes
+- ✅ **JSON Input/Output** - Provide JSON data as input and get JSON results
+- ✅ **Real-Time Compilation** - See the compiled CEL expression as you build your graph
+- ✅ **Interactive Console** - Test your graphs with different input data
+- ✅ **Visual Graph Builder** - Drag-and-drop interface for building expression graphs
 
-## TypeScript Type System
+## CEL Integration
 
-Expression-eval features a sophisticated type inference system powered by the TypeScript compiler API. This system automatically infers types as you build your graph and provides real-time type checking with the same power as TypeScript itself.
+Expression-eval uses the **@bufbuild/cel** package to provide CEL (Common Expression Language) support:
 
 **Key capabilities:**
-- Automatic type inference from values and node signatures
-- Real-time type checking on graph changes
-- Support for complex TypeScript types (generics, unions, mapped types)
-- Visual type information with hover tooltips
-- Detailed type error messages from TypeScript compiler
-
-For detailed information, see [TYPESCRIPT_TYPE_SYSTEM.md](TYPESCRIPT_TYPE_SYSTEM.md).
+- Compile dataflow graphs to CEL expressions
+- Evaluate expressions with JSON input data
+- Support for arithmetic, comparison, and conditional operations
+- Expression nodes for custom CEL expressions
+- Map, Filter, and Reduce operations with expression support
 
 ## Architecture Overview
 
-Expression-eval uses a **function-based architecture** where:
+Expression-eval uses a **CEL-based architecture** where:
 
-- **Functions** are the main execution units with:
-  - **Name** (as ID) - Unique identifier for each function
-  - **Graph** - Contains nodes and edges defining the function logic
-  - **Nested Functions** - Functions can reference and call other functions
-  - **Input** - Single JSON object with properties
-  - **Output** - Produced at the end of execution
+- **Graphs** are compiled to CEL expressions
+- **Nodes** represent operations or values that compile to CEL
+- **Expression Nodes** - Can contain custom CEL expressions as strings
+- **Input Data** - Provided as JSON for evaluation
+- **Output** - Results returned as JSON
 
-- **FunctionInput Node** - Generic object properties accessor:
-  - Automatically creates output pins for each property of the input object
-  - Provides both full object (`out` port) and individual property ports
-  - Example: Input `{ element: 5, index: 0 }` exposes ports: `out`, `element`, `index`
+### Node Types
 
-- **Array Operations** (Map/Filter/Reduce) use FunctionValue nodes to reference functions
-
-For detailed architecture documentation, see [DATAFLOW.md](DATAFLOW.md).
+- **Value** - Static values (numbers, strings, arrays, objects)
+- **Input** - Access to the input data
+- **Expression** - Custom CEL expression strings
+- **Math Nodes** - Add, Subtract, Multiply, Divide, Modulo
+- **Control Nodes** - If (ternary), Compare
+- **Array Nodes** - Map, Filter, Reduce (with expression support)
+- **Output** - Final output node
 
 ## Creating a project
 
