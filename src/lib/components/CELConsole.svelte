@@ -5,11 +5,11 @@
 	
 	let { graph, inputData = {} }: { graph: Graph; inputData?: any } = $props();
 	
-	let celExpression = '';
-	let evaluationResult: any = null;
-	let error = '';
-	let isEvaluating = false;
-	let inputDataStr = JSON.stringify(inputData, null, 2);
+	let celExpression = $state('');
+	let evaluationResult: any = $state(null);
+	let error = $state('');
+	let isEvaluating = $state(false);
+	let inputDataStr = $state(JSON.stringify(inputData, null, 2));
 	
 	// Load sample input data on mount
 	let loadError = $state('');
@@ -93,7 +93,7 @@
 		<h3>CEL Expression Console</h3>
 		<button 
 			class="compile-btn" 
-			on:click={compileToCEL}
+			onclick={compileToCEL}
 			title="Recompile graph to CEL"
 		>
 			🔄 Compile
@@ -119,7 +119,7 @@
 	<div class="actions">
 		<button 
 			class="evaluate-btn" 
-			on:click={evaluateCEL}
+			onclick={evaluateCEL}
 			disabled={isEvaluating || !celExpression}
 		>
 			{isEvaluating ? '⏳ Evaluating...' : '▶️ Evaluate'}
@@ -187,10 +187,19 @@
 		font-size: 0.875rem;
 		font-weight: 600;
 		transition: background 0.2s;
+		/* iOS Safari fixes for button interactions */
+		-webkit-tap-highlight-color: rgba(59, 130, 246, 0.3);
+		touch-action: manipulation;
+		-webkit-user-select: none;
+		user-select: none;
 	}
 	
 	.compile-btn:hover {
 		background: #2563eb;
+	}
+	
+	.compile-btn:active {
+		background: #1d4ed8;
 	}
 	
 	.cel-expression-section,
@@ -252,10 +261,19 @@
 		font-size: 1rem;
 		font-weight: 600;
 		transition: background 0.2s;
+		/* iOS Safari fixes for button interactions */
+		-webkit-tap-highlight-color: rgba(16, 185, 129, 0.3);
+		touch-action: manipulation;
+		-webkit-user-select: none;
+		user-select: none;
 	}
 	
 	.evaluate-btn:hover:not(:disabled) {
 		background: #059669;
+	}
+	
+	.evaluate-btn:active:not(:disabled) {
+		background: #047857;
 	}
 	
 	.evaluate-btn:disabled {

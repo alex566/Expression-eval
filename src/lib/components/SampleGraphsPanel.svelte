@@ -63,10 +63,19 @@
 		color: #cccccc;
 		font-size: 0.875rem;
 		font-weight: 600;
+		/* iOS Safari fixes for button interactions */
+		-webkit-tap-highlight-color: rgba(62, 62, 66, 0.3);
+		touch-action: manipulation;
+		-webkit-user-select: none;
+		user-select: none;
 	}
 
 	.panel-header:hover {
 		background: #3e3e42;
+	}
+	
+	.panel-header:active {
+		background: #4e4e52;
 	}
 
 	.header-title {
@@ -97,6 +106,11 @@
 		text-align: left;
 		transition: all 0.2s;
 		color: #cccccc;
+		/* iOS Safari fixes for button interactions */
+		-webkit-tap-highlight-color: rgba(0, 122, 204, 0.3);
+		touch-action: manipulation;
+		-webkit-user-select: none;
+		user-select: none;
 	}
 
 	.graph-item:last-child {
@@ -107,11 +121,19 @@
 		border-color: #007acc;
 		background: #2d2d30;
 	}
+	
+	.graph-item:active {
+		background: #3d3d40;
+	}
 
 	.graph-item.active {
 		background: #007acc;
 		border-color: #007acc;
 		color: white;
+	}
+	
+	.graph-item.active:active {
+		background: #005a9e;
 	}
 
 	.graph-item.active .graph-desc {

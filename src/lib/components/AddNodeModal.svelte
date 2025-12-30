@@ -365,11 +365,20 @@
 		justify-content: center;
 		border-radius: 4px;
 		transition: background 0.2s;
+		/* iOS Safari fixes for button interactions */
+		-webkit-tap-highlight-color: rgba(243, 244, 246, 0.5);
+		touch-action: manipulation;
+		-webkit-user-select: none;
+		user-select: none;
 	}
 
 	.close-btn:hover {
 		background: #f3f4f6;
 		color: #1a192b;
+	}
+	
+	.close-btn:active {
+		background: #e5e7eb;
 	}
 
 	.modal-content {
@@ -410,12 +419,21 @@
 		padding: 1rem;
 		cursor: pointer;
 		transition: all 0.2s;
+		/* iOS Safari fixes for button interactions */
+		-webkit-tap-highlight-color: rgba(59, 130, 246, 0.1);
+		touch-action: manipulation;
+		-webkit-user-select: none;
+		user-select: none;
 	}
 
 	.node-item:hover {
 		border-color: #3b82f6;
 		background: #eff6ff;
 		box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+	}
+	
+	.node-item:active {
+		background: #dbeafe;
 	}
 
 	.node-item-header {
@@ -548,6 +566,11 @@
 		font-size: 0.875rem;
 		cursor: pointer;
 		transition: background 0.2s;
+		/* iOS Safari fixes for button interactions */
+		-webkit-tap-highlight-color: rgba(59, 130, 246, 0.3);
+		touch-action: manipulation;
+		-webkit-user-select: none;
+		user-select: none;
 	}
 
 	.btn-primary {
@@ -558,6 +581,10 @@
 	.btn-primary:hover {
 		background: #2563eb;
 	}
+	
+	.btn-primary:active {
+		background: #1d4ed8;
+	}
 
 	.btn-secondary {
 		background: #f3f4f6;
@@ -566,5 +593,9 @@
 
 	.btn-secondary:hover {
 		background: #e5e7eb;
+	}
+	
+	.btn-secondary:active {
+		background: #d1d5db;
 	}
 </style>
