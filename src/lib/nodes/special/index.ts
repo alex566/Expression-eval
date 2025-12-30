@@ -136,8 +136,7 @@ export const OutputNode: NodeDefinition = {
 		}
 	},
 	inferOutputTypes(context: TypeInferenceContext): Record<string, string> {
-		// Output node doesn't have output types - it's a terminal node
-		// But we could return an empty object for consistency
+		// Output node is a terminal node with no output ports
 		return {};
 	}
 };

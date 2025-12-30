@@ -76,7 +76,7 @@ function getNodePorts(
 		const inputPorts = new Set<string>();
 		edges.forEach(edge => {
 			if (edge.to.node === nodeId) {
-				// Infer input pin name from the source output port name
+				// Infer input pin name from the edge's target port name
 				inputPorts.add(edge.to.port);
 			}
 		});
