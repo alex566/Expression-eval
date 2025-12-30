@@ -1,6 +1,6 @@
 import { nodeRegistry } from '../dataflow/registry';
-import { IfNode, CompareNode, SwitchNode } from './control';
-import { ValueNode, InputNode, OutputNode, CreateObjectNode } from './special';
+import { IfNode, SwitchNode } from './control';
+import { InputNode, OutputNode, CreateObjectNode } from './special';
 import { CreateDateNode, AddDateNode, FormatDateNode } from './datetime';
 import { MapNode, FilterNode, ReduceNode } from './array';
 import { ExpressionNode } from './expression';
@@ -11,11 +11,9 @@ import { ExpressionNode } from './expression';
 export function registerAllNodes() {
 	// Control nodes
 	nodeRegistry.register(IfNode);
-	nodeRegistry.register(CompareNode);
 	nodeRegistry.register(SwitchNode);
 
 	// Special nodes
-	nodeRegistry.register(ValueNode);
 	nodeRegistry.register(InputNode);
 	nodeRegistry.register(OutputNode);
 	nodeRegistry.register(CreateObjectNode);

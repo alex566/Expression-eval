@@ -65,9 +65,6 @@ function compileNodeToCEL(
 	};
 	
 	switch (node.type) {
-		case 'Value':
-			return JSON.stringify(node.data.value);
-			
 		case 'Input':
 			// Input node provides access to the input data
 			return 'input';
@@ -118,13 +115,6 @@ function compileNodeToCEL(
 			}
 			
 			return `{${properties.join(', ')}}`;
-		}
-			
-		case 'Compare': {
-			const operator = node.data.operator || '==';
-			const a = getInputExpression('a');
-			const b = getInputExpression('b');
-			return `(${a} ${operator} ${b})`;
 		}
 			
 		case 'If': {

@@ -4,16 +4,16 @@ export const SAMPLE_GRAPH: Graph = {
 	nodes: [
 		{
 			id: "value1",
-			type: "Value",
+			type: "Expression",
 			data: {
-				value: 10
+				expression: "10"
 			}
 		},
 		{
 			id: "value2",
-			type: "Value",
+			type: "Expression",
 			data: {
-				value: 5
+				expression: "5"
 			}
 		},
 		{
@@ -69,44 +69,44 @@ export const COMPLEX_GRAPH: Graph = {
 	nodes: [
 		{
 			id: "value_x",
-			type: "Value",
+			type: "Expression",
 			data: {
-				value: 5
+				expression: "5"
 			}
 		},
 		{
 			id: "value_2",
-			type: "Value",
+			type: "Expression",
 			data: {
-				value: 2
+				expression: "2"
 			}
 		},
 		{
 			id: "value_y",
-			type: "Value",
+			type: "Expression",
 			data: {
-				value: 10
+				expression: "10"
 			}
 		},
 		{
 			id: "value_3",
-			type: "Value",
+			type: "Expression",
 			data: {
-				value: 3
+				expression: "3"
 			}
 		},
 		{
 			id: "value_z",
-			type: "Value",
+			type: "Expression",
 			data: {
-				value: 3
+				expression: "3"
 			}
 		},
 		{
 			id: "value_5",
-			type: "Value",
+			type: "Expression",
 			data: {
-				value: 5
+				expression: "5"
 			}
 		},
 		{
@@ -236,9 +236,9 @@ export const DATE_SAMPLE_GRAPH: Graph = {
 	nodes: [
 		{
 			id: "dateString",
-			type: "Value",
+			type: "Expression",
 			data: {
-				value: "2025-01-01T00:00:00.000Z"
+				expression: '"2025-01-01T00:00:00.000Z"'
 			}
 		},
 		{
@@ -248,16 +248,16 @@ export const DATE_SAMPLE_GRAPH: Graph = {
 		},
 		{
 			id: "daysToAdd",
-			type: "Value",
+			type: "Expression",
 			data: {
-				value: 7
+				expression: "7"
 			}
 		},
 		{
 			id: "hoursToAdd",
-			type: "Value",
+			type: "Expression",
 			data: {
-				value: 12
+				expression: "12"
 			}
 		},
 		{
@@ -267,9 +267,9 @@ export const DATE_SAMPLE_GRAPH: Graph = {
 		},
 		{
 			id: "formatType",
-			type: "Value",
+			type: "Expression",
 			data: {
-				value: "iso"
+				expression: '"iso"'
 			}
 		},
 		{
@@ -397,38 +397,31 @@ export const INPUT_SAMPLE_GRAPH: Graph = {
 			}
 		},
 		{
-			id: "ageExpr",
+			id: "threshold",
 			type: "Expression",
 			data: {
-				expression: "input.age"
-			}
-		},
-		{
-			id: "threshold",
-			type: "Value",
-			data: {
-				value: 18
+				expression: "18"
 			}
 		},
 		{
 			id: "compare",
-			type: "Compare",
+			type: "Expression",
 			data: {
-				operator: ">"
+				expression: "in0 > in1"
 			}
 		},
 		{
 			id: "adultLabel",
-			type: "Value",
+			type: "Expression",
 			data: {
-				value: "Adult"
+				expression: '"Adult"'
 			}
 		},
 		{
 			id: "minorLabel",
-			type: "Value",
+			type: "Expression",
 			data: {
-				value: "Minor"
+				expression: '"Minor"'
 			}
 		},
 		{
@@ -446,12 +439,12 @@ export const INPUT_SAMPLE_GRAPH: Graph = {
 	],
 	edges: [
 		{
-			from: { node: "ageExpr", port: "out" },
-			to: { node: "compare", port: "a" }
+			from: { node: "input", port: "age" },
+			to: { node: "compare", port: "in0" }
 		},
 		{
 			from: { node: "threshold", port: "out" },
-			to: { node: "compare", port: "b" }
+			to: { node: "compare", port: "in1" }
 		},
 		{
 			from: { node: "compare", port: "out" },
@@ -477,27 +470,31 @@ export const CEL_SAMPLE_GRAPH: Graph = {
 		{
 			id: "input",
 			type: "Input",
-			data: {}
+			data: {
+				inputSchema: {
+					age: "number"
+				}
+			}
 		},
 		{
-			id: "expr1",
+			id: "compare",
 			type: "Expression",
 			data: {
-				expression: "element > 18"
+				expression: "in0 > 18"
 			}
 		},
 		{
 			id: "value1",
-			type: "Value",
+			type: "Expression",
 			data: {
-				value: "Adult"
+				expression: '"Adult"'
 			}
 		},
 		{
 			id: "value2",
-			type: "Value",
+			type: "Expression",
 			data: {
-				value: "Minor"
+				expression: '"Minor"'
 			}
 		},
 		{
@@ -515,7 +512,11 @@ export const CEL_SAMPLE_GRAPH: Graph = {
 	],
 	edges: [
 		{
-			from: { node: "expr1", port: "out" },
+			from: { node: "input", port: "age" },
+			to: { node: "compare", port: "in0" }
+		},
+		{
+			from: { node: "compare", port: "out" },
 			to: { node: "if", port: "condition" }
 		},
 		{
@@ -541,9 +542,9 @@ export const EXPRESSION_MATH_GRAPH: Graph = {
 	nodes: [
 		{
 			id: "value1",
-			type: "Value",
+			type: "Expression",
 			data: {
-				value: 5
+				expression: "5"
 			}
 		},
 		{
@@ -581,16 +582,16 @@ export const CREATE_OBJECT_GRAPH: Graph = {
 	nodes: [
 		{
 			id: "value_name",
-			type: "Value",
+			type: "Expression",
 			data: {
-				value: "John Doe"
+				expression: '"John Doe"'
 			}
 		},
 		{
 			id: "value_age",
-			type: "Value",
+			type: "Expression",
 			data: {
-				value: 30
+				expression: "30"
 			}
 		},
 		{
