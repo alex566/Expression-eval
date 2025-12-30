@@ -79,6 +79,36 @@ export const InputNode: NodeDefinition = {
 		// The actual input will be provided at evaluation time
 		const value = context.getNodeData().value;
 		context.setOutputValue('out', value);
+	},
+	inferOutputTypes(context: TypeInferenceContext): Record<string, string> {
+		const data = context.getNodeData();
+		const inputSchema = data.inputSchema;
+		const outputTypes: Record<string, string> = {};
+		
+		// If we have an input schema, infer types from it
+		if (inputSchema && typeof inputSchema === 'object') {
+			for (const [key, schemaType] of Object.entries(inputSchema)) {
+				// Map schema types to CEL types
+				let celType = 'dyn';
+				if (schemaType === 'string') {
+					celType = 'string';
+				} else if (schemaType === 'number') {
+					celType = 'double';
+				} else if (schemaType === 'boolean') {
+					celType = 'bool';
+				} else if (schemaType === 'array') {
+					celType = 'list(dyn)';
+				} else if (schemaType === 'object') {
+					celType = 'map(string, dyn)';
+				}
+				outputTypes[key] = celType;
+			}
+		}
+		
+		// Always include the generic 'out' port
+		outputTypes['out'] = 'dyn';
+		
+		return outputTypes;
 	}
 };
 
