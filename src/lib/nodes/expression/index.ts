@@ -1,14 +1,20 @@
 import type { NodeDefinition } from '../../dataflow/types';
 
 /**
- * Expression node - contains a CEL expression string
- * This node can be connected as an argument to other nodes
+ * Expression node - contains a CEL expression string with dynamic inputs
+ * This node can accept multiple inputs via dynamic pins and evaluate expressions
+ * Examples: "(in0 + 1) * 2", "in0 > 10 ? in1 : in2", "in0.date"
+ * 
+ * Features:
+ * - Dynamic input pins (in0, in1, in2, ...) or custom named pins
+ * - Expression preview shown in node UI
+ * - Supports CEL syntax for property access (e.g., in0.date)
  */
 export const ExpressionNode: NodeDefinition = {
 	type: 'Expression',
 	category: 'expression',
-	description: 'A CEL expression that can be used as input to other nodes',
-	inputs: [],
+	description: 'CEL expression with dynamic inputs for inline processing. Example: "(in0 + 1) * 2"',
+	inputs: [], // Dynamic inputs - will accept in0, in1, in2, etc. or custom names
 	outputs: [
 		{ name: 'out', type: 'any' }
 	],

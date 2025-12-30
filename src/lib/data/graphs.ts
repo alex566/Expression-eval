@@ -525,10 +525,147 @@ export const CEL_SAMPLE_GRAPH: Graph = {
 	]
 };
 
+/**
+ * Expression-based math operations sample
+ * Demonstrates using Expression node for inline calculations like "(in0 + 1) * 2"
+ */
+export const EXPRESSION_MATH_GRAPH: Graph = {
+	nodes: [
+		{
+			id: "value1",
+			type: "Value",
+			data: {
+				value: 5
+			}
+		},
+		{
+			id: "expr1",
+			type: "Expression",
+			data: {
+				expression: "(in0 + 1) * 2"
+			}
+		},
+		{
+			id: "output",
+			type: "Output",
+			data: {
+				outputs: ["result"]
+			}
+		}
+	],
+	edges: [
+		{
+			from: { node: "value1", port: "out" },
+			to: { node: "expr1", port: "in0" }
+		},
+		{
+			from: { node: "expr1", port: "out" },
+			to: { node: "output", port: "result" }
+		}
+	]
+};
+
+/**
+ * CreateObject node sample
+ * Demonstrates creating objects from input pins
+ */
+export const CREATE_OBJECT_GRAPH: Graph = {
+	nodes: [
+		{
+			id: "value_name",
+			type: "Value",
+			data: {
+				value: "John Doe"
+			}
+		},
+		{
+			id: "value_age",
+			type: "Value",
+			data: {
+				value: 30
+			}
+		},
+		{
+			id: "createObj",
+			type: "CreateObject",
+			data: {
+				pinNames: ["name", "age"]
+			}
+		},
+		{
+			id: "output",
+			type: "Output",
+			data: {
+				outputs: ["person"]
+			}
+		}
+	],
+	edges: [
+		{
+			from: { node: "value_name", port: "out" },
+			to: { node: "createObj", port: "name" }
+		},
+		{
+			from: { node: "value_age", port: "out" },
+			to: { node: "createObj", port: "age" }
+		},
+		{
+			from: { node: "createObj", port: "out" },
+			to: { node: "output", port: "person" }
+		}
+	]
+};
+
+/**
+ * Property access with CEL syntax sample
+ * Demonstrates accessing object properties like "in0.date"
+ */
+export const PROPERTY_ACCESS_GRAPH: Graph = {
+	nodes: [
+		{
+			id: "input",
+			type: "Input",
+			data: {
+				inputSchema: {
+					user: { name: "string", age: "number" },
+					timestamp: "string"
+				}
+			}
+		},
+		{
+			id: "expr1",
+			type: "Expression",
+			data: {
+				expression: "in0.name + ' is ' + string(in0.age) + ' years old'"
+			}
+		},
+		{
+			id: "output",
+			type: "Output",
+			data: {
+				outputs: ["message"]
+			}
+		}
+	],
+	edges: [
+		{
+			from: { node: "input", port: "user" },
+			to: { node: "expr1", port: "in0" }
+		},
+		{
+			from: { node: "expr1", port: "out" },
+			to: { node: "output", port: "message" }
+		}
+	]
+};
+
 export const GRAPHS: Record<string, Graph> = {
 	'sample': SAMPLE_GRAPH,
 	'complex': COMPLEX_GRAPH,
 	'dates': DATE_SAMPLE_GRAPH,
 	'input-example': INPUT_SAMPLE_GRAPH,
-	'cel': CEL_SAMPLE_GRAPH
+	'cel': CEL_SAMPLE_GRAPH,
+	'expression-math': EXPRESSION_MATH_GRAPH,
+	'create-object': CREATE_OBJECT_GRAPH,
+	'property-access': PROPERTY_ACCESS_GRAPH
 };

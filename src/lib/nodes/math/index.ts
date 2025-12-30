@@ -4,11 +4,14 @@ import type { NodeDefinition } from '../../dataflow/types';
  * Add node - adds all connected input values together
  * Dynamically accepts any number of inputs (in0, in1, in2, ...)
  * For array operations, use Map/Filter/Reduce nodes
+ * 
+ * @deprecated Use Expression node instead for simple math operations.
+ * Example: Expression node with "(in0 + in1)" is preferred over Add node.
  */
 export const AddNode: NodeDefinition = {
 	type: 'Add',
 	category: 'math',
-	description: 'Adds all connected input values together. For array operations, use Map node.',
+	description: '[LEGACY] Adds values. Use Expression node: "(in0 + in1)"',
 	inputs: [], // Dynamic inputs - will accept in0, in1, in2, etc.
 	outputs: [
 		{ name: 'out', type: 'number' }
@@ -41,11 +44,14 @@ export const AddNode: NodeDefinition = {
  * Subtract node - subtracts all inputs from the first input
  * First input (in0) is the base, subsequent inputs (in1, in2, ...) are subtracted from it
  * For array operations, use Map/Filter/Reduce nodes
+ * 
+ * @deprecated Use Expression node instead for simple math operations.
+ * Example: Expression node with "(in0 - in1)" is preferred over Subtract node.
  */
 export const SubtractNode: NodeDefinition = {
 	type: 'Subtract',
 	category: 'math',
-	description: 'Subtracts all subsequent inputs from the first input. For array operations, use Map node.',
+	description: '[LEGACY] Subtracts values. Use Expression node: "(in0 - in1)"',
 	inputs: [], // Dynamic inputs - will accept in0, in1, in2, etc.
 	outputs: [
 		{ name: 'out', type: 'number' }
@@ -83,11 +89,14 @@ export const SubtractNode: NodeDefinition = {
  * Multiply node - multiplies all connected input values together
  * Dynamically accepts any number of inputs (in0, in1, in2, ...)
  * For array operations, use Map/Filter/Reduce nodes
+ * 
+ * @deprecated Use Expression node instead for simple math operations.
+ * Example: Expression node with "(in0 * in1)" is preferred over Multiply node.
  */
 export const MultiplyNode: NodeDefinition = {
 	type: 'Multiply',
 	category: 'math',
-	description: 'Multiplies all connected input values together. For array operations, use Map node.',
+	description: '[LEGACY] Multiplies values. Use Expression node: "(in0 * in1)"',
 	inputs: [], // Dynamic inputs - will accept in0, in1, in2, etc.
 	outputs: [
 		{ name: 'out', type: 'number' }
@@ -125,11 +134,14 @@ export const MultiplyNode: NodeDefinition = {
  * Divide node - divides the first input by subsequent inputs
  * First input (in0) is the dividend, subsequent inputs (in1, in2, ...) are divisors
  * For array operations, use Map/Filter/Reduce nodes
+ * 
+ * @deprecated Use Expression node instead for simple math operations.
+ * Example: Expression node with "(in0 / in1)" is preferred over Divide node.
  */
 export const DivideNode: NodeDefinition = {
 	type: 'Divide',
 	category: 'math',
-	description: 'Divides the first input by all subsequent inputs. For array operations, use Map node.',
+	description: '[LEGACY] Divides values. Use Expression node: "(in0 / in1)"',
 	inputs: [], // Dynamic inputs - will accept in0, in1, in2, etc.
 	outputs: [
 		{ name: 'out', type: 'number' }
@@ -171,11 +183,14 @@ export const DivideNode: NodeDefinition = {
  * Modulo node - computes the remainder of division
  * First input (in0) is the dividend, second input (in1) is the divisor
  * For array operations, use Map/Filter/Reduce nodes
+ * 
+ * @deprecated Use Expression node instead for simple math operations.
+ * Example: Expression node with "(in0 % in1)" is preferred over Modulo node.
  */
 export const ModuloNode: NodeDefinition = {
 	type: 'Modulo',
 	category: 'math',
-	description: 'Computes the remainder of division (modulo). For array operations, use Map node.',
+	description: '[LEGACY] Computes modulo. Use Expression node: "(in0 % in1)"',
 	inputs: [],
 	outputs: [
 		{ name: 'out', type: 'number' }
