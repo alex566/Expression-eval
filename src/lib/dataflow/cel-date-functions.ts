@@ -3,7 +3,7 @@
  * These functions provide date manipulation capabilities in CEL expressions
  */
 
-import { celFunc, celOverload } from '@bufbuild/cel';
+import { celFunc, celOverload, CelScalar } from '@bufbuild/cel';
 import type { CelFunc } from '@bufbuild/cel';
 
 /**
@@ -15,7 +15,7 @@ export function createDateFunctions(): CelFunc[] {
 		// createDate(dateString: string) -> int
 		// Creates a timestamp from an ISO date string
 		celFunc('createDate', [
-			celOverload(['string'], 'int', (dateStr: string): bigint => {
+			celOverload([CelScalar.STRING], CelScalar.INT, (dateStr: string): bigint => {
 				// Validate date string first using Date.parse
 				const timestamp = Date.parse(dateStr);
 				if (isNaN(timestamp)) {
@@ -28,7 +28,7 @@ export function createDateFunctions(): CelFunc[] {
 		// addDays(timestamp: int, days: int) -> int
 		// Adds days to a timestamp and returns new timestamp
 		celFunc('addDays', [
-			celOverload(['int', 'int'], 'int', (timestamp: bigint, days: bigint): bigint => {
+			celOverload([CelScalar.INT, CelScalar.INT], CelScalar.INT, (timestamp: bigint, days: bigint): bigint => {
 				const date = new Date(Number(timestamp));
 				date.setDate(date.getDate() + Number(days));
 				return BigInt(date.getTime());
@@ -38,7 +38,7 @@ export function createDateFunctions(): CelFunc[] {
 		// addHours(timestamp: int, hours: int) -> int
 		// Adds hours to a timestamp and returns new timestamp
 		celFunc('addHours', [
-			celOverload(['int', 'int'], 'int', (timestamp: bigint, hours: bigint): bigint => {
+			celOverload([CelScalar.INT, CelScalar.INT], CelScalar.INT, (timestamp: bigint, hours: bigint): bigint => {
 				const date = new Date(Number(timestamp));
 				date.setHours(date.getHours() + Number(hours));
 				return BigInt(date.getTime());
@@ -48,7 +48,7 @@ export function createDateFunctions(): CelFunc[] {
 		// formatDate(timestamp: int, format: string) -> string
 		// Formats a timestamp to a string
 		celFunc('formatDate', [
-			celOverload(['int', 'string'], 'string', (timestamp: bigint, format: string): string => {
+			celOverload([CelScalar.INT, CelScalar.STRING], CelScalar.STRING, (timestamp: bigint, format: string): string => {
 				const date = new Date(Number(timestamp));
 				
 				switch (format) {

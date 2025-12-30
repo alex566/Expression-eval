@@ -7,6 +7,8 @@ export interface PortSpec {
 	name: string;
 	/** Type signature (e.g., 'number', 'string[]', '{ x: number }') */
 	type: string;
+	/** Optional display name (shown in UI instead of name) */
+	displayName?: string;
 }
 
 /**
