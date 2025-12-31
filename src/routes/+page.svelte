@@ -95,6 +95,33 @@
 	function handleNodeEditSave(nodeId: string, updates: Record<string, any>) {
 		if (!graph) return;
 
+		// Find the node to determine if we need to update edges
+		const node = graph.nodes.find(n => n.id === nodeId);
+		if (!node) return;
+
+		// Check if output name is being changed for Expression or If nodes
+		let updatedEdges = [...graph.edges];
+		if ((node.type === 'Expression' || node.type === 'If') && updates.outputName) {
+			const oldPortName = node.data.outputName || 'out';
+			const newPortName = updates.outputName;
+			
+			// Update all edges that connect FROM this node's output port
+			if (oldPortName !== newPortName) {
+				updatedEdges = graph.edges.map(edge => {
+					if (edge.from.node === nodeId && edge.from.port === oldPortName) {
+						return {
+							...edge,
+							from: {
+								...edge.from,
+								port: newPortName
+							}
+						};
+					}
+					return edge;
+				});
+			}
+		}
+
 		// Find and update the node
 		graph = {
 			nodes: graph.nodes.map(n => {
@@ -109,7 +136,7 @@
 				}
 				return n;
 			}),
-			edges: [...graph.edges]
+			edges: updatedEdges
 		};
 
 		// Update current graph if different
@@ -127,7 +154,7 @@
 					}
 					return n;
 				}),
-				edges: [...currentGraph.edges]
+				edges: updatedEdges
 			};
 		}
 
