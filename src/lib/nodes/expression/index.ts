@@ -1,19 +1,19 @@
 import type { NodeDefinition, TypeInferenceContext } from '../../dataflow/types';
 
 /**
- * Expression node - contains a CEL expression string with dynamic inputs
+ * Expression node - contains a JavaScript expression string with dynamic inputs
  * This node can accept multiple inputs via dynamic pins and evaluate expressions
  * Examples: "(in0 + 1) * 2", "in0 > 10 ? in1 : in2", "in0.date"
  * 
  * Features:
  * - Dynamic input pins (in0, in1, in2, ...) or custom named pins
  * - Expression preview shown in node UI
- * - Supports CEL syntax for property access (e.g., in0.date)
+ * - Supports JavaScript syntax for property access (e.g., in0.date)
  */
 export const ExpressionNode: NodeDefinition = {
 	type: 'Expression',
 	category: 'expression',
-	description: 'CEL expression with dynamic inputs for inline processing. Example: "(in0 + 1) * 2"',
+	description: 'JavaScript expression with dynamic inputs for inline processing. Example: "(in0 + 1) * 2"',
 	inputs: [], // Dynamic inputs - will accept in0, in1, in2, etc. or custom names
 	outputs: [
 		{ name: 'out', type: 'any' }
@@ -25,67 +25,62 @@ export const ExpressionNode: NodeDefinition = {
 		context.setOutputValue('out', expression);
 	},
 	inferOutputTypes(context: TypeInferenceContext): Record<string, string> {
-		// For CEL expressions, we could parse the expression to infer the type
-		// For now, we use heuristic-based type inference
+		// For JavaScript expressions, we use heuristic-based type inference
 		const expression = context.getNodeData().expression || '';
 		
 		// Check for literal values first
 		const trimmedExpr = expression.trim();
 		
-		// Integer literal (e.g., "10", "42", "-5")
-		if (/^-?\d+$/.test(trimmedExpr)) {
-			return { out: 'int' };
+		// Number literal (e.g., "10", "42", "-5", "3.14")
+		if (/^-?\d+(\.\d+)?$/.test(trimmedExpr)) {
+			return { out: 'number' };
 		}
 		
-		// Double literal (e.g., "3.14", "-2.5")
-		if (/^-?\d+\.\d+$/.test(trimmedExpr)) {
-			return { out: 'double' };
-		}
-		
-		// String literal (e.g., '"hello"', "'world'")
+		// String literal (e.g., '"hello"', "'world'", "`template`")
 		if ((trimmedExpr.startsWith('"') && trimmedExpr.endsWith('"')) ||
-		    (trimmedExpr.startsWith("'") && trimmedExpr.endsWith("'"))) {
+		    (trimmedExpr.startsWith("'") && trimmedExpr.endsWith("'")) ||
+		    (trimmedExpr.startsWith('`') && trimmedExpr.endsWith('`'))) {
 			return { out: 'string' };
 		}
 		
 		// Boolean literal
 		if (trimmedExpr === 'true' || trimmedExpr === 'false') {
-			return { out: 'bool' };
+			return { out: 'boolean' };
 		}
 		
-		// List literal (e.g., "[1, 2, 3]")
+		// Array literal (e.g., "[1, 2, 3]")
 		if (trimmedExpr.startsWith('[') && trimmedExpr.endsWith(']')) {
-			return { out: 'list(dyn)' };
+			return { out: 'unknown[]' };
 		}
 		
-		// Map/Object literal (e.g., "{a: 1, b: 2}")
+		// Object literal (e.g., "{a: 1, b: 2}")
 		if (trimmedExpr.startsWith('{') && trimmedExpr.endsWith('}')) {
-			return { out: 'map(string, dyn)' };
+			return { out: 'object' };
 		}
 		
 		// Simple heuristic-based type inference for expressions
 		if (expression.includes('>') || expression.includes('<') || 
-		    expression.includes('==') || expression.includes('!=') || 
+		    expression.includes('==') || expression.includes('===') ||
+		    expression.includes('!=') || expression.includes('!==') ||
 		    expression.includes('&&') || expression.includes('||')) {
 			// Likely a boolean expression
-			return { out: 'bool' };
+			return { out: 'boolean' };
 		}
 		
 		if (expression.includes('+') || expression.includes('-') || 
 		    expression.includes('*') || expression.includes('/')) {
-			// CEL keywords and functions to skip during variable extraction
-			const celKeywords = ['true', 'false', 'null', 'in', 'has', 'size', 'map', 'filter'];
+			// JavaScript keywords and functions to skip during variable extraction
+			const jsKeywords = ['true', 'false', 'null', 'undefined', 'in', 'of', 'typeof'];
 			
 			// Extract variable names from the expression to check their types
-			// Match common variable patterns: word characters, digits, underscores
 			const variablePattern = /\b([a-zA-Z_][a-zA-Z0-9_]*)\b/g;
 			const matches = expression.matchAll(variablePattern);
 			const variableNames = new Set<string>();
 			
 			for (const match of matches) {
 				const varName = match[1];
-				// Skip CEL keywords and functions
-				if (!celKeywords.includes(varName)) {
+				// Skip JavaScript keywords and functions
+				if (!jsKeywords.includes(varName)) {
 					variableNames.add(varName);
 				}
 			}
@@ -95,7 +90,7 @@ export const ExpressionNode: NodeDefinition = {
 				variableNames.add(`in${i}`);
 			}
 			
-			// Collect types for all variables, avoiding duplicates
+			// Collect types for all variables
 			const inputTypes: string[] = [];
 			for (const varName of variableNames) {
 				const inputType = context.getInputType(varName);
@@ -106,28 +101,24 @@ export const ExpressionNode: NodeDefinition = {
 			
 			// If we found any input types, use them for inference
 			if (inputTypes.length > 0) {
-				// If any input is double, result is double
-				if (inputTypes.some(t => t === 'double')) {
-					return { out: 'double' };
+				// If all inputs are numbers, result is number
+				if (inputTypes.every(t => t === 'number')) {
+					return { out: 'number' };
 				}
-				// If all inputs are int, result is int
-				if (inputTypes.every(t => t === 'int')) {
-					return { out: 'int' };
-				}
-				// If we have numeric types, default to double
-				if (inputTypes.some(t => t === 'int' || t === 'double')) {
-					return { out: 'double' };
+				// If we have string concatenation with +
+				if (expression.includes('+') && inputTypes.some(t => t === 'string')) {
+					return { out: 'string' };
 				}
 			}
 			
-			return { out: 'dyn' };
+			return { out: 'any' };
 		}
 		
 		if (expression.includes('.map(') || expression.includes('.filter(')) {
-			return { out: 'list(dyn)' };
+			return { out: 'unknown[]' };
 		}
 		
-		// Default to dynamic type
-		return { out: 'dyn' };
+		// Default to any type
+		return { out: 'any' };
 	}
 };
