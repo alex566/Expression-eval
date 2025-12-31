@@ -20,6 +20,11 @@ import { parseTypeString } from './type-inference';
  * celTypeToTypeScript('map(string, int)') // returns 'Record<string, number>'
  */
 export function celTypeToTypeScript(celType: string): string {
+	// Handle undefined or null inputs
+	if (!celType) {
+		return 'unknown';
+	}
+	
 	// Handle primitive types
 	switch (celType) {
 		case 'null':
