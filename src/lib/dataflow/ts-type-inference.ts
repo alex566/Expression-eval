@@ -149,6 +149,149 @@ function createTypeNode(typeString: string): ts.TypeNode {
 }
 
 /**
+ * Transform a parsed expression AST to replace variable references
+ * with typed identifiers from the node's inputs
+ */
+function transformExpression(
+	expr: ts.Expression,
+	graph: Graph,
+	node: GraphNode,
+	nodeVarMap: Map<string, string>
+): ts.Expression {
+	const factory = ts.factory;
+	
+	// Helper to get the source variable for an input port
+	const getInputIdentifier = (portName: string): ts.Expression | null => {
+		const edge = graph.edges.find(e => e.to.node === node.id && e.to.port === portName);
+		if (edge) {
+			const sourceVar = nodeVarMap.get(edge.from.node);
+			if (sourceVar) {
+				const sourceNode = graph.nodes.find(n => n.id === edge.from.node);
+				// Special handling for Input node with property access
+				if (sourceNode && sourceNode.type === 'Input' && edge.from.port !== 'out') {
+					return factory.createPropertyAccessExpression(
+						factory.createIdentifier('input'),
+						edge.from.port
+					);
+				}
+				return factory.createIdentifier(sourceVar);
+			}
+		}
+		return null;
+	};
+	
+	// Recursive transformer
+	const transform = (expression: ts.Expression): ts.Expression => {
+		// Check if this is an identifier that matches an input port (in0, in1, in2, etc.)
+		if (ts.isIdentifier(expression)) {
+			const identifierName = expression.text;
+			// Check if it matches a port name pattern
+			const replacement = getInputIdentifier(identifierName);
+			if (replacement) {
+				return replacement;
+			}
+			// Return as-is if no replacement found
+			return expression;
+		}
+		
+		// Handle binary expressions (e.g., a + b, a * b)
+		if (ts.isBinaryExpression(expression)) {
+			return factory.createBinaryExpression(
+				transform(expression.left),
+				expression.operatorToken,
+				transform(expression.right)
+			);
+		}
+		
+		// Handle parenthesized expressions
+		if (ts.isParenthesizedExpression(expression)) {
+			return factory.createParenthesizedExpression(
+				transform(expression.expression)
+			);
+		}
+		
+		// Handle prefix unary expressions (e.g., -x, !x)
+		if (ts.isPrefixUnaryExpression(expression)) {
+			return factory.createPrefixUnaryExpression(
+				expression.operator,
+				transform(expression.operand) as ts.UnaryExpression
+			);
+		}
+		
+		// Handle postfix unary expressions (e.g., x++)
+		if (ts.isPostfixUnaryExpression(expression)) {
+			return factory.createPostfixUnaryExpression(
+				transform(expression.operand) as ts.LeftHandSideExpression,
+				expression.operator
+			);
+		}
+		
+		// Handle conditional expressions (ternary)
+		if (ts.isConditionalExpression(expression)) {
+			return factory.createConditionalExpression(
+				transform(expression.condition),
+				factory.createToken(ts.SyntaxKind.QuestionToken),
+				transform(expression.whenTrue),
+				factory.createToken(ts.SyntaxKind.ColonToken),
+				transform(expression.whenFalse)
+			);
+		}
+		
+		// Handle property access (e.g., in0.property)
+		if (ts.isPropertyAccessExpression(expression)) {
+			return factory.createPropertyAccessExpression(
+				transform(expression.expression),
+				expression.name
+			);
+		}
+		
+		// Handle element access (e.g., in0[0])
+		if (ts.isElementAccessExpression(expression)) {
+			return factory.createElementAccessExpression(
+				transform(expression.expression),
+				transform(expression.argumentExpression)
+			);
+		}
+		
+		// Handle call expressions (e.g., func(in0))
+		if (ts.isCallExpression(expression)) {
+			return factory.createCallExpression(
+				transform(expression.expression),
+				expression.typeArguments,
+				expression.arguments.map(arg => transform(arg))
+			);
+		}
+		
+		// Handle array literals
+		if (ts.isArrayLiteralExpression(expression)) {
+			return factory.createArrayLiteralExpression(
+				expression.elements.map(elem => transform(elem))
+			);
+		}
+		
+		// Handle object literals
+		if (ts.isObjectLiteralExpression(expression)) {
+			return factory.createObjectLiteralExpression(
+				expression.properties.map(prop => {
+					if (ts.isPropertyAssignment(prop)) {
+						return factory.createPropertyAssignment(
+							prop.name,
+							transform(prop.initializer)
+						);
+					}
+					return prop; // Keep other property types as-is
+				})
+			);
+		}
+		
+		// For other expression types, return as-is
+		return expression;
+	};
+	
+	return transform(expr);
+}
+
+/**
  * Generate AST expression node for a graph node using TypeScript factory
  */
 function createExpressionAst(
@@ -182,10 +325,7 @@ function createExpressionAst(
 			return factory.createIdentifier('input');
 			
 		case 'Expression': {
-			// For Expression nodes, we can't parse arbitrary JavaScript expressions into AST
-			// We need to preserve the expression as-is for JavaScript evaluation
-			// For type inference purposes, we'll return a generic expression
-			// that TypeScript can't fully analyze, so we'll default to 'any'
+			// For Expression nodes, parse the JavaScript expression into AST
 			const expression = node.data.expression || 'null';
 			
 			// Try to detect simple literals for better type inference
@@ -206,8 +346,37 @@ function createExpressionAst(
 			if (trimmed === 'true') return factory.createTrue();
 			if (trimmed === 'false') return factory.createFalse();
 			
-			// For complex expressions, we can't create valid AST without parsing
-			// Return a call to eval-like expression (treated as 'any' type)
+			// For complex expressions, parse them using TypeScript's parser
+			// and replace variable references with typed identifiers
+			try {
+				// Parse the expression as a TypeScript expression
+				const sourceFile = ts.createSourceFile(
+					'temp.ts',
+					expression,
+					ts.ScriptTarget.ESNext,
+					true,
+					ts.ScriptKind.TS
+				);
+				
+				// Get the first expression statement
+				if (sourceFile.statements.length > 0) {
+					const statement = sourceFile.statements[0];
+					if (ts.isExpressionStatement(statement)) {
+						// Transform the expression to replace variable references
+						const transformedExpr = transformExpression(
+							statement.expression,
+							graph,
+							node,
+							nodeVarMap
+						);
+						return transformedExpr;
+					}
+				}
+			} catch (error) {
+				// If parsing fails, fall back to 'any' type
+			}
+			
+			// Fallback for expressions we can't parse
 			return factory.createAsExpression(
 				factory.createNull(),
 				factory.createKeywordTypeNode(ts.SyntaxKind.AnyKeyword)
@@ -644,7 +813,96 @@ export class TypeScriptInferenceEngine {
 			case ts.SyntaxKind.NullKeyword:
 				return 'null';
 			case ts.SyntaxKind.Identifier:
-				return 'unknown'; // Would need type checker to resolve
+				// Look up the identifier in our node types to get its type
+				const identifier = expr as ts.Identifier;
+				const varName = identifier.text;
+				
+				// Find the node that corresponds to this variable
+				for (const [nodeId, nodeInfo] of this.nodeTypes) {
+					const expectedVarName = `node_${nodeId}`;
+					if (expectedVarName === varName) {
+						return nodeInfo.outputTypes['out'] || 'unknown';
+					}
+				}
+				return 'unknown';
+			case ts.SyntaxKind.BinaryExpression:
+				// Handle binary expressions (e.g., a + b, a * b, a > b)
+				const binaryExpr = expr as ts.BinaryExpression;
+				const leftType = this.inferTypeFromExpression(binaryExpr.left);
+				const rightType = this.inferTypeFromExpression(binaryExpr.right);
+				
+				// Determine result type based on operator
+				const operator = binaryExpr.operatorToken.kind;
+				
+				// Comparison operators return boolean
+				if (operator === ts.SyntaxKind.GreaterThanToken ||
+				    operator === ts.SyntaxKind.LessThanToken ||
+				    operator === ts.SyntaxKind.GreaterThanEqualsToken ||
+				    operator === ts.SyntaxKind.LessThanEqualsToken ||
+				    operator === ts.SyntaxKind.EqualsEqualsToken ||
+				    operator === ts.SyntaxKind.EqualsEqualsEqualsToken ||
+				    operator === ts.SyntaxKind.ExclamationEqualsToken ||
+				    operator === ts.SyntaxKind.ExclamationEqualsEqualsToken) {
+					return 'boolean';
+				}
+				
+				// Logical operators return boolean
+				if (operator === ts.SyntaxKind.AmpersandAmpersandToken ||
+				    operator === ts.SyntaxKind.BarBarToken) {
+					return 'boolean';
+				}
+				
+				// Arithmetic operators
+				if (operator === ts.SyntaxKind.PlusToken ||
+				    operator === ts.SyntaxKind.MinusToken ||
+				    operator === ts.SyntaxKind.AsteriskToken ||
+				    operator === ts.SyntaxKind.SlashToken ||
+				    operator === ts.SyntaxKind.PercentToken ||
+				    operator === ts.SyntaxKind.AsteriskAsteriskToken) {
+					// If both operands are numbers, result is number
+					if (leftType === 'number' && rightType === 'number') {
+						return 'number';
+					}
+					// Plus with strings returns string
+					if (operator === ts.SyntaxKind.PlusToken &&
+					    (leftType === 'string' || rightType === 'string')) {
+						return 'string';
+					}
+					// Otherwise, return number if at least one operand is number
+					if (leftType === 'number' || rightType === 'number') {
+						return 'number';
+					}
+					return 'any';
+				}
+				
+				// For other binary operators, unify the types
+				return unifyTypes(leftType, rightType);
+			case ts.SyntaxKind.ParenthesizedExpression:
+				const parenExpr = expr as ts.ParenthesizedExpression;
+				return this.inferTypeFromExpression(parenExpr.expression);
+			case ts.SyntaxKind.PrefixUnaryExpression:
+				const prefixExpr = expr as ts.PrefixUnaryExpression;
+				const operandType = this.inferTypeFromExpression(prefixExpr.operand);
+				// Logical NOT returns boolean
+				if (prefixExpr.operator === ts.SyntaxKind.ExclamationToken) {
+					return 'boolean';
+				}
+				// Unary minus/plus returns number
+				if (prefixExpr.operator === ts.SyntaxKind.MinusToken ||
+				    prefixExpr.operator === ts.SyntaxKind.PlusToken) {
+					return operandType === 'number' ? 'number' : 'any';
+				}
+				return operandType;
+			case ts.SyntaxKind.PostfixUnaryExpression:
+				const postfixExpr = expr as ts.PostfixUnaryExpression;
+				return this.inferTypeFromExpression(postfixExpr.operand);
+			case ts.SyntaxKind.PropertyAccessExpression:
+				// For property access, we'd need type information about the object
+				// For now, return 'any'
+				return 'any';
+			case ts.SyntaxKind.ElementAccessExpression:
+				// For array/object element access, return 'any'
+				return 'any';
 			case ts.SyntaxKind.ArrayLiteralExpression:
 				const arrayLiteral = expr as ts.ArrayLiteralExpression;
 				if (arrayLiteral.elements.length === 0) {
