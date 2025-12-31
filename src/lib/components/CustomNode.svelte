@@ -3,6 +3,7 @@
 	import type { NodeProps } from '@xyflow/svelte';
 	import type { PortSpec } from '$lib/dataflow/types';
 	import { PinMode } from '$lib/dataflow/types';
+	import { celTypeToTypeScript } from '$lib/dataflow/type-converter';
 
 	type $$Props = NodeProps;
 
@@ -97,8 +98,8 @@
 						style="top: {(i + 1) * (100 / (inputs.length + 1))}%"
 					/>
 					<span class="handle-label left">
-						{input.displayName || input.name}: <span class="type-label" title={`TypeScript: ${input.type}`}>
-							{input.type}
+						{input.displayName || input.name}: <span class="type-label" title={`CEL type: ${input.type}`}>
+							{celTypeToTypeScript(input.type)}
 						</span>
 						{#if input.nameMode === PinMode.Static || input.typeMode === PinMode.Static}
 							<span class="mode-indicator static" title="Static (user-defined or schema)">📌</span>
@@ -153,8 +154,8 @@
 						style="top: {(i + 1) * (100 / (outputs.length + 1))}%"
 					/>
 					<span class="handle-label right">
-						{output.displayName || output.name}: <span class="type-label" title={`TypeScript: ${output.type}`}>
-							{output.type}
+						{output.displayName || output.name}: <span class="type-label" title={`CEL type: ${output.type}`}>
+							{celTypeToTypeScript(output.type)}
 						</span>
 						{#if output.nameMode === PinMode.Static || output.typeMode === PinMode.Static}
 							<span class="mode-indicator static" title="Static (user-defined or schema)">📌</span>

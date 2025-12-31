@@ -4,3 +4,4 @@ export * from './registry';
 export * from './cel-compiler';
 export * from './cel-evaluator';
 export * from './type-inference';
+export * from './type-converter';
