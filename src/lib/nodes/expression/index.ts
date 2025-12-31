@@ -73,28 +73,34 @@ export const ExpressionNode: NodeDefinition = {
 		
 		if (expression.includes('+') || expression.includes('-') || 
 		    expression.includes('*') || expression.includes('/')) {
+			// CEL keywords and functions to skip during variable extraction
+			const celKeywords = ['true', 'false', 'null', 'in', 'has', 'size', 'map', 'filter'];
+			
 			// Extract variable names from the expression to check their types
 			// Match common variable patterns: word characters, digits, underscores
 			const variablePattern = /\b([a-zA-Z_][a-zA-Z0-9_]*)\b/g;
 			const matches = expression.matchAll(variablePattern);
-			const inputTypes: string[] = [];
+			const variableNames = new Set<string>();
 			
 			for (const match of matches) {
 				const varName = match[1];
 				// Skip CEL keywords and functions
-				if (!['true', 'false', 'null', 'in', 'has', 'size', 'map', 'filter'].includes(varName)) {
-					const inputType = context.getInputType(varName);
-					if (inputType && inputType !== 'any') {
-						inputTypes.push(inputType);
-					}
+				if (!celKeywords.includes(varName)) {
+					variableNames.add(varName);
 				}
 			}
 			
-			// Also check for standard in0, in1, in2, etc. inputs
+			// Also check for standard in0, in1, in2, etc. inputs (up to in9)
 			for (let i = 0; i < 10; i++) {
-				const inType = context.getInputType(`in${i}`);
-				if (inType && inType !== 'any') {
-					inputTypes.push(inType);
+				variableNames.add(`in${i}`);
+			}
+			
+			// Collect types for all variables, avoiding duplicates
+			const inputTypes: string[] = [];
+			for (const varName of variableNames) {
+				const inputType = context.getInputType(varName);
+				if (inputType && inputType !== 'any') {
+					inputTypes.push(inputType);
 				}
 			}
 			
