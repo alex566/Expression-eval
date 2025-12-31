@@ -853,6 +853,455 @@ export const NAME_PROPAGATION_GRAPH: Graph = {
 	]
 };
 
+/**
+ * Grasshopper-inspired stress test graph
+ * Demonstrates complex operations mimicking common Grasshopper (Rhino 3D) workflows:
+ * - Range generation (series of numbers)
+ * - Multiple mathematical transformations (scaling, powers, trigonometry)
+ * - Array filtering and mapping operations
+ * - Data merging and reduction
+ * - Nested operations and complex data flows
+ * 
+ * This serves as a comprehensive stress test for the expression evaluation engine.
+ */
+export const GRASSHOPPER_STRESS_TEST: Graph = {
+	nodes: [
+		// Range generation: Create a series from 0 to 9
+		{
+			id: "rangeStart",
+			type: "Expression",
+			data: {
+				expression: "0"
+			}
+		},
+		{
+			id: "rangeEnd",
+			type: "Expression",
+			data: {
+				expression: "9"
+			}
+		},
+		{
+			id: "rangeStep",
+			type: "Expression",
+			data: {
+				expression: "1"
+			}
+		},
+		// Create array: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+		{
+			id: "generateRange",
+			type: "Expression",
+			data: {
+				expression: "Array.from({length: Math.floor((end - start) / step) + 1}, (_, i) => start + i * step)"
+			}
+		},
+		
+		// Path 1: Scale and apply power transformation
+		{
+			id: "scaleFactor1",
+			type: "Expression",
+			data: {
+				expression: "2.5"
+			}
+		},
+		{
+			id: "scaleExpr",
+			type: "Expression",
+			data: {
+				expression: "element * scale"
+			}
+		},
+		{
+			id: "scaleMap",
+			type: "Map",
+			data: {}
+		},
+		{
+			id: "powerExpr",
+			type: "Expression",
+			data: {
+				expression: "Math.pow(element, 2)"
+			}
+		},
+		{
+			id: "powerMap",
+			type: "Map",
+			data: {}
+		},
+		
+		// Path 2: Trigonometric transformation
+		{
+			id: "angleScale",
+			type: "Expression",
+			data: {
+				expression: "Math.PI / 18" // Convert to radians (10 degrees per unit)
+			}
+		},
+		{
+			id: "sinExpr",
+			type: "Expression",
+			data: {
+				expression: "Math.sin(element * angleScale)"
+			}
+		},
+		{
+			id: "sinMap",
+			type: "Map",
+			data: {}
+		},
+		{
+			id: "amplify",
+			type: "Expression",
+			data: {
+				expression: "100"
+			}
+		},
+		{
+			id: "amplifyExpr",
+			type: "Expression",
+			data: {
+				expression: "element * amp"
+			}
+		},
+		{
+			id: "amplifyMap",
+			type: "Map",
+			data: {}
+		},
+		
+		// Path 3: Filter and modulo operation (cull pattern)
+		{
+			id: "filterThreshold",
+			type: "Expression",
+			data: {
+				expression: "30"
+			}
+		},
+		{
+			id: "filterExpr",
+			type: "Expression",
+			data: {
+				expression: "element > threshold"
+			}
+		},
+		{
+			id: "filterOp",
+			type: "Filter",
+			data: {}
+		},
+		{
+			id: "moduloExpr",
+			type: "Expression",
+			data: {
+				expression: "element % 3"
+			}
+		},
+		{
+			id: "moduloMap",
+			type: "Map",
+			data: {}
+		},
+		
+		// Merge and combine operations
+		{
+			id: "mergeArrays",
+			type: "Expression",
+			data: {
+				expression: "path1.map((v, i) => ({scaled: v, trig: path2[i] || 0, modulo: path3[i] || 0}))"
+			}
+		},
+		
+		// Statistics and reduction
+		{
+			id: "sumInitial",
+			type: "Expression",
+			data: {
+				expression: "0"
+			}
+		},
+		{
+			id: "sumExpr",
+			type: "Expression",
+			data: {
+				expression: "accumulator + element.scaled"
+			}
+		},
+		{
+			id: "sumReduce",
+			type: "Reduce",
+			data: {}
+		},
+		
+		{
+			id: "avgDivisor",
+			type: "Expression",
+			data: {
+				expression: "10"
+			}
+		},
+		{
+			id: "calculateAvg",
+			type: "Expression",
+			data: {
+				expression: "sum / count"
+			}
+		},
+		
+		// Extract specific values (list item access)
+		{
+			id: "extractIndex",
+			type: "Expression",
+			data: {
+				expression: "5"
+			}
+		},
+		{
+			id: "extractItem",
+			type: "Expression",
+			data: {
+				expression: "array[index]"
+			}
+		},
+		
+		// Count and statistics
+		{
+			id: "countFiltered",
+			type: "Expression",
+			data: {
+				expression: "array.length"
+			}
+		},
+		
+		// Complex nested calculation
+		{
+			id: "complexCalc",
+			type: "Expression",
+			data: {
+				expression: "(avg * 0.5) + (itemValue.trig * 0.3) + (count * 0.2)"
+			}
+		},
+		
+		// Create summary object
+		{
+			id: "createSummary",
+			type: "CreateObject",
+			data: {
+				pinNames: ["originalRange", "scaledPower", "trigValues", "moduloFiltered", "mergedData", "sum", "average", "extractedItem", "filteredCount", "complexResult"]
+			}
+		},
+		
+		{
+			id: "output",
+			type: "Output",
+			data: {
+				outputs: ["result"]
+			}
+		}
+	],
+	edges: [
+		// Range generation
+		{
+			from: { node: "rangeStart", port: "out" },
+			to: { node: "generateRange", port: "start" }
+		},
+		{
+			from: { node: "rangeEnd", port: "out" },
+			to: { node: "generateRange", port: "end" }
+		},
+		{
+			from: { node: "rangeStep", port: "out" },
+			to: { node: "generateRange", port: "step" }
+		},
+		
+		// Path 1: Scale and power
+		{
+			from: { node: "generateRange", port: "out" },
+			to: { node: "scaleMap", port: "array" }
+		},
+		{
+			from: { node: "scaleFactor1", port: "out" },
+			to: { node: "scaleExpr", port: "scale" }
+		},
+		{
+			from: { node: "scaleExpr", port: "out" },
+			to: { node: "scaleMap", port: "expression" }
+		},
+		{
+			from: { node: "scaleMap", port: "out" },
+			to: { node: "powerMap", port: "array" }
+		},
+		{
+			from: { node: "powerExpr", port: "out" },
+			to: { node: "powerMap", port: "expression" }
+		},
+		
+		// Path 2: Trigonometric
+		{
+			from: { node: "generateRange", port: "out" },
+			to: { node: "sinMap", port: "array" }
+		},
+		{
+			from: { node: "angleScale", port: "out" },
+			to: { node: "sinExpr", port: "angleScale" }
+		},
+		{
+			from: { node: "sinExpr", port: "out" },
+			to: { node: "sinMap", port: "expression" }
+		},
+		{
+			from: { node: "sinMap", port: "out" },
+			to: { node: "amplifyMap", port: "array" }
+		},
+		{
+			from: { node: "amplify", port: "out" },
+			to: { node: "amplifyExpr", port: "amp" }
+		},
+		{
+			from: { node: "amplifyExpr", port: "out" },
+			to: { node: "amplifyMap", port: "expression" }
+		},
+		
+		// Path 3: Filter and modulo
+		{
+			from: { node: "powerMap", port: "out" },
+			to: { node: "filterOp", port: "array" }
+		},
+		{
+			from: { node: "filterThreshold", port: "out" },
+			to: { node: "filterExpr", port: "threshold" }
+		},
+		{
+			from: { node: "filterExpr", port: "out" },
+			to: { node: "filterOp", port: "expression" }
+		},
+		{
+			from: { node: "filterOp", port: "out" },
+			to: { node: "moduloMap", port: "array" }
+		},
+		{
+			from: { node: "moduloExpr", port: "out" },
+			to: { node: "moduloMap", port: "expression" }
+		},
+		
+		// Merge operations
+		{
+			from: { node: "powerMap", port: "out" },
+			to: { node: "mergeArrays", port: "path1" }
+		},
+		{
+			from: { node: "amplifyMap", port: "out" },
+			to: { node: "mergeArrays", port: "path2" }
+		},
+		{
+			from: { node: "moduloMap", port: "out" },
+			to: { node: "mergeArrays", port: "path3" }
+		},
+		
+		// Reduction (sum)
+		{
+			from: { node: "mergeArrays", port: "out" },
+			to: { node: "sumReduce", port: "array" }
+		},
+		{
+			from: { node: "sumInitial", port: "out" },
+			to: { node: "sumReduce", port: "initial" }
+		},
+		{
+			from: { node: "sumExpr", port: "out" },
+			to: { node: "sumReduce", port: "expression" }
+		},
+		
+		// Average calculation
+		{
+			from: { node: "sumReduce", port: "out" },
+			to: { node: "calculateAvg", port: "sum" }
+		},
+		{
+			from: { node: "avgDivisor", port: "out" },
+			to: { node: "calculateAvg", port: "count" }
+		},
+		
+		// Extract item
+		{
+			from: { node: "mergeArrays", port: "out" },
+			to: { node: "extractItem", port: "array" }
+		},
+		{
+			from: { node: "extractIndex", port: "out" },
+			to: { node: "extractItem", port: "index" }
+		},
+		
+		// Count filtered
+		{
+			from: { node: "moduloMap", port: "out" },
+			to: { node: "countFiltered", port: "array" }
+		},
+		
+		// Complex calculation
+		{
+			from: { node: "calculateAvg", port: "out" },
+			to: { node: "complexCalc", port: "avg" }
+		},
+		{
+			from: { node: "extractItem", port: "out" },
+			to: { node: "complexCalc", port: "itemValue" }
+		},
+		{
+			from: { node: "countFiltered", port: "out" },
+			to: { node: "complexCalc", port: "count" }
+		},
+		
+		// Create summary object
+		{
+			from: { node: "generateRange", port: "out" },
+			to: { node: "createSummary", port: "originalRange" }
+		},
+		{
+			from: { node: "powerMap", port: "out" },
+			to: { node: "createSummary", port: "scaledPower" }
+		},
+		{
+			from: { node: "amplifyMap", port: "out" },
+			to: { node: "createSummary", port: "trigValues" }
+		},
+		{
+			from: { node: "moduloMap", port: "out" },
+			to: { node: "createSummary", port: "moduloFiltered" }
+		},
+		{
+			from: { node: "mergeArrays", port: "out" },
+			to: { node: "createSummary", port: "mergedData" }
+		},
+		{
+			from: { node: "sumReduce", port: "out" },
+			to: { node: "createSummary", port: "sum" }
+		},
+		{
+			from: { node: "calculateAvg", port: "out" },
+			to: { node: "createSummary", port: "average" }
+		},
+		{
+			from: { node: "extractItem", port: "out" },
+			to: { node: "createSummary", port: "extractedItem" }
+		},
+		{
+			from: { node: "countFiltered", port: "out" },
+			to: { node: "createSummary", port: "filteredCount" }
+		},
+		{
+			from: { node: "complexCalc", port: "out" },
+			to: { node: "createSummary", port: "complexResult" }
+		},
+		
+		// Output
+		{
+			from: { node: "createSummary", port: "out" },
+			to: { node: "output", port: "result" }
+		}
+	]
+};
+
 export const GRAPHS: Record<string, Graph> = {
 	'sample': SAMPLE_GRAPH,
 	'complex': COMPLEX_GRAPH,
@@ -864,5 +1313,6 @@ export const GRAPHS: Record<string, Graph> = {
 	'property-access': PROPERTY_ACCESS_GRAPH,
 	'array-operations': ARRAY_OPERATIONS_GRAPH,
 	'auto-inferred-output': AUTO_INFERRED_OUTPUT_GRAPH,
-	'name-propagation': NAME_PROPAGATION_GRAPH
+	'name-propagation': NAME_PROPAGATION_GRAPH,
+	'grasshopper-stress-test': GRASSHOPPER_STRESS_TEST
 };

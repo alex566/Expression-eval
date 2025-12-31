@@ -12,7 +12,8 @@
 		{ key: 'complex', name: 'Complex Graph', description: 'Multiple operations and nodes' },
 		{ key: 'dates', name: 'Date Operations', description: 'Working with dates and times (uses custom CEL functions)' },
 		{ key: 'cel', name: 'CEL Expression', description: 'CEL expression with conditionals' },
-		{ key: 'name-propagation', name: 'Name Propagation', description: 'Output names propagate to dynamic input names' }
+		{ key: 'name-propagation', name: 'Name Propagation', description: 'Output names propagate to dynamic input names' },
+		{ key: 'grasshopper-stress-test', name: 'Grasshopper Stress Test', description: 'Complex operations mimicking Grasshopper (Rhino 3D) workflows - comprehensive engine stress test' }
 	];
 
 	function toggleExpanded() {
