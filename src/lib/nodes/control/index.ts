@@ -1,17 +1,18 @@
-import type { NodeDefinition, TypeInferenceContext } from '../../dataflow/types';
-import { unifyTypes } from '../../dataflow/type-inference';
+import type { NodeDefinition } from '../../dataflow/types';
 
 /**
  * If node - conditional branching
  * Outputs either the true or false value based on condition
- * Can accept either a boolean value or a CEL expression that returns boolean
+ * Can accept either a boolean value or a JavaScript expression that returns boolean
+ * 
+ * Type inference is now handled by TypeScript factory API (ternary operator)
  */
 export const IfNode: NodeDefinition = {
 	type: 'If',
 	category: 'control',
 	description: 'Conditional execution based on a condition. Can accept boolean or expression.',
 	inputs: [
-		{ name: 'condition', type: 'boolean | string' }, // boolean or CEL expression
+		{ name: 'condition', type: 'boolean | string' }, // boolean or expression
 		{ name: 'true', type: 'any' },
 		{ name: 'false', type: 'any' }
 	],
@@ -27,8 +28,8 @@ export const IfNode: NodeDefinition = {
 			throw new Error('If node does not support array conditions.');
 		}
 
-		// NOTE: In CEL mode, this execute method may not be used
-		// If condition is a string (CEL expression), it will be compiled at graph level
+		// NOTE: In JavaScript mode, this execute method may not be used
+		// If condition is a string (expression), it will be compiled at graph level
 		// This fallback evaluates based on the condition value
 		if (typeof condition === 'boolean') {
 			if (condition) {
@@ -38,31 +39,11 @@ export const IfNode: NodeDefinition = {
 			}
 		} else {
 			// For string conditions in old execution path, treat as truthy
-			// In CEL mode, the ternary operator would be used instead
+			// In JavaScript mode, the ternary operator would be used instead
 			context.setOutputValue('out', condition ? trueValue : falseValue);
 		}
-	},
-	inferOutputTypes(context: TypeInferenceContext): Record<string, string> {
-		// Output type is the unification of true and false branch types
-		const trueType = context.getInputType('true');
-		const falseType = context.getInputType('false');
-		
-		if (!trueType && !falseType) {
-			return { out: 'any' };
-		}
-		
-		if (!trueType) {
-			return { out: falseType || 'any' };
-		}
-		
-		if (!falseType) {
-			return { out: trueType };
-		}
-		
-		// Both branches have types - they should match or be unified
-		const unifiedType = unifyTypes(trueType, falseType);
-		return { out: unifiedType };
 	}
+	// inferOutputTypes removed - TypeScript factory API handles type unification automatically
 };
 
 /**
