@@ -111,6 +111,8 @@ export interface EvaluationResult {
 	success: boolean;
 	outputs: Record<string, any>;
 	error?: string;
+	/** Map of node ID to computed value (for visualization) */
+	nodeValues?: Map<string, any>;
 }
 
 /**

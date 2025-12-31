@@ -266,7 +266,8 @@ function getNodePorts(
 export function graphToSvelteFlow(
 	graph: Graph, 
 	onNodeDoubleClick?: (nodeId: string) => void,
-	onNodeEdit?: (nodeId: string) => void
+	onNodeEdit?: (nodeId: string) => void,
+	nodeValues?: Map<string, any>
 ): { nodes: Node[]; edges: Edge[] } {
 	const nodes: Node[] = [];
 	const edges: Edge[] = [];
@@ -358,6 +359,7 @@ export function graphToSvelteFlow(
 				onNodeDoubleClick,
 				onNodeEdit,
 				expressionBody, // Add expression body for array operation nodes
+				computedValue: nodeValues?.get(node.id), // Add computed value if available
 				...node.data // Include original node data (like value)
 			},
 			position: {
@@ -395,7 +397,8 @@ export function updateFlowWithPreservedPositions(
 	graph: Graph,
 	existingNodes: Node[],
 	onNodeDoubleClick?: (nodeId: string) => void,
-	onNodeEdit?: (nodeId: string) => void
+	onNodeEdit?: (nodeId: string) => void,
+	nodeValues?: Map<string, any>
 ): { nodes: Node[]; edges: Edge[] } {
 	const nodes: Node[] = [];
 	const edges: Edge[] = [];
@@ -464,6 +467,7 @@ export function updateFlowWithPreservedPositions(
 				onNodeDoubleClick: nodeCallback,
 				onNodeEdit: editCallback,
 				expressionBody, // Add expression body for array operation nodes
+				computedValue: nodeValues?.get(node.id), // Add computed value if available
 				...node.data // Include original node data
 			},
 			position: existingPosition || { x: 0, y: 0 } // Use existing position or default
