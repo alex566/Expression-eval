@@ -33,13 +33,27 @@
 	
 	// Format computed value for display
 	function formatComputedValue(value: any): string {
-		if (value === null || value === undefined) return '';
+		if (value === null) return 'null';
+		if (value === undefined) return '';
 		if (typeof value === 'string') return `"${value}"`;
 		if (typeof value === 'object') {
-			const str = JSON.stringify(value);
-			return str.length > 20 ? str.substring(0, 20) + '...' : str;
+			try {
+				const str = JSON.stringify(value);
+				return str.length > 20 ? str.substring(0, 20) + '...' : str;
+			} catch (e) {
+				return '[object]';
+			}
 		}
 		return String(value);
+	}
+	
+	// Safe JSON stringify for tooltip
+	function safeStringify(value: any): string {
+		try {
+			return JSON.stringify(value);
+		} catch (e) {
+			return String(value);
+		}
 	}
 
 	function handleDoubleClick(event: MouseEvent) {
@@ -65,8 +79,8 @@
 	title={isEditable ? 'Double-click to edit' : hasSubgraph ? 'Double-click to view function' : ''}
 >
 	<!-- Computed value badge (top-right corner) -->
-	{#if computedValue !== undefined && computedValue !== null}
-		<div class="computed-value-badge" title={`Computed: ${JSON.stringify(computedValue)}`}>
+	{#if computedValue !== undefined}
+		<div class="computed-value-badge" title={`Computed: ${safeStringify(computedValue)}`}>
 			💡 {formatComputedValue(computedValue)}
 		</div>
 	{/if}
