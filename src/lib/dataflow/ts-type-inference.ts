@@ -182,11 +182,36 @@ function createExpressionAst(
 			return factory.createIdentifier('input');
 			
 		case 'Expression': {
-			// For Expression nodes, parse and return the expression
+			// For Expression nodes, we can't parse arbitrary JavaScript expressions into AST
+			// We need to preserve the expression as-is for JavaScript evaluation
+			// For type inference purposes, we'll return a generic expression
+			// that TypeScript can't fully analyze, so we'll default to 'any'
 			const expression = node.data.expression || 'null';
-			// We'll use a simple string-based approach here as we need to preserve
-			// the user's expression exactly as written
-			return factory.createIdentifier(`(${expression})`);
+			
+			// Try to detect simple literals for better type inference
+			const trimmed = expression.trim();
+			
+			// Number literal
+			if (/^-?\d+(\.\d+)?$/.test(trimmed)) {
+				return factory.createNumericLiteral(trimmed);
+			}
+			
+			// String literal
+			if ((trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+			    (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+				return factory.createStringLiteral(trimmed.slice(1, -1));
+			}
+			
+			// Boolean literal
+			if (trimmed === 'true') return factory.createTrue();
+			if (trimmed === 'false') return factory.createFalse();
+			
+			// For complex expressions, we can't create valid AST without parsing
+			// Return a call to eval-like expression (treated as 'any' type)
+			return factory.createAsExpression(
+				factory.createNull(),
+				factory.createKeywordTypeNode(ts.SyntaxKind.AnyKeyword)
+			);
 		}
 			
 		case 'CreateObject': {
@@ -538,17 +563,140 @@ export class TypeScriptInferenceEngine {
 	
 	/**
 	 * Infer type from AST using TypeScript compiler
-	 * For now, we'll use a simplified approach - just return 'any'
-	 * In a full implementation, we would create a SourceFile and use the type checker
+	 * This is a simplified implementation that infers basic types from the AST structure
+	 * 
+	 * A full implementation would create a SourceFile, Program, and use TypeChecker
+	 * For now, we infer based on the AST node type
 	 */
 	private inferTypeFromAst(statements: ts.Statement[]): string {
-		// This is a simplified version - a full implementation would:
-		// 1. Create a SourceFile from statements
-		// 2. Create a Program
-		// 3. Get the TypeChecker
-		// 4. Query the type of the last variable declaration
-		// For now, return 'any' to let the system work
+		if (statements.length === 0) {
+			return 'any';
+		}
+		
+		// Get the last statement (should be the current node's variable declaration)
+		const lastStatement = statements[statements.length - 1];
+		
+		if (ts.isVariableStatement(lastStatement)) {
+			const declaration = lastStatement.declarationList.declarations[0];
+			
+			// If there's an explicit type annotation, use it
+			if (declaration.type) {
+				return this.typeNodeToString(declaration.type);
+			}
+			
+			// Try to infer from the initializer expression
+			if (declaration.initializer) {
+				return this.inferTypeFromExpression(declaration.initializer);
+			}
+		}
+		
 		return 'any';
+	}
+	
+	/**
+	 * Convert a TypeScript type node to a string representation
+	 */
+	private typeNodeToString(typeNode: ts.TypeNode): string {
+		switch (typeNode.kind) {
+			case ts.SyntaxKind.StringKeyword:
+				return 'string';
+			case ts.SyntaxKind.NumberKeyword:
+				return 'number';
+			case ts.SyntaxKind.BooleanKeyword:
+				return 'boolean';
+			case ts.SyntaxKind.AnyKeyword:
+				return 'any';
+			case ts.SyntaxKind.UnknownKeyword:
+				return 'unknown';
+			case ts.SyntaxKind.NullKeyword:
+				return 'null';
+			case ts.SyntaxKind.UndefinedKeyword:
+				return 'undefined';
+			case ts.SyntaxKind.ObjectKeyword:
+				return 'object';
+			case ts.SyntaxKind.ArrayType:
+				const arrayType = typeNode as ts.ArrayTypeNode;
+				const elementType = this.typeNodeToString(arrayType.elementType);
+				return `${elementType}[]`;
+			case ts.SyntaxKind.TypeReference:
+				const typeRef = typeNode as ts.TypeReferenceNode;
+				if (ts.isIdentifier(typeRef.typeName)) {
+					return typeRef.typeName.text;
+				}
+				return 'unknown';
+			default:
+				return 'any';
+		}
+	}
+	
+	/**
+	 * Infer type from an expression AST node
+	 */
+	private inferTypeFromExpression(expr: ts.Expression): string {
+		switch (expr.kind) {
+			case ts.SyntaxKind.StringLiteral:
+				return 'string';
+			case ts.SyntaxKind.NumericLiteral:
+				return 'number';
+			case ts.SyntaxKind.TrueKeyword:
+			case ts.SyntaxKind.FalseKeyword:
+				return 'boolean';
+			case ts.SyntaxKind.NullKeyword:
+				return 'null';
+			case ts.SyntaxKind.Identifier:
+				return 'unknown'; // Would need type checker to resolve
+			case ts.SyntaxKind.ArrayLiteralExpression:
+				const arrayLiteral = expr as ts.ArrayLiteralExpression;
+				if (arrayLiteral.elements.length === 0) {
+					return 'unknown[]';
+				}
+				// Infer element type from first element
+				const elementType = this.inferTypeFromExpression(arrayLiteral.elements[0]);
+				return `${elementType}[]`;
+			case ts.SyntaxKind.ObjectLiteralExpression:
+				return 'object';
+			case ts.SyntaxKind.ConditionalExpression:
+				// For ternary, try to infer from both branches
+				const conditional = expr as ts.ConditionalExpression;
+				const trueType = this.inferTypeFromExpression(conditional.whenTrue);
+				const falseType = this.inferTypeFromExpression(conditional.whenFalse);
+				// Unify the types
+				return unifyTypes(trueType, falseType);
+			case ts.SyntaxKind.CallExpression:
+				const callExpr = expr as ts.CallExpression;
+				// Check if it's an array method
+				if (ts.isPropertyAccessExpression(callExpr.expression)) {
+					const methodName = callExpr.expression.name.text;
+					if (methodName === 'map' || methodName === 'filter') {
+						// Preserve array type
+						return 'unknown[]';
+					}
+					if (methodName === 'reduce') {
+						// Reduce returns the accumulator type (unknown without type checker)
+						return 'any';
+					}
+				}
+				// Constructor calls
+				if (ts.isIdentifier(callExpr.expression)) {
+					const funcName = callExpr.expression.text;
+					if (funcName === 'Date') {
+						return 'Date';
+					}
+				}
+				return 'any';
+			case ts.SyntaxKind.NewExpression:
+				const newExpr = expr as ts.NewExpression;
+				if (ts.isIdentifier(newExpr.expression)) {
+					return newExpr.expression.text; // e.g., 'Date'
+				}
+				return 'object';
+			case ts.SyntaxKind.AsExpression:
+				// For 'as' expressions, use the asserted type
+				const asExpr = expr as ts.AsExpression;
+				return this.typeNodeToString(asExpr.type);
+			default:
+				return 'any';
+		}
 	}
 	
 	/**
