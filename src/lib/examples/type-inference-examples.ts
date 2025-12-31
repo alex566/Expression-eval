@@ -1,11 +1,11 @@
 /**
- * Example demonstrating type inference for CEL expressions
+ * Example demonstrating type inference for JavaScript expressions
  * 
  * This file shows how the type inference system works with various node types
  */
 
 import type { Graph } from '../dataflow/types';
-import { CELGraphEvaluator } from '../dataflow/cel-evaluator';
+import { QuickJSGraphEvaluator } from '../dataflow/quickjs-evaluator';
 
 // Example 1: If node type inference
 // The If node should infer its output type from true/false branches
@@ -67,7 +67,7 @@ export function runTypeInferenceExamples() {
 	
 	// Example 1: If node
 	console.log('Example 1: If Node Type Inference');
-	const evaluator1 = new CELGraphEvaluator(ifNodeExample);
+	const evaluator1 = new QuickJSGraphEvaluator(ifNodeExample);
 	const typeCheck1 = evaluator1.typeCheck();
 	console.log('Valid:', typeCheck1.valid);
 	console.log('Errors:', typeCheck1.errors);
@@ -85,7 +85,7 @@ export function runTypeInferenceExamples() {
 	
 	// Example 2: Map node
 	console.log('Example 2: Map Node Type Inference');
-	const evaluator2 = new CELGraphEvaluator(mapNodeExample);
+	const evaluator2 = new QuickJSGraphEvaluator(mapNodeExample);
 	const typeCheck2 = evaluator2.typeCheck();
 	console.log('Valid:', typeCheck2.valid);
 	console.log('Errors:', typeCheck2.errors);
@@ -100,7 +100,7 @@ export function runTypeInferenceExamples() {
 	
 	// Example 3: CreateObject node
 	console.log('Example 3: CreateObject Node Type Inference');
-	const evaluator3 = new CELGraphEvaluator(createObjectExample);
+	const evaluator3 = new QuickJSGraphEvaluator(createObjectExample);
 	const typeCheck3 = evaluator3.typeCheck();
 	console.log('Valid:', typeCheck3.valid);
 	console.log('Errors:', typeCheck3.errors);

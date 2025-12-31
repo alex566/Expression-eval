@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Graph } from '$lib/dataflow/types';
-	import { CELGraphEvaluator } from '$lib/dataflow/cel-evaluator';
+	import { QuickJSGraphEvaluator } from '$lib/dataflow/quickjs-evaluator';
 	import { onMount } from 'svelte';
 	
 	let { 
@@ -13,7 +13,7 @@
 		onNodeValuesUpdate?: (nodeValues: Map<string, any>) => void;
 	} = $props();
 	
-	let celExpression = $state('');
+	let jsCode = $state('');
 	let evaluationResult: any = $state(null);
 	let error = $state('');
 	let isEvaluating = $state(false);
@@ -38,11 +38,11 @@
 		}
 	});
 	
-	// Compile to CEL expression
-	function compileToCEL() {
+	// Compile to JavaScript code
+	function compileToJS() {
 		try {
-			const evaluator = new CELGraphEvaluator(graph);
-			celExpression = evaluator.compile();
+			const evaluator = new QuickJSGraphEvaluator(graph);
+			jsCode = evaluator.compile();
 			error = '';
 		} catch (err) {
 			error = err instanceof Error ? err.message : String(err);
@@ -50,7 +50,7 @@
 	}
 	
 	// Evaluate with input data
-	async function evaluateCEL() {
+	async function evaluateJS() {
 		try {
 			isEvaluating = true;
 			
@@ -64,7 +64,7 @@
 				return;
 			}
 			
-			const evaluator = new CELGraphEvaluator(graph);
+			const evaluator = new QuickJSGraphEvaluator(graph);
 			const result = await evaluator.evaluate(parsedInput);
 			
 			if (result.success) {
@@ -88,7 +88,7 @@
 	// Auto-compile when graph changes
 	$effect(() => {
 		if (graph) {
-			compileToCEL();
+			compileToJS();
 		}
 	});
 	
@@ -101,22 +101,22 @@
 	}
 </script>
 
-<div class="cel-console">
-	<div class="cel-header">
-		<h3>CEL Expression Console</h3>
+<div class="js-console">
+	<div class="js-header">
+		<h3>JavaScript Expression Console</h3>
 		<button 
 			class="compile-btn" 
-			onclick={compileToCEL}
-			title="Recompile graph to CEL"
+			onclick={compileToJS}
+			title="Recompile graph to JavaScript"
 		>
 			🔄 Compile
 		</button>
 	</div>
 	
-	<div class="cel-expression-section">
-		<h4>Compiled CEL Expression:</h4>
+	<div class="js-expression-section">
+		<h4>Compiled JavaScript Code:</h4>
 		<div class="code-block">
-			{celExpression || 'No expression compiled yet'}
+			{jsCode || 'No code compiled yet'}
 		</div>
 	</div>
 	
@@ -132,8 +132,8 @@
 	<div class="actions">
 		<button 
 			class="evaluate-btn" 
-			onclick={evaluateCEL}
-			disabled={isEvaluating || !celExpression}
+			onclick={evaluateJS}
+			disabled={isEvaluating || !jsCode}
 		>
 			{isEvaluating ? '⏳ Evaluating...' : '▶️ Evaluate'}
 		</button>
@@ -157,7 +157,7 @@
 </div>
 
 <style>
-	.cel-console {
+	.js-console {
 		background: #1e293b;
 		color: #e2e8f0;
 		border-radius: 0.5rem;
@@ -165,7 +165,7 @@
 		font-family: 'Courier New', Courier, monospace;
 	}
 	
-	.cel-header {
+	.js-header {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
@@ -215,7 +215,7 @@
 		background: #1d4ed8;
 	}
 	
-	.cel-expression-section,
+	.js-expression-section,
 	.input-section,
 	.result-section,
 	.error-section {

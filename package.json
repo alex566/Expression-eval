@@ -22,9 +22,9 @@
 		"vite": "^7.2.6"
 	},
 	"dependencies": {
-		"@bufbuild/cel": "^0.3.0",
 		"@xyflow/svelte": "latest",
 		"dagre": "^0.8.5",
+		"quickjs-emscripten": "^0.31.0",
 		"typescript": "^5.9.3"
 	}
 }

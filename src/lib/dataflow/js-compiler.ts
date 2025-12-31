@@ -1,26 +1,33 @@
 /**
- * CEL Compiler - Converts graph nodes to CEL expressions
+ * JavaScript Code Generator - Converts graph nodes to JavaScript code
+ * Replaces the CEL compiler with JavaScript code generation for QuickJS evaluation
  */
 
 import type { Graph, GraphNode, GraphEdge } from './types';
 
 /**
- * Compile a graph to a CEL expression
+ * Compile a graph to JavaScript code
+ * Each node's result is stored in a const variable named node_<id>
+ * This allows results to be reused by multiple downstream nodes
  */
-export function compileGraphToCEL(graph: Graph): string {
-	// Build a map of node outputs
-	const nodeOutputs = new Map<string, string>();
+export function compileGraphToJS(graph: Graph): string {
+	// Build a map of node outputs to variable names
+	const nodeVars = new Map<string, string>();
 	
 	// Find all nodes that need to be compiled
 	const sortedNodes = topologicalSort(graph);
 	
-	// Compile each node to a CEL expression
+	// Generate code for each node
+	const statements: string[] = [];
+	
 	for (const node of sortedNodes) {
-		const celExpr = compileNodeToCEL(node, graph, nodeOutputs);
-		nodeOutputs.set(node.id, celExpr);
+		const varName = `node_${node.id}`;
+		const jsExpr = compileNodeToJS(node, graph, nodeVars);
+		statements.push(`const ${varName} = ${jsExpr};`);
+		nodeVars.set(node.id, varName);
 	}
 	
-	// Find the output node and return its expression
+	// Find the output node and return its value
 	const outputNode = graph.nodes.find(n => n.type === 'Output');
 	if (outputNode) {
 		// Get all edges to the output node
@@ -30,78 +37,90 @@ export function compileGraphToCEL(graph: Graph): string {
 			if (outputEdges.length > 1) {
 				const properties: string[] = [];
 				for (const edge of outputEdges) {
-					const sourceExpression = nodeOutputs.get(edge.from.node) || 'null';
+					const sourceVar = nodeVars.get(edge.from.node) || 'null';
 					const outputName = edge.to.port;
-					properties.push(`"${outputName}": ${sourceExpression}`);
+					properties.push(`"${outputName}": ${sourceVar}`);
 				}
-				return `{${properties.join(', ')}}`;
+				statements.push(`return {${properties.join(', ')}};`);
 			} else {
-				// Single output - check if it has a specific name
+				// Single output
 				const edge = outputEdges[0];
-				const sourceExpression = nodeOutputs.get(edge.from.node) || 'null';
+				const sourceVar = nodeVars.get(edge.from.node) || 'null';
 				const outputName = edge.to.port;
 				
 				// If the output has a specific name (not just 'result' or 'in'), create an object
-				// This ensures consistent behavior where outputs are always objects with named keys
 				if (outputName && outputName !== 'in') {
-					return `{"${outputName}": ${sourceExpression}}`;
+					statements.push(`return {"${outputName}": ${sourceVar}};`);
+				} else {
+					// Legacy behavior for unnamed outputs
+					statements.push(`return ${sourceVar};`);
 				}
-				
-				// Legacy behavior for unnamed outputs
-				return sourceExpression;
 			}
 		}
+	} else if (sortedNodes.length > 0) {
+		// If no output node, return the last node's value
+		const lastVar = nodeVars.get(sortedNodes[sortedNodes.length - 1].id);
+		statements.push(`return ${lastVar};`);
+	} else {
+		statements.push('return null;');
 	}
 	
-	// If no output node, return the last node's expression
-	if (sortedNodes.length > 0) {
-		return nodeOutputs.get(sortedNodes[sortedNodes.length - 1].id) || 'null';
-	}
-	
-	return 'null';
+	return statements.join('\n');
 }
 
 /**
  * Compile individual node expressions for evaluation
- * Returns a map of nodeId -> CEL expression
+ * Returns a map of nodeId -> JavaScript expression
  */
 export function compileNodeExpressions(graph: Graph): Map<string, string> {
-	const nodeOutputs = new Map<string, string>();
+	const nodeVars = new Map<string, string>();
 	
 	// Find all nodes that need to be compiled
 	const sortedNodes = topologicalSort(graph);
 	
-	// Compile each node to a CEL expression
+	// Compile each node to a JavaScript expression
+	const nodeExpressions = new Map<string, string>();
+	
 	for (const node of sortedNodes) {
-		const celExpr = compileNodeToCEL(node, graph, nodeOutputs);
-		nodeOutputs.set(node.id, celExpr);
+		const varName = `node_${node.id}`;
+		const jsExpr = compileNodeToJS(node, graph, nodeVars);
+		nodeVars.set(node.id, varName);
+		
+		// Generate a complete expression for this node
+		const dependencies: string[] = [];
+		for (const [id, varName] of nodeVars.entries()) {
+			if (id !== node.id) {
+				dependencies.push(`const ${varName} = node_${id};`);
+			}
+		}
+		
+		nodeExpressions.set(node.id, jsExpr);
 	}
 	
-	return nodeOutputs;
+	return nodeExpressions;
 }
 
 /**
- * Compile a single node to CEL expression
+ * Compile a single node to JavaScript expression
  */
-function compileNodeToCEL(
+function compileNodeToJS(
 	node: GraphNode,
 	graph: Graph,
-	nodeOutputs: Map<string, string>
+	nodeVars: Map<string, string>
 ): string {
-	// Get input values for this node
+	// Get input expression for this node
 	const getInputExpression = (portName: string): string => {
 		const edge = graph.edges.find(e => e.to.node === node.id && e.to.port === portName);
 		if (edge) {
 			const sourceNode = graph.nodes.find(n => n.id === edge.from.node);
-			const sourceExpression = nodeOutputs.get(edge.from.node) || 'null';
+			const sourceVar = nodeVars.get(edge.from.node) || 'null';
 			
 			// Special handling for Input node with property access
 			if (sourceNode && sourceNode.type === 'Input' && edge.from.port !== 'out') {
-				// If accessing a specific property from Input node, append property access
 				return `input.${edge.from.port}`;
 			}
 			
-			return sourceExpression;
+			return sourceVar;
 		}
 		return 'null';
 	};
@@ -112,8 +131,7 @@ function compileNodeToCEL(
 			return 'input';
 			
 		case 'Expression': {
-			// Expression node contains a CEL expression string with dynamic inputs
-			// Replace references to inputs (in0, in1, etc.) with actual values
+			// Expression node contains a JavaScript expression with dynamic inputs
 			let expression = node.data.expression || 'null';
 			
 			// Find all edges targeting this node
@@ -122,19 +140,19 @@ function compileNodeToCEL(
 			// Build a map of input port names to their expressions
 			const inputMap = new Map<string, string>();
 			for (const edge of inputEdges) {
-				const sourceExpression = nodeOutputs.get(edge.from.node) || 'null';
+				const sourceVar = nodeVars.get(edge.from.node) || 'null';
 				const sourceNode = graph.nodes.find(n => n.id === edge.from.node);
 				
 				// Special handling for Input node with property access
 				if (sourceNode && sourceNode.type === 'Input' && edge.from.port !== 'out') {
 					inputMap.set(edge.to.port, `input.${edge.from.port}`);
 				} else {
-					inputMap.set(edge.to.port, sourceExpression);
+					inputMap.set(edge.to.port, sourceVar);
 				}
 			}
 			
 			// Replace input references in the expression
-			// Sort by key length descending to avoid partial replacements (e.g., in10 before in1)
+			// Sort by key length descending to avoid partial replacements
 			const sortedInputs = Array.from(inputMap.entries()).sort((a, b) => b[0].length - a[0].length);
 			for (const [inputName, inputExpr] of sortedInputs) {
 				// Use word boundary regex to ensure we replace whole identifiers
@@ -151,9 +169,9 @@ function compileNodeToCEL(
 			const properties: string[] = [];
 			
 			for (const edge of inputEdges) {
-				const sourceExpression = nodeOutputs.get(edge.from.node) || 'null';
+				const sourceVar = nodeVars.get(edge.from.node) || 'null';
 				const propertyName = edge.to.port;
-				properties.push(`"${propertyName}": ${sourceExpression}`);
+				properties.push(`"${propertyName}": ${sourceVar}`);
 			}
 			
 			return `{${properties.join(', ')}}`;
@@ -169,58 +187,54 @@ function compileNodeToCEL(
 		case 'Map': {
 			const array = getInputExpression('array');
 			const exprInput = getInputExpression('expression');
-			// If expression comes from an Expression node, it will be the expression string
-			// CEL map: array.map(element, <expression>)
-			return `${array}.map(element, ${exprInput})`;
+			// Map operation: array.map(element => expression)
+			// We need to replace 'element' in the expression with the actual element
+			return `${array}.map(element => ${exprInput})`;
 		}
 			
 		case 'Filter': {
 			const array = getInputExpression('array');
 			const exprInput = getInputExpression('expression');
-			// If expression comes from an Expression node, it will be the expression string
-			// CEL filter: array.filter(element, <expression>)
-			return `${array}.filter(element, ${exprInput})`;
+			// Filter operation: array.filter(element => expression)
+			return `${array}.filter(element => ${exprInput})`;
 		}
 			
 		case 'Reduce': {
-			// Note: CEL doesn't have built-in reduce
-			// This is a placeholder - proper implementation would need custom CEL functions
-			// or use a different approach like fold operations
 			const array = getInputExpression('array');
 			const initial = getInputExpression('initial');
 			const exprInput = getInputExpression('expression');
-			// This will fail at runtime - needs custom implementation
-			return `reduce(${array}, ${initial}, ${exprInput})`;
+			// Reduce operation: array.reduce((accumulator, element) => expression, initial)
+			return `${array}.reduce((accumulator, element) => ${exprInput}, ${initial})`;
 		}
 		
 		case 'CreateDate': {
-			// Convert CreateDate node to createDate() CEL function call
+			// Convert CreateDate node to Date constructor
 			const value = getInputExpression('value');
-			return `createDate(${value})`;
+			return `new Date(${value})`;
 		}
 		
 		case 'AddDate': {
-			// Convert AddDate node to addDays()/addHours() CEL function calls
+			// Convert AddDate node to date manipulation
 			const date = getInputExpression('date');
 			const days = getInputExpression('days');
 			const hours = getInputExpression('hours');
 			
 			// Apply transformations in sequence
-			let result = date;
+			let result = `new Date(${date})`;
 			if (days !== 'null') {
-				result = `addDays(${result}, ${days})`;
+				result = `(function(d) { const nd = new Date(d); nd.setDate(nd.getDate() + ${days}); return nd; })(${result})`;
 			}
 			if (hours !== 'null') {
-				result = `addHours(${result}, ${hours})`;
+				result = `(function(d) { const nd = new Date(d); nd.setHours(nd.getHours() + ${hours}); return nd; })(${result})`;
 			}
 			return result;
 		}
 		
 		case 'FormatDate': {
-			// Convert FormatDate node to formatDate() CEL function call
+			// Convert FormatDate node to date formatting
 			const date = getInputExpression('date');
 			const format = getInputExpression('format');
-			return `formatDate(${date}, ${format})`;
+			return `formatDate(new Date(${date}), ${format})`;
 		}
 			
 		case 'Output':
@@ -228,9 +242,9 @@ function compileNodeToCEL(
 			return getInputExpression('result') || getInputExpression('in');
 			
 		default:
-			// Unknown node type - log warning for debugging
+			// Unknown node type
 			if (typeof console !== 'undefined' && console.warn) {
-				console.warn(`Unknown node type during CEL compilation: ${node.type}`);
+				console.warn(`Unknown node type during JS compilation: ${node.type}`);
 			}
 			return 'null';
 	}
@@ -284,9 +298,6 @@ function topologicalSort(graph: Graph): GraphNode[] {
 		visit(node.id);
 	}
 	
-	// Reverse the sorted array to get correct dependency order
-	// DFS post-order visits nodes after their dependencies, adding them to the array
-	// This creates a reverse topological order, so we reverse it to get dependency-first order
-	// (inputs are processed before outputs)
+	// Reverse to get dependency order
 	return sorted.reverse();
 }
