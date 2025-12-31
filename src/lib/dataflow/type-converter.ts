@@ -84,6 +84,10 @@ export function celTypeToTypeScript(celType: string): string {
  * Convert a TypeScript type back to CEL type (reverse conversion)
  * This is useful for situations where we need to work with CEL internally
  * 
+ * Note: This function has limitations with nested generic types like
+ * Record<string, Record<number, boolean>> due to regex matching.
+ * Currently not used in the codebase - provided for future extensibility.
+ * 
  * @param tsType - The TypeScript type string
  * @returns The CEL type string
  */
@@ -117,6 +121,7 @@ export function typeScriptToCelType(tsType: string): string {
 	}
 	
 	// Handle Record types: Record<K, V> -> map(K, V)
+	// Note: This regex will not work correctly for nested generics
 	const recordMatch = tsType.match(/^Record<(.+),\s*(.+)>$/);
 	if (recordMatch) {
 		const keyType = typeScriptToCelType(recordMatch[1]);
