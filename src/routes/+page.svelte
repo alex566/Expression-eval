@@ -24,6 +24,9 @@
 	let showAddNodeModal = $state(false);
 	let showEditNodeModal = $state(false);
 	let editingNode = $state<GraphNode | null>(null);
+	
+	// Node values after evaluation
+	let nodeValues = $state<Map<string, any>>(new Map());
 
 	// Breadcrumb navigation state
 	interface BreadcrumbItem {
@@ -365,9 +368,18 @@
 		if (!graph) return;
 
 		// Update flow while preserving existing node positions
-		const flow = updateFlowWithPreservedPositions(graph, nodes, handleNodeDoubleClick, handleNodeEdit);
+		const flow = updateFlowWithPreservedPositions(graph, nodes, handleNodeDoubleClick, handleNodeEdit, nodeValues);
 		nodes = flow.nodes;
 		edges = flow.edges;
+	}
+	
+	/**
+	 * Handle node values update from CEL Console
+	 */
+	function handleNodeValuesUpdate(values: Map<string, any>) {
+		nodeValues = values;
+		// Update the visualization to show the new values
+		updateVisualizationPreservingPositions();
 	}
 
 </script>
@@ -422,7 +434,7 @@
 					<div class="collapsible-section">
 						<div class="section-header">CEL Console</div>
 						<div class="section-content">
-							<CELConsole graph={currentGraph} inputData={{}} />
+							<CELConsole graph={currentGraph} inputData={{}} onNodeValuesUpdate={handleNodeValuesUpdate} />
 						</div>
 					</div>
 				{/if}

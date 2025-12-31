@@ -3,7 +3,15 @@
 	import { CELGraphEvaluator } from '$lib/dataflow/cel-evaluator';
 	import { onMount } from 'svelte';
 	
-	let { graph, inputData = {} }: { graph: Graph; inputData?: any } = $props();
+	let { 
+		graph, 
+		inputData = {},
+		onNodeValuesUpdate
+	}: { 
+		graph: Graph; 
+		inputData?: any;
+		onNodeValuesUpdate?: (nodeValues: Map<string, any>) => void;
+	} = $props();
 	
 	let celExpression = $state('');
 	let evaluationResult: any = $state(null);
@@ -62,6 +70,11 @@
 			if (result.success) {
 				evaluationResult = result.outputs.result;
 				error = '';
+				
+				// Pass node values to parent if callback is provided
+				if (onNodeValuesUpdate && result.nodeValues) {
+					onNodeValuesUpdate(result.nodeValues);
+				}
 			} else {
 				error = result.error || 'Evaluation failed';
 			}

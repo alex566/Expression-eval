@@ -22,6 +22,7 @@
 	$: nodeType = (data.nodeType as string) || '';
 	$: nodeExpression = (typeof data.expression === 'string' ? data.expression : null);
 	$: nodeExpressionBody = (typeof data.expressionBody === 'string' ? data.expressionBody : null);
+	$: computedValue = data.computedValue;
 	
 	// Calculate dynamic height based on number of ports
 	$: maxPorts = Math.max(inputs.length, outputs.length);
@@ -29,6 +30,17 @@
 
 	// Check if node is editable (Input, Expression, If, Output)
 	$: isEditable = ['Input', 'Expression', 'If', 'Output'].includes(nodeType);
+	
+	// Format computed value for display
+	function formatComputedValue(value: any): string {
+		if (value === null || value === undefined) return '';
+		if (typeof value === 'string') return `"${value}"`;
+		if (typeof value === 'object') {
+			const str = JSON.stringify(value);
+			return str.length > 20 ? str.substring(0, 20) + '...' : str;
+		}
+		return String(value);
+	}
 
 	function handleDoubleClick(event: MouseEvent) {
 		event.stopPropagation();
@@ -52,6 +64,13 @@
 	ondblclick={handleDoubleClick}
 	title={isEditable ? 'Double-click to edit' : hasSubgraph ? 'Double-click to view function' : ''}
 >
+	<!-- Computed value badge (top-right corner) -->
+	{#if computedValue !== undefined && computedValue !== null}
+		<div class="computed-value-badge" title={`Computed: ${JSON.stringify(computedValue)}`}>
+			💡 {formatComputedValue(computedValue)}
+		</div>
+	{/if}
+
 	<!-- Input handles on the left -->
 	{#if inputs.length > 0}
 		<div class="handles-container left">
@@ -175,6 +194,27 @@
 		margin-left: 0.5rem;
 		font-size: 0.875rem;
 		opacity: 0.7;
+	}
+	
+	.computed-value-badge {
+		position: absolute;
+		top: -8px;
+		right: -8px;
+		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+		color: white;
+		font-size: 10px;
+		font-weight: 600;
+		padding: 4px 8px;
+		border-radius: 12px;
+		box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+		font-family: 'Courier New', monospace;
+		white-space: nowrap;
+		max-width: 100px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		z-index: 10;
+		pointer-events: none;
+		border: 2px solid white;
 	}
 
 	.node-content {

@@ -4,7 +4,7 @@
 
 import { celEnv, parse, plan } from '@bufbuild/cel';
 import type { Graph, EvaluationResult, TypeCheckResult } from './types';
-import { compileGraphToCEL } from './cel-compiler';
+import { compileGraphToCEL, compileNodeExpressions } from './cel-compiler';
 import { createDateFunctions } from './cel-date-functions';
 import { inferGraphTypes } from './type-inference';
 
@@ -104,9 +104,39 @@ export class CELGraphEvaluator {
 				};
 			}
 			
+			// Compile and evaluate individual node expressions
+			const nodeValues = new Map<string, any>();
+			const nodeExpressions = compileNodeExpressions(this.graph);
+			
+			for (const [nodeId, nodeExpr] of nodeExpressions) {
+				try {
+					// Skip Output nodes as they don't have meaningful values
+					const node = this.graph.nodes.find(n => n.id === nodeId);
+					if (node && node.type === 'Output') {
+						continue;
+					}
+					
+					const parsedNodeExpr = parse(nodeExpr);
+					const nodeEvalFn = plan(env, parsedNodeExpr);
+					const nodeResult = nodeEvalFn({ input: inputData });
+					
+					// Check if node result is an error
+					if (nodeResult && typeof nodeResult === 'object' && 'error' in nodeResult) {
+						// Skip nodes with errors - they might depend on missing data
+						continue;
+					}
+					
+					nodeValues.set(nodeId, convertCELToJS(nodeResult));
+				} catch (err) {
+					// Skip nodes that fail to evaluate - they might have issues
+					console.warn(`Failed to evaluate node ${nodeId}:`, err);
+				}
+			}
+			
 			return {
 				success: true,
-				outputs: { result: convertCELToJS(result) }
+				outputs: { result: convertCELToJS(result) },
+				nodeValues
 			};
 		} catch (error) {
 			return {

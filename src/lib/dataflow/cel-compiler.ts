@@ -62,6 +62,25 @@ export function compileGraphToCEL(graph: Graph): string {
 }
 
 /**
+ * Compile individual node expressions for evaluation
+ * Returns a map of nodeId -> CEL expression
+ */
+export function compileNodeExpressions(graph: Graph): Map<string, string> {
+	const nodeOutputs = new Map<string, string>();
+	
+	// Find all nodes that need to be compiled
+	const sortedNodes = topologicalSort(graph);
+	
+	// Compile each node to a CEL expression
+	for (const node of sortedNodes) {
+		const celExpr = compileNodeToCEL(node, graph, nodeOutputs);
+		nodeOutputs.set(node.id, celExpr);
+	}
+	
+	return nodeOutputs;
+}
+
+/**
  * Compile a single node to CEL expression
  */
 function compileNodeToCEL(
