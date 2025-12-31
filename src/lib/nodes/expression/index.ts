@@ -73,19 +73,45 @@ export const ExpressionNode: NodeDefinition = {
 		
 		if (expression.includes('+') || expression.includes('-') || 
 		    expression.includes('*') || expression.includes('/')) {
-			// Check if inputs are numeric
-			const in0Type = context.getInputType('in0');
-			const in1Type = context.getInputType('in1');
+			// Extract variable names from the expression to check their types
+			// Match common variable patterns: word characters, digits, underscores
+			const variablePattern = /\b([a-zA-Z_][a-zA-Z0-9_]*)\b/g;
+			const matches = expression.matchAll(variablePattern);
+			const inputTypes: string[] = [];
 			
-			// If both inputs are integers, result is integer
-			if (in0Type === 'int' && in1Type === 'int') {
-				return { out: 'int' };
+			for (const match of matches) {
+				const varName = match[1];
+				// Skip CEL keywords and functions
+				if (!['true', 'false', 'null', 'in', 'has', 'size', 'map', 'filter'].includes(varName)) {
+					const inputType = context.getInputType(varName);
+					if (inputType && inputType !== 'any') {
+						inputTypes.push(inputType);
+					}
+				}
 			}
 			
-			// If any input is double or if we have a numeric operation, return double
-			if (in0Type === 'int' || in0Type === 'double' || 
-			    in1Type === 'int' || in1Type === 'double') {
-				return { out: 'double' };
+			// Also check for standard in0, in1, in2, etc. inputs
+			for (let i = 0; i < 10; i++) {
+				const inType = context.getInputType(`in${i}`);
+				if (inType && inType !== 'any') {
+					inputTypes.push(inType);
+				}
+			}
+			
+			// If we found any input types, use them for inference
+			if (inputTypes.length > 0) {
+				// If any input is double, result is double
+				if (inputTypes.some(t => t === 'double')) {
+					return { out: 'double' };
+				}
+				// If all inputs are int, result is int
+				if (inputTypes.every(t => t === 'int')) {
+					return { out: 'int' };
+				}
+				// If we have numeric types, default to double
+				if (inputTypes.some(t => t === 'int' || t === 'double')) {
+					return { out: 'double' };
+				}
 			}
 			
 			return { out: 'dyn' };
