@@ -1,53 +1,58 @@
 # Expression-eval
 
-A Svelte-based dataflow graph visualization and evaluation tool with **CEL (Common Expression Language)** integration. This application allows you to create, visualize, and evaluate expression graphs that compile to CEL expressions and are evaluated using a CEL interpreter.
+A Svelte-based dataflow graph visualization and evaluation tool with **QuickJS WASM** integration. This application allows you to create, visualize, and evaluate expression graphs that compile to JavaScript code and are evaluated in a fully sandboxed QuickJS environment.
 
 ## Key Features
 
-- ✅ **CEL Expression Language** - Graphs compile to CEL expressions for evaluation
-- ✅ **Type Inference System** - Automatic type checking and inference for all nodes
-- ✅ **Expression Nodes** - Add CEL expressions as nodes with dynamic inputs for inline processing
+- ✅ **QuickJS Sandboxed Evaluation** - Graphs compile to JavaScript and execute in isolated QuickJS WASM runtime
+- ✅ **TypeScript Type Inference System** - Automatic type checking and inference for all nodes using TypeScript
+- ✅ **Expression Nodes** - Add JavaScript expressions as nodes with dynamic inputs for inline processing
 - ✅ **JSON Input/Output** - Provide JSON data as input and get JSON results
-- ✅ **Real-Time Compilation** - See the compiled CEL expression as you build your graph
+- ✅ **Real-Time Compilation** - See the compiled JavaScript code as you build your graph
 - ✅ **Interactive Console** - Test your graphs with different input data
 - ✅ **Visual Graph Builder** - Drag-and-drop interface for building expression graphs
 - ✅ **Dynamic Pins** - Nodes support dynamic input/output pins with custom naming
 - ✅ **Expression Preview** - See expression bodies directly in node UI
+- ✅ **Intermediate Value Storage** - Each node result stored as `const node_<id>` for reuse
 
-## CEL Integration
+## QuickJS Integration
 
-Expression-eval uses the **@bufbuild/cel** package to provide CEL (Common Expression Language) support:
+Expression-eval uses **quickjs-emscripten** to provide sandboxed JavaScript execution:
 
 **Key capabilities:**
-- Compile dataflow graphs to CEL expressions
-- Evaluate expressions with JSON input data
+- Compile dataflow graphs to JavaScript code
+- Evaluate code in fully isolated QuickJS WASM environment
 - Support for arithmetic, comparison, and conditional operations
-- Expression nodes for custom CEL expressions with dynamic inputs
+- Expression nodes for custom JavaScript expressions with dynamic inputs
 - Map, Filter, and Reduce operations with expression support
-- Property access using CEL syntax (e.g., `in0.date`, `user.name`)
-- **Automatic type inference and validation** - See [TYPE_INFERENCE.md](TYPE_INFERENCE.md) for details
+- Property access using JavaScript syntax (e.g., `in0.date`, `user.name`)
+- **Automatic type inference and validation** using TypeScript
+- **Memory and execution limits** for security
+- **No access to global state or functions** except registered custom functions
 
 ## Architecture Overview
 
-Expression-eval uses a **CEL-based architecture** where:
+Expression-eval uses a **QuickJS-based architecture** where:
 
-- **Graphs** are compiled to CEL expressions
-- **Nodes** represent operations or values that compile to CEL
-- **Expression Nodes** - Primary node for inline processing with CEL expressions
+- **Graphs** are compiled to JavaScript code
+- **Nodes** represent operations or values that compile to JavaScript
+- **Intermediate Values** - Each node stores its result in `const node_<id>` for reuse
+- **Expression Nodes** - Primary node for inline processing with JavaScript expressions
 - **Input Data** - Provided as JSON for evaluation
 - **Output** - Results returned as JSON
-- **Type Inference** - Automatic type checking validates graph correctness
+- **Type Inference** - TypeScript-based type checking validates graph correctness
+- **Sandbox** - QuickJS provides isolated execution environment
 
 ## Type Inference System
 
-Expression-eval includes a powerful **type inference system** that automatically validates your graphs:
+Expression-eval includes a powerful **TypeScript-based type inference system** that automatically validates your graphs:
 
 ### Features
 - ✅ **Automatic type inference** - Types propagate from inputs to outputs
 - ✅ **Type compatibility checking** - Validates connections between nodes
 - ✅ **Per-node type information** - Each node reports inferred input/output types
 - ✅ **Detailed error messages** - Clear explanations of type mismatches
-- ✅ **CEL type system integration** - Maps JavaScript types to CEL types
+- ✅ **TypeScript type system** - Uses standard JavaScript/TypeScript types
 
 ### How It Works
 
@@ -63,8 +68,8 @@ The type inference engine:
 // If node unifies types from true and false branches
 const graph = {
   nodes: [
-    { id: 'true_val', type: 'Expression', data: { expression: '100' } },  // int
-    { id: 'false_val', type: 'Expression', data: { expression: '0' } },   // int
+    { id: 'true_val', type: 'Expression', data: { expression: '100' } },  // number
+    { id: 'false_val', type: 'Expression', data: { expression: '0' } },   // number
     { id: 'if1', type: 'If', data: {} }
   ],
   edges: [
@@ -74,15 +79,15 @@ const graph = {
 };
 
 // Type inference result:
-// if1.out = unify(int, int) = int
+// if1.out = unify(number, number) = number
 ```
 
 ### Usage
 
 ```typescript
-import { CELGraphEvaluator } from './dataflow/cel-evaluator';
+import { QuickJSGraphEvaluator } from './dataflow/quickjs-evaluator';
 
-const evaluator = new CELGraphEvaluator(graph);
+const evaluator = new QuickJSGraphEvaluator(graph);
 
 // Run type checking
 const typeCheck = evaluator.typeCheck();
@@ -107,7 +112,7 @@ typeCheck.nodeTypes.forEach((info, nodeId) => {
 - **Value** - Static values (numbers, strings, arrays, objects)
 - **Input** - Access to input data with schema-based dynamic pins
 - **Output** - Final output node with dynamic pins
-- **Expression** - Custom CEL expressions with dynamic inputs
+- **Expression** - Custom JavaScript codes with dynamic inputs
   - Use for inline processing: `"(in0 + 1) * 2"`
   - Supports arithmetic: `"in0 + in1"`, `"in0 * in1"`, `"in0 - in1"`
   - Supports property access: `"in0.name"`, `"in0.date"`
@@ -152,7 +157,7 @@ Value(3) ↗
 
 ### Property Access
 
-Access object properties using CEL syntax:
+Access object properties using JavaScript syntax:
 ```
 Input(user) → Expression("in0.name + ' is ' + string(in0.age)") → Output
 ```
@@ -213,10 +218,10 @@ The application includes several sample graphs demonstrating different patterns:
 - **complex** - Multiple operations
 - **dates** - Date/time operations
 - **input-example** - Input node with schema
-- **cel** - CEL expressions with conditionals
+- **cel** - JavaScript codes with conditionals
 - **expression-math** - Expression node for math (recommended pattern)
 - **create-object** - Creating objects from pins
-- **property-access** - Property access with CEL syntax
+- **property-access** - Property access with JavaScript syntax
 - **array-operations** - Map/Filter with expression previews
 
 ## Creating a project
