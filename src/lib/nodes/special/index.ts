@@ -8,6 +8,8 @@ import type { NodeDefinition, TypeInferenceContext } from '../../dataflow/types'
  * Example:
  * - Input pins: name (value: "John"), age (value: 30)
  * - Output: { name: "John", age: 30 }
+ * 
+ * Type inference is handled by TypeScript factory API (object literal)
  */
 export const CreateObjectNode: NodeDefinition = {
 	type: 'CreateObject',
@@ -42,29 +44,16 @@ export const CreateObjectNode: NodeDefinition = {
 		}
 		
 		context.setOutputValue('out', result);
-	},
-	inferOutputTypes(context: TypeInferenceContext): Record<string, string> {
-		// Infer object type from input types
-		// Build a map type with known properties
-		const data = context.getNodeData();
-		const pinNames = data.pinNames || [];
-		
-		if (pinNames.length === 0) {
-			// Generic object type if no pins defined
-			return { out: 'map(string, dyn)' };
-		}
-		
-		// Build structured object type
-		// Note: CEL doesn't have TypeScript-style object types, so we use map
-		// In a more sophisticated implementation, we could track property types
-		return { out: 'map(string, dyn)' };
 	}
+	// inferOutputTypes removed - TypeScript factory API handles object type inference
 };
 
 /**
  * Input node - Provides access to input data
- * In CEL mode, this compiles to 'input' which provides access to the entire input object
+ * In JavaScript mode, this compiles to 'input' which provides access to the entire input object
  * Dynamic output pins can be defined based on the input data structure
+ * 
+ * This is the ONLY node where explicit type casting from schema is allowed
  */
 export const InputNode: NodeDefinition = {
 	type: 'Input',
@@ -75,7 +64,7 @@ export const InputNode: NodeDefinition = {
 		{ name: 'out', type: 'any' }
 	],
 	execute(context) {
-		// In CEL mode, this returns the input data reference
+		// In JavaScript mode, this returns the input data reference
 		// The actual input will be provided at evaluation time
 		const value = context.getNodeData().value;
 		context.setOutputValue('out', value);
@@ -83,30 +72,39 @@ export const InputNode: NodeDefinition = {
 	inferOutputTypes(context: TypeInferenceContext): Record<string, string> {
 		const data = context.getNodeData();
 		const inputSchema = data.inputSchema;
+		const inputSchemaTypes = data.inputSchemaTypes;
 		const outputTypes: Record<string, string> = {};
 		
 		// If we have an input schema, infer types from it
+		// This is the ONLY place where explicit schema-based type casting is allowed
 		if (inputSchema && typeof inputSchema === 'object') {
-			for (const [key, schemaType] of Object.entries(inputSchema)) {
-				// Map schema types to CEL types
-				let celType = 'dyn';
-				if (schemaType === 'string') {
-					celType = 'string';
-				} else if (schemaType === 'number') {
-					celType = 'double';
-				} else if (schemaType === 'boolean') {
-					celType = 'bool';
-				} else if (schemaType === 'array') {
-					celType = 'list(dyn)';
-				} else if (schemaType === 'object') {
-					celType = 'map(string, dyn)';
+			for (const [key, schemaValue] of Object.entries(inputSchema)) {
+				let type = 'any';
+				
+				// Use explicitly defined type from schema if available
+				if (inputSchemaTypes && inputSchemaTypes[key]) {
+					type = inputSchemaTypes[key] as string;
+				} else {
+					// Infer from schema value
+					if (typeof schemaValue === 'string') {
+						type = 'string';
+					} else if (typeof schemaValue === 'number') {
+						type = 'number';
+					} else if (typeof schemaValue === 'boolean') {
+						type = 'boolean';
+					} else if (Array.isArray(schemaValue)) {
+						type = 'unknown[]';
+					} else if (typeof schemaValue === 'object') {
+						type = 'object';
+					}
 				}
-				outputTypes[key] = celType;
+				
+				outputTypes[key] = type;
 			}
 		}
 		
 		// Always include the generic 'out' port
-		outputTypes['out'] = 'dyn';
+		outputTypes['out'] = 'any';
 		
 		return outputTypes;
 	}
@@ -116,6 +114,8 @@ export const InputNode: NodeDefinition = {
  * Output node - marks final output values
  * Dynamically creates input ports based on connected edges
  * Input pin names are inferred from the source output port names
+ * 
+ * Type inference is handled by TypeScript factory API (pass-through)
  */
 export const OutputNode: NodeDefinition = {
 	type: 'Output',
@@ -134,9 +134,6 @@ export const OutputNode: NodeDefinition = {
 				context.setOutputValue(name, value);
 			}
 		}
-	},
-	inferOutputTypes(context: TypeInferenceContext): Record<string, string> {
-		// Output node is a terminal node with no output ports
-		return {};
 	}
+	// inferOutputTypes removed - Output node has no outputs
 };

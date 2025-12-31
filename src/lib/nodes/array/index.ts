@@ -1,8 +1,10 @@
-import type { NodeDefinition, TypeInferenceContext } from '../../dataflow/types';
+import type { NodeDefinition } from '../../dataflow/types';
 
 /**
  * Map node - applies a transformation to each element of an array
  * Uses Expression node: receives a JavaScript expression via the 'expression' input pin
+ * 
+ * Type inference is handled by TypeScript factory API (array.map)
  */
 export const MapNode: NodeDefinition = {
 	type: 'Map',
@@ -31,27 +33,15 @@ export const MapNode: NodeDefinition = {
 		
 		// Mapping happens during JavaScript evaluation
 		context.setOutputValue('out', inputArray);
-	},
-	inferOutputTypes(context: TypeInferenceContext): Record<string, string> {
-		// Map preserves array type structure
-		const arrayType = context.getInputType('array');
-		
-		if (!arrayType) {
-			return { out: 'unknown[]' };
-		}
-		
-		// If it's an array type, preserve it
-		if (arrayType.endsWith('[]') || arrayType === 'array') {
-			return { out: arrayType };
-		}
-		
-		return { out: 'unknown[]' };
 	}
+	// inferOutputTypes removed - TypeScript factory API handles array type inference
 };
 
 /**
  * Filter node - filters elements of an array using a predicate
  * Uses Expression node: receives a JavaScript expression via the 'expression' input pin
+ * 
+ * Type inference is handled by TypeScript factory API (array.filter)
  */
 export const FilterNode: NodeDefinition = {
 	type: 'Filter',
@@ -80,23 +70,15 @@ export const FilterNode: NodeDefinition = {
 		
 		// Filtering happens during JavaScript evaluation
 		context.setOutputValue('out', inputArray);
-	},
-	inferOutputTypes(context: TypeInferenceContext): Record<string, string> {
-		// Filter preserves the exact array type
-		const arrayType = context.getInputType('array');
-		
-		if (!arrayType) {
-			return { out: 'unknown[]' };
-		}
-		
-		// Filter doesn't change the type, just filters elements
-		return { out: arrayType };
 	}
+	// inferOutputTypes removed - TypeScript factory API handles array type preservation
 };
 
 /**
  * Reduce node - reduces an array to a single value using an accumulator
  * Uses Expression node: receives a JavaScript expression via the 'expression' input pin
+ * 
+ * Type inference is handled by TypeScript factory API (array.reduce)
  */
 export const ReduceNode: NodeDefinition = {
 	type: 'Reduce',
@@ -128,5 +110,5 @@ export const ReduceNode: NodeDefinition = {
 		// Reduce happens during JavaScript evaluation
 		context.setOutputValue('out', initialValue);
 	}
+	// inferOutputTypes removed - TypeScript factory API handles reduce type inference
 };
-
