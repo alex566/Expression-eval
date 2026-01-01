@@ -133,11 +133,16 @@ export const RangeNode: NodeDefinition = {
 	],
 	execute(context) {
 		// Compiled to JavaScript during evaluation
-		const start = context.getInputValue('start') || 0;
-		const end = context.getInputValue('end') || 0;
-		const step = context.getInputValue('step') || 1;
+		const start = context.getInputValue('start') ?? 0;
+		const end = context.getInputValue('end') ?? 0;
+		const step = context.getInputValue('step') ?? 1;
 		
-		const length = Math.floor((end - start) / step) + 1;
+		if (step === 0) {
+			throw new Error('Range node: step cannot be zero');
+		}
+		
+		// Handle both positive and negative steps
+		const length = Math.floor(Math.abs((end - start) / step)) + 1;
 		const range = Array.from({length}, (_, i) => start + i * step);
 		context.setOutputValue('out', range);
 	}
@@ -193,6 +198,10 @@ export const GetItemNode: NodeDefinition = {
 		
 		if (!Array.isArray(inputArray)) {
 			throw new Error('GetItem node requires an array input');
+		}
+		
+		if (index < 0 || index >= inputArray.length) {
+			throw new Error(`GetItem node: index ${index} out of bounds (array length: ${inputArray.length})`);
 		}
 		
 		context.setOutputValue('out', inputArray[index]);

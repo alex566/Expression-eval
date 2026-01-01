@@ -201,7 +201,8 @@ function compileNodeToJS(
 				
 				// Create condition: value === val1 || value === val2 || ...
 				const conditions = values.map(v => {
-					const stringValue = typeof v === 'string' ? `"${v}"` : String(v);
+					// Properly escape and stringify values
+					const stringValue = JSON.stringify(v);
 					return `(${value}) === ${stringValue}`;
 				}).join(' || ');
 				
@@ -238,7 +239,8 @@ function compileNodeToJS(
 			for (let i = caseEntries.length - 1; i >= 0; i--) {
 				const [outputPort, values] = caseEntries[i];
 				const conditions = values.map(v => {
-					const stringValue = typeof v === 'string' ? `"${v}"` : String(v);
+					// Properly escape and stringify values
+					const stringValue = JSON.stringify(v);
 					return `(${value}) === ${stringValue}`;
 				}).join(' || ');
 				
@@ -280,7 +282,7 @@ function compileNodeToJS(
 			const start = getInputExpression('start');
 			const end = getInputExpression('end');
 			const step = getInputExpression('step');
-			return `Array.from({length: Math.floor((${end} - ${start}) / ${step}) + 1}, (_, i) => ${start} + i * ${step})`;
+			return `Array.from({length: Math.floor(Math.abs((${end} - ${start}) / ${step})) + 1}, (_, i) => ${start} + i * ${step})`;
 		}
 		
 		case 'Length': {
@@ -297,11 +299,12 @@ function compileNodeToJS(
 		}
 		
 		case 'Concat': {
-			// Concatenate arrays
+			// Concatenate arrays - properly chain concat calls
 			// Find all edges targeting this node to get all array inputs
 			const inputEdges = graph.edges.filter(e => e.to.node === node.id);
 			const arrays = inputEdges
 				.filter(e => e.to.port.startsWith('array'))
+				.sort((a, b) => a.to.port.localeCompare(b.to.port)) // Sort to ensure consistent order
 				.map(e => nodeVars.get(e.from.node) || 'null');
 			
 			if (arrays.length === 0) {
@@ -309,7 +312,8 @@ function compileNodeToJS(
 			} else if (arrays.length === 1) {
 				return arrays[0];
 			} else {
-				return `${arrays[0]}.concat(${arrays.slice(1).join(', ')})`;
+				// Chain concat: array1.concat(array2).concat(array3)...
+				return arrays.slice(1).reduce((acc, arr) => `${acc}.concat(${arr})`, arrays[0]);
 			}
 		}
 		
