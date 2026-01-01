@@ -47,13 +47,63 @@ export const IfNode: NodeDefinition = {
 };
 
 /**
- * Switch node - multi-case branching based on a value
- * Routes input to different outputs based on the value matching a case
+ * Match node - pattern matching with multiple values per case
+ * Inspired by JavaScript switch statements and functional programming patterns
+ * 
+ * Features:
+ * - Multiple values can map to the same output branch
+ * - Automatic break after matching case (no fallthrough)
+ * - Default case for unmatched values
+ * - Cases defined as: { "case1": ["value1", "value2"], "case2": ["value3"] }
+ * 
+ * Type inference handled by TypeScript factory API
+ */
+export const MatchNode: NodeDefinition = {
+	type: 'Match',
+	category: 'control',
+	description: 'Pattern matching - routes input to outputs based on case values',
+	inputs: [
+		{ name: 'value', type: 'any' }
+	],
+	outputs: [
+		{ name: 'default', type: 'any' }
+	],
+	execute(context) {
+		const value = context.getInputValue('value');
+		const cases = context.getNodeData().cases || {};
+		
+		// Check if value matches any case
+		// cases format: { "caseName": ["value1", "value2", ...] }
+		let matched = false;
+		for (const [caseName, caseValues] of Object.entries(cases)) {
+			const values = Array.isArray(caseValues) ? caseValues : [caseValues];
+			
+			// Check if input value matches any of the case values
+			for (const caseValue of values) {
+				if (String(value) === String(caseValue)) {
+					context.setOutputValue(caseName as string, value);
+					matched = true;
+					break;
+				}
+			}
+			
+			if (matched) break; // No fallthrough
+		}
+
+		// If no match, output to default
+		if (!matched) {
+			context.setOutputValue('default', value);
+		}
+	}
+};
+
+/**
+ * @deprecated Use MatchNode instead. Kept for backward compatibility.
  */
 export const SwitchNode: NodeDefinition = {
 	type: 'Switch',
 	category: 'control',
-	description: 'Routes input to different outputs based on case matching',
+	description: '[DEPRECATED] Use Match node instead',
 	inputs: [
 		{ name: 'value', type: 'any' }
 	],

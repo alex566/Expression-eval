@@ -183,6 +183,74 @@ function compileNodeToJS(
 			const falseVal = getInputExpression('false');
 			return `(${condition} ? ${trueVal} : ${falseVal})`;
 		}
+		
+		case 'Match': {
+			// Compile Match node to JavaScript switch-like expression
+			const value = getInputExpression('value');
+			const cases = node.data.cases || {};
+			
+			// Build a switch-like structure using nested ternaries
+			// cases format: { "caseName": ["value1", "value2", ...] }
+			let expression = 'null'; // default if no cases
+			
+			// Start from the end to build nested ternaries
+			const caseEntries = Object.entries(cases);
+			for (let i = caseEntries.length - 1; i >= 0; i--) {
+				const [caseName, caseValues] = caseEntries[i];
+				const values = Array.isArray(caseValues) ? caseValues : [caseValues];
+				
+				// Create condition: value === val1 || value === val2 || ...
+				const conditions = values.map(v => {
+					const stringValue = typeof v === 'string' ? `"${v}"` : String(v);
+					return `(${value}) === ${stringValue}`;
+				}).join(' || ');
+				
+				// Get the expression for this case output
+				const caseOutput = getInputExpression(caseName) || value;
+				
+				expression = `(${conditions}) ? ${caseOutput} : ${expression}`;
+			}
+			
+			// Add default case at the end
+			const defaultOutput = getInputExpression('default') || value;
+			expression = expression === 'null' ? defaultOutput : expression.replace(/: null$/, `: ${defaultOutput}`);
+			
+			return expression;
+		}
+		
+		case 'Switch': {
+			// Deprecated - delegates to Match behavior
+			const value = getInputExpression('value');
+			const cases = node.data.cases || {};
+			
+			// Old switch format: { "value1": "outputPort1", "value2": "outputPort2" }
+			// Convert to Match format for compilation
+			const matchCases: Record<string, string[]> = {};
+			for (const [caseValue, outputPort] of Object.entries(cases)) {
+				if (!matchCases[outputPort as string]) {
+					matchCases[outputPort as string] = [];
+				}
+				matchCases[outputPort as string].push(caseValue);
+			}
+			
+			let expression = 'null';
+			const caseEntries = Object.entries(matchCases);
+			for (let i = caseEntries.length - 1; i >= 0; i--) {
+				const [outputPort, values] = caseEntries[i];
+				const conditions = values.map(v => {
+					const stringValue = typeof v === 'string' ? `"${v}"` : String(v);
+					return `(${value}) === ${stringValue}`;
+				}).join(' || ');
+				
+				const caseOutput = getInputExpression(outputPort) || value;
+				expression = `(${conditions}) ? ${caseOutput} : ${expression}`;
+			}
+			
+			const defaultOutput = getInputExpression('default') || value;
+			expression = expression === 'null' ? defaultOutput : expression.replace(/: null$/, `: ${defaultOutput}`);
+			
+			return expression;
+		}
 			
 		case 'Map': {
 			const array = getInputExpression('array');
@@ -205,6 +273,44 @@ function compileNodeToJS(
 			const exprInput = getInputExpression('expression');
 			// Reduce operation: array.reduce((accumulator, element) => expression, initial)
 			return `${array}.reduce((accumulator, element) => ${exprInput}, ${initial})`;
+		}
+		
+		case 'Range': {
+			// Generate a series of numbers from start to end with step
+			const start = getInputExpression('start');
+			const end = getInputExpression('end');
+			const step = getInputExpression('step');
+			return `Array.from({length: Math.floor((${end} - ${start}) / ${step}) + 1}, (_, i) => ${start} + i * ${step})`;
+		}
+		
+		case 'Length': {
+			// Get the length of an array
+			const array = getInputExpression('array');
+			return `${array}.length`;
+		}
+		
+		case 'GetItem': {
+			// Access array element by index
+			const array = getInputExpression('array');
+			const index = getInputExpression('index');
+			return `${array}[${index}]`;
+		}
+		
+		case 'Concat': {
+			// Concatenate arrays
+			// Find all edges targeting this node to get all array inputs
+			const inputEdges = graph.edges.filter(e => e.to.node === node.id);
+			const arrays = inputEdges
+				.filter(e => e.to.port.startsWith('array'))
+				.map(e => nodeVars.get(e.from.node) || 'null');
+			
+			if (arrays.length === 0) {
+				return '[]';
+			} else if (arrays.length === 1) {
+				return arrays[0];
+			} else {
+				return `${arrays[0]}.concat(${arrays.slice(1).join(', ')})`;
+			}
 		}
 		
 		case 'CreateDate': {

@@ -1302,6 +1302,214 @@ export const GRASSHOPPER_STRESS_TEST: Graph = {
 	]
 };
 
+/**
+ * Match node demonstration
+ * Shows pattern matching with multiple values per case
+ */
+export const MATCH_DEMO_GRAPH: Graph = {
+	nodes: [
+		{
+			id: "input",
+			type: "Input",
+			data: {
+				inputSchema: {
+					color: "string"
+				}
+			}
+		},
+		{
+			id: "match",
+			type: "Match",
+			data: {
+				// Multiple values can map to the same case
+				cases: {
+					"warm": ["red", "orange", "yellow"],
+					"cool": ["blue", "green", "purple"]
+				}
+			}
+		},
+		{
+			id: "warmValue",
+			type: "Expression",
+			data: {
+				expression: '"Warm color detected"'
+			}
+		},
+		{
+			id: "coolValue",
+			type: "Expression",
+			data: {
+				expression: '"Cool color detected"'
+			}
+		},
+		{
+			id: "defaultValue",
+			type: "Expression",
+			data: {
+				expression: '"Unknown color"'
+			}
+		},
+		{
+			id: "output",
+			type: "Output",
+			data: {
+				outputs: ["category"]
+			}
+		}
+	],
+	edges: [
+		{
+			from: { node: "input", port: "color" },
+			to: { node: "match", port: "value" }
+		},
+		{
+			from: { node: "warmValue", port: "out" },
+			to: { node: "match", port: "warm" }
+		},
+		{
+			from: { node: "coolValue", port: "out" },
+			to: { node: "match", port: "cool" }
+		},
+		{
+			from: { node: "defaultValue", port: "out" },
+			to: { node: "match", port: "default" }
+		},
+		{
+			from: { node: "match", port: "out" },
+			to: { node: "output", port: "category" }
+		}
+	]
+};
+
+/**
+ * New array operations demonstration
+ * Shows Range, Length, GetItem, and Concat nodes
+ */
+export const NEW_ARRAY_OPS_GRAPH: Graph = {
+	nodes: [
+		// Generate a range of numbers
+		{
+			id: "start",
+			type: "Expression",
+			data: { expression: "0" }
+		},
+		{
+			id: "end",
+			type: "Expression",
+			data: { expression: "9" }
+		},
+		{
+			id: "step",
+			type: "Expression",
+			data: { expression: "1" }
+		},
+		{
+			id: "range",
+			type: "Range",
+			data: {}
+		},
+		
+		// Get length of the range
+		{
+			id: "length",
+			type: "Length",
+			data: {}
+		},
+		
+		// Get item at index 5
+		{
+			id: "index",
+			type: "Expression",
+			data: { expression: "5" }
+		},
+		{
+			id: "getItem",
+			type: "GetItem",
+			data: {}
+		},
+		
+		// Create another array to concat
+		{
+			id: "extraArray",
+			type: "Expression",
+			data: { expression: "[10, 11, 12]" }
+		},
+		{
+			id: "concat",
+			type: "Concat",
+			data: {}
+		},
+		
+		// Output all results
+		{
+			id: "output",
+			type: "Output",
+			data: {
+				outputs: ["originalRange", "rangeLength", "itemAtIndex5", "concatenated"]
+			}
+		}
+	],
+	edges: [
+		// Range generation
+		{
+			from: { node: "start", port: "out" },
+			to: { node: "range", port: "start" }
+		},
+		{
+			from: { node: "end", port: "out" },
+			to: { node: "range", port: "end" }
+		},
+		{
+			from: { node: "step", port: "out" },
+			to: { node: "range", port: "step" }
+		},
+		
+		// Length
+		{
+			from: { node: "range", port: "out" },
+			to: { node: "length", port: "array" }
+		},
+		
+		// GetItem
+		{
+			from: { node: "range", port: "out" },
+			to: { node: "getItem", port: "array" }
+		},
+		{
+			from: { node: "index", port: "out" },
+			to: { node: "getItem", port: "index" }
+		},
+		
+		// Concat
+		{
+			from: { node: "range", port: "out" },
+			to: { node: "concat", port: "array1" }
+		},
+		{
+			from: { node: "extraArray", port: "out" },
+			to: { node: "concat", port: "array2" }
+		},
+		
+		// Outputs
+		{
+			from: { node: "range", port: "out" },
+			to: { node: "output", port: "originalRange" }
+		},
+		{
+			from: { node: "length", port: "out" },
+			to: { node: "output", port: "rangeLength" }
+		},
+		{
+			from: { node: "getItem", port: "out" },
+			to: { node: "output", port: "itemAtIndex5" }
+		},
+		{
+			from: { node: "concat", port: "out" },
+			to: { node: "output", port: "concatenated" }
+		}
+	]
+};
+
 export const GRAPHS: Record<string, Graph> = {
 	'sample': SAMPLE_GRAPH,
 	'complex': COMPLEX_GRAPH,
@@ -1314,5 +1522,7 @@ export const GRAPHS: Record<string, Graph> = {
 	'array-operations': ARRAY_OPERATIONS_GRAPH,
 	'auto-inferred-output': AUTO_INFERRED_OUTPUT_GRAPH,
 	'name-propagation': NAME_PROPAGATION_GRAPH,
-	'grasshopper-stress-test': GRASSHOPPER_STRESS_TEST
+	'grasshopper-stress-test': GRASSHOPPER_STRESS_TEST,
+	'match-demo': MATCH_DEMO_GRAPH,
+	'new-array-ops': NEW_ARRAY_OPS_GRAPH
 };
