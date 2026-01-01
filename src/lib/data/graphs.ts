@@ -888,13 +888,11 @@ export const GRASSHOPPER_STRESS_TEST: Graph = {
 				expression: "1"
 			}
 		},
-		// Create array: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+		// Create array: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] using Range node
 		{
 			id: "generateRange",
-			type: "Expression",
-			data: {
-				expression: "Array.from({length: Math.floor((end - start) / step) + 1}, (_, i) => start + i * step)"
-			}
+			type: "Range",
+			data: {}
 		},
 		
 		// Path 1: Scale and apply power transformation
@@ -1048,7 +1046,7 @@ export const GRASSHOPPER_STRESS_TEST: Graph = {
 			}
 		},
 		
-		// Extract specific values (list item access)
+		// Extract specific values (list item access) using GetItem node
 		{
 			id: "extractIndex",
 			type: "Expression",
@@ -1058,19 +1056,15 @@ export const GRASSHOPPER_STRESS_TEST: Graph = {
 		},
 		{
 			id: "extractItem",
-			type: "Expression",
-			data: {
-				expression: "array[index]"
-			}
+			type: "GetItem",
+			data: {}
 		},
 		
-		// Count and statistics
+		// Count and statistics using Length node
 		{
 			id: "countFiltered",
-			type: "Expression",
-			data: {
-				expression: "array.length"
-			}
+			type: "Length",
+			data: {}
 		},
 		
 		// Complex nested calculation
