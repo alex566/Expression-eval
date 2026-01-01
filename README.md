@@ -127,12 +127,16 @@ typeCheck.nodeTypes.forEach((info, nodeId) => {
 - **Map** - Transform array elements using expression body
 - **Filter** - Filter array elements using expression predicate
 - **Reduce** - Reduce array to single value using expression accumulator
+- **Range** - Generate series of numbers from start to end with step
+- **Length** - Get the length of an array
+- **GetItem** - Access array element by index
+- **Concat** - Concatenate multiple arrays into one
 
 ### Control Flow
 
 - **If** - Conditional branching (ternary operator)
-- **Compare** - Comparison operations
-- **Switch** - Multi-case branching
+- **Match** - Pattern matching with multiple values per case (replaces Switch)
+- **Switch** - _(Deprecated)_ Use Match node instead
 
 ### Date/Time Operations
 

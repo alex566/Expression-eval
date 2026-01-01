@@ -141,19 +141,40 @@ The Reduce node reduces an array to a single value using an accumulator function
 ### Array Operation Nodes
 
 #### Map
-- **Inputs:** array (array), function (string - function name)
+- **Inputs:** array (array), expression (string - JavaScript expression)
 - **Output:** array
-- **Behavior:** Applies the function to each element, passing `{ element: value }` to the function
+- **Behavior:** Applies the expression to each element using `element` variable
 
 #### Filter
-- **Inputs:** array (array), function (string - function name)
+- **Inputs:** array (array), expression (string - JavaScript expression)
 - **Output:** array
-- **Behavior:** Includes elements where the function returns truthy, passing `{ element: value }` to the function
+- **Behavior:** Includes elements where the expression returns truthy using `element` variable
 
 #### Reduce
-- **Inputs:** array (array), initial (any), function (string - function name)
+- **Inputs:** array (array), initial (any), expression (string - JavaScript expression)
 - **Output:** any
-- **Behavior:** Reduces the array using an accumulator, passing `{ accumulator, element }` to the function
+- **Behavior:** Reduces the array using an accumulator, using `accumulator` and `element` variables
+
+#### Range
+- **Inputs:** start (number), end (number), step (number)
+- **Output:** array
+- **Behavior:** Generates a series of numbers from start to end with given step
+- **Example:** start=0, end=9, step=1 produces [0,1,2,3,4,5,6,7,8,9]
+
+#### Length
+- **Inputs:** array (array)
+- **Output:** number
+- **Behavior:** Returns the length of the input array
+
+#### GetItem
+- **Inputs:** array (array), index (number)
+- **Output:** any
+- **Behavior:** Returns the element at the specified index in the array
+
+#### Concat
+- **Inputs:** array1 (array), array2 (array), ... (supports dynamic inputs)
+- **Output:** array
+- **Behavior:** Concatenates multiple arrays into a single array
 
 ### Math Nodes (Single Values Only)
 
@@ -190,7 +211,14 @@ The Reduce node reduces an array to a single value using an accumulator function
 - **Outputs:** out
 - **Behavior:** Outputs either true or false value based on the condition
 
-#### Switch
+#### Match
+- **Inputs:** value (any)
+- **Outputs:** Dynamic based on cases configuration + default
+- **Configuration:** `cases` object mapping case names to arrays of values: `{ "case1": ["val1", "val2"], "case2": ["val3"] }`
+- **Behavior:** Routes input to matching case output, or default if no match. Multiple values can map to same output.
+
+#### Switch (Deprecated)
+- Use Match node instead
 - **Inputs:** value (any)
 - **Outputs:** Dynamic based on cases configuration + default
 - **Configuration:** `cases` object mapping values to output port names
@@ -200,20 +228,22 @@ The Reduce node reduces an array to a single value using an accumulator function
 
 To create a complete array processing pipeline:
 
-1. **Map**: Transform each element
-2. **Filter**: Keep only elements matching a condition  
-3. **Reduce**: Combine all elements into a final result
+1. **Range**: Generate a series of numbers
+2. **Map**: Transform each element
+3. **Filter**: Keep only elements matching a condition  
+4. **Reduce**: Combine all elements into a final result
 
-Example: Sum of squares of even numbers
+Example: Sum of squares of even numbers from 1 to 10
 
 ```
-[1,2,3,4,5] 
-  → Map(x => x * x) 
-  → [1,4,9,16,25]
-  → Filter(x => x % 2 == 0)
-  → [4,16]
-  → Reduce((acc, x) => acc + x, 0)
-  → 20
+Range(start=1, end=10, step=1)
+  → [1,2,3,4,5,6,7,8,9,10]
+  → Map(element * element) 
+  → [1,4,9,16,25,36,49,64,81,100]
+  → Filter(element % 2 == 0)
+  → [4,16,36,64,100]
+  → Reduce(accumulator + element, initial=0)
+  → 220
 ```
 
 ## Benefits
@@ -221,5 +251,6 @@ Example: Sum of squares of even numbers
 1. **Clear separation** - Single operations vs. array operations
 2. **Functional approach** - Map/Filter/Reduce pattern is well-understood
 3. **Composability** - Easy to chain array operations
-4. **Flexibility** - Functions can contain complex logic
+4. **Flexibility** - Expressions support complex logic
 5. **Type safety** - Clear distinction between single values and arrays
+6. **Dedicated nodes** - Range, Length, GetItem, and Concat provide convenient interfaces for common operations
