@@ -1504,6 +1504,296 @@ export const NEW_ARRAY_OPS_GRAPH: Graph = {
 	]
 };
 
+/**
+ * Nullability test graph
+ * Demonstrates how the type system handles null and undefined values:
+ * - Null value expressions
+ * - Null checking and handling with If nodes
+ * - Null coalescing with expressions
+ * - Null propagation through operations
+ * - Default value patterns for null handling
+ */
+export const NULLABILITY_TEST_GRAPH: Graph = {
+	nodes: [
+		// Test 1: Explicit null value
+		{
+			id: "nullValue",
+			type: "Expression",
+			data: {
+				expression: "null"
+			}
+		},
+		
+		// Test 2: Input that might be null
+		{
+			id: "input",
+			type: "Input",
+			data: {
+				inputSchema: {
+					optionalValue: "any",
+					requiredValue: "string"
+				}
+			}
+		},
+		
+		// Test 3: Check if value is null
+		{
+			id: "isNull",
+			type: "Expression",
+			data: {
+				expression: "in0 === null || in0 === undefined"
+			}
+		},
+		
+		// Test 4: Default value when null
+		{
+			id: "defaultValue",
+			type: "Expression",
+			data: {
+				expression: '"default"'
+			}
+		},
+		
+		// Test 5: Use If to provide default for null
+		{
+			id: "nullCoalesce",
+			type: "If",
+			data: {}
+		},
+		
+		// Test 6: Null-safe property access
+		{
+			id: "nullSafeAccess",
+			type: "Expression",
+			data: {
+				// Using ternary for null-safe access
+				expression: "in0 != null ? in0 : 'N/A'"
+			}
+		},
+		
+		// Test 7: Null in arithmetic (should propagate)
+		{
+			id: "number",
+			type: "Expression",
+			data: {
+				expression: "42"
+			}
+		},
+		{
+			id: "nullArithmetic",
+			type: "Expression",
+			data: {
+				expression: "in0 + in1"
+			}
+		},
+		
+		// Test 8: Null in object creation
+		{
+			id: "createObjWithNull",
+			type: "CreateObject",
+			data: {
+				pinNames: ["hasValue", "maybeNull", "alwaysNull"]
+			}
+		},
+		
+		// Test 9: Null in array (arrays can contain null)
+		{
+			id: "arrayWithNull",
+			type: "Expression",
+			data: {
+				expression: "[1, null, 3, null, 5]"
+			}
+		},
+		
+		// Test 10: Filter out nulls from array
+		{
+			id: "filterNulls",
+			type: "Expression",
+			data: {
+				expression: "element != null"
+			}
+		},
+		{
+			id: "filterNode",
+			type: "Filter",
+			data: {}
+		},
+		
+		// Test 11: Map with null handling
+		{
+			id: "mapWithNullCheck",
+			type: "Expression",
+			data: {
+				expression: "element != null ? element * 2 : 0"
+			}
+		},
+		{
+			id: "mapNode",
+			type: "Map",
+			data: {}
+		},
+		
+		// Test 12: Logical operations with null
+		{
+			id: "nullOrValue",
+			type: "Expression",
+			data: {
+				// Nullish coalescing pattern
+				expression: "in0 ?? in1"
+			}
+		},
+		
+		{
+			id: "output",
+			type: "Output",
+			data: {
+				outputs: [
+					"explicitNull",
+					"optionalInput",
+					"isNullCheck",
+					"coalescedValue",
+					"safeAccess",
+					"nullArithmeticResult",
+					"objectWithNulls",
+					"originalArrayWithNulls",
+					"filteredArray",
+					"mappedWithNullHandling",
+					"nullishCoalescing"
+				]
+			}
+		}
+	],
+	edges: [
+		// Test 1: Explicit null to output
+		{
+			from: { node: "nullValue", port: "out" },
+			to: { node: "output", port: "explicitNull" }
+		},
+		
+		// Test 2: Optional input to null check
+		{
+			from: { node: "input", port: "optionalValue" },
+			to: { node: "isNull", port: "in0" }
+		},
+		{
+			from: { node: "input", port: "optionalValue" },
+			to: { node: "output", port: "optionalInput" }
+		},
+		
+		// Test 3: Null check result
+		{
+			from: { node: "isNull", port: "out" },
+			to: { node: "output", port: "isNullCheck" }
+		},
+		
+		// Test 4-5: Null coalescing with If
+		{
+			from: { node: "isNull", port: "out" },
+			to: { node: "nullCoalesce", port: "condition" }
+		},
+		{
+			from: { node: "defaultValue", port: "out" },
+			to: { node: "nullCoalesce", port: "true" }
+		},
+		{
+			from: { node: "input", port: "optionalValue" },
+			to: { node: "nullCoalesce", port: "false" }
+		},
+		{
+			from: { node: "nullCoalesce", port: "out" },
+			to: { node: "output", port: "coalescedValue" }
+		},
+		
+		// Test 6: Null-safe access
+		{
+			from: { node: "input", port: "optionalValue" },
+			to: { node: "nullSafeAccess", port: "in0" }
+		},
+		{
+			from: { node: "nullSafeAccess", port: "out" },
+			to: { node: "output", port: "safeAccess" }
+		},
+		
+		// Test 7: Null in arithmetic
+		{
+			from: { node: "nullValue", port: "out" },
+			to: { node: "nullArithmetic", port: "in0" }
+		},
+		{
+			from: { node: "number", port: "out" },
+			to: { node: "nullArithmetic", port: "in1" }
+		},
+		{
+			from: { node: "nullArithmetic", port: "out" },
+			to: { node: "output", port: "nullArithmeticResult" }
+		},
+		
+		// Test 8: Object with nulls
+		{
+			from: { node: "input", port: "requiredValue" },
+			to: { node: "createObjWithNull", port: "hasValue" }
+		},
+		{
+			from: { node: "input", port: "optionalValue" },
+			to: { node: "createObjWithNull", port: "maybeNull" }
+		},
+		{
+			from: { node: "nullValue", port: "out" },
+			to: { node: "createObjWithNull", port: "alwaysNull" }
+		},
+		{
+			from: { node: "createObjWithNull", port: "out" },
+			to: { node: "output", port: "objectWithNulls" }
+		},
+		
+		// Test 9-10: Array with nulls and filtering
+		{
+			from: { node: "arrayWithNull", port: "out" },
+			to: { node: "output", port: "originalArrayWithNulls" }
+		},
+		{
+			from: { node: "arrayWithNull", port: "out" },
+			to: { node: "filterNode", port: "array" }
+		},
+		{
+			from: { node: "filterNulls", port: "out" },
+			to: { node: "filterNode", port: "expression" }
+		},
+		{
+			from: { node: "filterNode", port: "out" },
+			to: { node: "output", port: "filteredArray" }
+		},
+		
+		// Test 11: Map with null handling
+		{
+			from: { node: "arrayWithNull", port: "out" },
+			to: { node: "mapNode", port: "array" }
+		},
+		{
+			from: { node: "mapWithNullCheck", port: "out" },
+			to: { node: "mapNode", port: "expression" }
+		},
+		{
+			from: { node: "mapNode", port: "out" },
+			to: { node: "output", port: "mappedWithNullHandling" }
+		},
+		
+		// Test 12: Nullish coalescing
+		{
+			from: { node: "input", port: "optionalValue" },
+			to: { node: "nullOrValue", port: "in0" }
+		},
+		{
+			from: { node: "defaultValue", port: "out" },
+			to: { node: "nullOrValue", port: "in1" }
+		},
+		{
+			from: { node: "nullOrValue", port: "out" },
+			to: { node: "output", port: "nullishCoalescing" }
+		}
+	]
+};
+
 export const GRAPHS: Record<string, Graph> = {
 	'sample': SAMPLE_GRAPH,
 	'complex': COMPLEX_GRAPH,
@@ -1518,5 +1808,6 @@ export const GRAPHS: Record<string, Graph> = {
 	'name-propagation': NAME_PROPAGATION_GRAPH,
 	'grasshopper-stress-test': GRASSHOPPER_STRESS_TEST,
 	'match-demo': MATCH_DEMO_GRAPH,
-	'new-array-ops': NEW_ARRAY_OPS_GRAPH
+	'new-array-ops': NEW_ARRAY_OPS_GRAPH,
+	'nullability-test': NULLABILITY_TEST_GRAPH
 };
