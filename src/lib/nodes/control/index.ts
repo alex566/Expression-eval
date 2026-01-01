@@ -64,9 +64,10 @@ export const MatchNode: NodeDefinition = {
 	description: 'Pattern matching - routes input to outputs based on case values',
 	inputs: [
 		{ name: 'value', type: 'any' }
+		// Dynamic inputs for each case (warm, cool, etc.) and default
 	],
 	outputs: [
-		{ name: 'default', type: 'any' }
+		{ name: 'out', type: 'any' }
 	],
 	execute(context) {
 		const value = context.getInputValue('value');
@@ -74,14 +75,16 @@ export const MatchNode: NodeDefinition = {
 		
 		// Check if value matches any case
 		// cases format: { "caseName": ["value1", "value2", ...] }
+		let result = null;
 		let matched = false;
+		
 		for (const [caseName, caseValues] of Object.entries(cases)) {
 			const values = Array.isArray(caseValues) ? caseValues : [caseValues];
 			
 			// Check if input value matches any of the case values
 			for (const caseValue of values) {
 				if (String(value) === String(caseValue)) {
-					context.setOutputValue(caseName as string, value);
+					result = context.getInputValue(caseName);
 					matched = true;
 					break;
 				}
@@ -90,10 +93,12 @@ export const MatchNode: NodeDefinition = {
 			if (matched) break; // No fallthrough
 		}
 
-		// If no match, output to default
+		// If no match, use default
 		if (!matched) {
-			context.setOutputValue('default', value);
+			result = context.getInputValue('default');
 		}
+		
+		context.setOutputValue('out', result);
 	}
 };
 
